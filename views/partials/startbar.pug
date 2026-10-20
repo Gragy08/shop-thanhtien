@@ -1,0 +1,62 @@
+.startbar.d-print-none
+  .brand
+    a.logo(href=`/${pathAdmin}/protected-health`)
+      span
+        img.logo-sm(alt="logo-small" src="/admin/assets/images/logo-sm.png")
+      span
+        img.logo-lg.logo-light(alt="logo-large" src="/admin/assets/images/logo-light.png" style="max-width: 120px; height: auto; padding-top: 15px;")
+        img.logo-lg.logo-dark(alt="logo-large" src="/admin/assets/images/logo-light.png" style="max-width: 120px; height: auto; padding-top: 15px;")
+  .startbar-menu
+    #startbarCollapse.startbar-collapse(data-simplebar="")
+      .d-flex.align-items-start.flex-column.w-100
+        ul.navbar-nav.mb-auto.w-100
+          li.nav-item
+            a.nav-link(href=`/${pathAdmin}/protected-health`)
+              i.iconoir-home-simple.menu-icon
+              span Tổng quan
+          if permissions.includes("product:read") || permissions.includes("admin:all")
+            li.nav-item
+              a.nav-link(aria-controls="sidebarProduct" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarProduct")
+                i.iconoir-shop.menu-icon
+                span Sản phẩm
+              #sidebarProduct.collapse
+                ul.nav.flex-column
+                  li.nav-item
+                    a.nav-link(href="#") Danh sách sản phẩm
+                  li.nav-item
+                    a.nav-link(href="#") Tạo sản phẩm
+                  li.nav-item
+                    a.nav-link(href="#") Danh mục sản phẩm
+                  li.nav-item
+                    a.nav-link(href="#") Thuộc tính sản phẩm
+          if permissions.includes("inventory:read") || permissions.includes("admin:all")
+            li.nav-item
+              a.nav-link(aria-controls="sidebarInventory" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarInventory")
+                i.iconoir-box.menu-icon
+                span Kho hàng
+              #sidebarInventory.collapse
+                ul.nav.flex-column
+                  li.nav-item
+                    a.nav-link(href="#") Tồn kho
+                  li.nav-item
+                    a.nav-link(href="#") Phiếu nhập kho
+          if permissions.includes("admin:all")
+            li.nav-item
+              a.nav-link(aria-controls="sidebarAccountAdmin" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarAccountAdmin")
+                i.iconoir-user-crown.menu-icon
+                span Tài khoản quản trị
+              #sidebarAccountAdmin.collapse
+                ul.nav.flex-column
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/account-admin/create`) Tạo tài khoản
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/account-admin/list`) Danh sách tài khoản
+          if permissions.includes("media:read") || permissions.includes("admin:all")
+            li.nav-item
+              a.nav-link(href="#")
+                i.iconoir-page-star.menu-icon
+                span Quản lý file
+          li.nav-item
+            a.nav-link(href="#")
+              i.iconoir-settings.menu-icon
+              span Cài đặt

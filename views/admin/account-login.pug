@@ -1,0 +1,26 @@
+extends ../layouts/blank.pug
+
+block main
+  .container.py-5
+    .row.justify-content-center.align-items-center.min-vh-75
+      .col-12.col-sm-9.col-md-6.col-lg-4
+        .auth-panel
+          .text-center.mb-4
+            .brand-mark ST
+            h1.h4.mt-3.mb-2 Shop Thanh Tien
+            p.text-muted.mb-0 Đăng nhập khu vực quản trị
+          form#accountLoginForm
+            .mb-3
+              label.form-label(for="email") Email
+              input#email.form-control(name="email", type="email", autocomplete="email", required, placeholder="admin@example.com")
+            .mb-3
+              label.form-label(for="password") Mật khẩu
+              input#password.form-control(name="password", type="password", autocomplete="current-password", required, placeholder="Nhập mật khẩu")
+            .form-check.mb-4
+              input#rememberPassword.form-check-input(name="rememberPassword", type="checkbox", value="true")
+              label.form-check-label(for="rememberPassword") Ghi nhớ đăng nhập
+            button#loginButton.btn.btn-primary.w-100(type="submit") Đăng nhập
+            p#loginMessage.form-message.text-danger.mt-3.mb-0(role="alert")
+
+block script
+  script(src="/admin/assets/js/account-login.js")

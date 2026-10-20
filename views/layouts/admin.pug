@@ -1,0 +1,24 @@
+doctype html
+html(lang="vi")
+  head
+    script.
+      const pathAdmin = "#{pathAdmin}";
+    meta(charset="utf-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1")
+    title #{pageTitle} | Shop Thanh Tien
+    link(rel="stylesheet", href="/admin/assets/css/bootstrap.min.css")
+    link(rel="stylesheet", href="/admin/assets/css/icons.min.css")
+    link(rel="stylesheet", href="/admin/assets/css/app.min.css")
+    link(rel="stylesheet", href="/admin/assets/css/main.css")
+  body
+    include ../partials/topbar.pug
+    include ../partials/startbar.pug
+    .page-wrapper
+      .page-content
+        .container-xxl
+          block main
+        include ../partials/footer.pug
+    script(src="/admin/assets/libs/bootstrap/js/bootstrap.bundle.min.js")
+    script(src="/admin/assets/libs/simplebar/simplebar.min.js")
+    script(src="/admin/assets/js/app.js")
+    block script

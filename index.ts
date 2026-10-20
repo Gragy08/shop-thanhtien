@@ -15,9 +15,11 @@ app.use(cookieParser());
 
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
+app.use(express.static(path.join(__dirname, "public")));
+app.locals.pathAdmin = pathAdmin;
 
 app.get("/", (_req, res) => {
-  res.redirect(`/${pathAdmin}/health`);
+  res.redirect(`/${pathAdmin}/account/login`);
 });
 
 app.use(`/${pathAdmin}`, adminRoutes);

@@ -1,0 +1,52 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Danh mục cha/con dùng chung cho toàn bộ sản phẩm.
+            .col-auto
+              a.btn.btn-primary(href=`/${pathAdmin}/product/category/create`)
+                i.las.la-plus.me-1
+                | Tạo danh mục
+        .card-body.pt-0
+          .table-responsive
+            table.table.table-striped.align-middle.mb-0
+              thead.table-light
+                tr
+                  th Tên danh mục
+                  th Slug
+                  th Trạng thái
+                  th.text-end Hành động
+              tbody
+                if recordList.length
+                  each item in recordList
+                    tr
+                      td
+                        span(style=`padding-left: ${item.level * 24}px`)
+                          if item.level > 0
+                            span.text-muted.me-2 └
+                          strong #{item.name}
+                      td.text-muted #{item.slug}
+                      td
+                        if item.status === "active"
+                          span.badge.bg-success Hoạt động
+                        else
+                          span.badge.bg-secondary Tạm dừng
+                      td.text-end
+                        a.btn.btn-sm.btn-outline-secondary.me-2(href=`/${pathAdmin}/product/category/edit/${item.id}`)
+                          i.las.la-pen
+                          |  Sửa
+                        button.btn.btn-sm.btn-outline-danger.category-delete(type="button" data-id=item.id)
+                          i.las.la-trash-alt
+                          |  Xóa
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="4") Chưa có danh mục nào.
+
+block script
+  script(src="/admin/assets/js/category.js")

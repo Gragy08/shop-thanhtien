@@ -17,7 +17,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
-    "pug": "^3.0.3"
+    "pug": "^3.0.3",
+    "slugify": "^1.6.9"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

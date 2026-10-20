@@ -1,0 +1,50 @@
+extends ../../layouts/admin.pug
+
+mixin categoryOptions(items, level, selectedId)
+  each item in items
+    option(value=item.id, selected=selectedId === item.id)= `${"— ".repeat(level)}${item.name}`
+    if item.children.length
+      +categoryOptions(item.children, level + 1, selectedId)
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          h4.card-title #{pageTitle}
+        .card-body.pt-0
+          form#categoryForm(data-id=category ? category._id : "", data-edit=isEdit ? "true" : "false")
+            .row
+              .col-md-6
+                .mb-3
+                  label.form-label(for="name") Tên danh mục *
+                  input#name.form-control(name="name", required, value=category ? category.name : "", placeholder="Ví dụ: Điện thoại")
+              .col-md-6
+                .mb-3
+                  label.form-label(for="slug") Đường dẫn *
+                  .input-group
+                    button#generateSlug.btn.btn-outline-info(type="button") Tự động
+                    input#slug.form-control(name="slug", required, value=category ? category.slug : "", placeholder="dien-thoai")
+              .col-md-6
+                .mb-3
+                  label.form-label(for="parentId") Danh mục cha
+                  select#parentId.form-select(name="parentId")
+                    option(value="", selected=!category || !category.parentId) -- Danh mục gốc --
+                    +categoryOptions(categoryTree, 0, category && category.parentId ? String(category.parentId) : "")
+              .col-md-6
+                .mb-3
+                  label.form-label(for="status") Trạng thái
+                  select#status.form-select(name="status")
+                    option(value="active", selected=!category || category.status === "active") Hoạt động
+                    option(value="inactive", selected=category && category.status === "inactive") Tạm dừng
+              .col-12
+                .mb-3
+                  label.form-label(for="description") Mô tả
+                  textarea#description.form-control(name="description", rows="4", placeholder="Mô tả ngắn cho danh mục")= category ? category.description : ""
+            .d-flex.gap-2
+              a.btn.btn-light(href=`/${pathAdmin}/product/category`) Hủy
+              button.btn.btn-primary(type="submit") #{isEdit ? "Cập nhật" : "Tạo mới"}
+            p#categoryMessage.form-message.mt-3.mb-0(role="alert")
+
+block script
+  script(src="/admin/assets/js/category.js")

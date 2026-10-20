@@ -1,6 +1,7 @@
 import { Router } from "express";
 import accountRoutes from "./account.route";
 import accountAdminRoutes from "./account-admin.route";
+import categoryRoutes from "./category.route";
 import { requireAuth } from "../../middlewares/admin/authenticate.middleware";
 import { RequestAccount } from "../../interfaces/request.interface";
 
@@ -16,6 +17,7 @@ router.get("/health", (_req, res) => {
 
 router.use("/account", accountRoutes);
 router.use("/account-admin", accountAdminRoutes);
+router.use("/product", categoryRoutes);
 
 router.get("/protected-health", requireAuth, (req: RequestAccount, res) => {
   res.json({

@@ -1,0 +1,46 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Quản lý thông tin các nhà cung cấp hàng hóa.
+            .col-auto
+              a.btn.btn-primary(href=`/${pathAdmin}/inventory/supplier/create`)
+                i.las.la-plus.me-1
+                | Tạo nhà cung cấp
+        .card-body.pt-0
+          .table-responsive
+            table.table.table-striped.align-middle.mb-0
+              thead.table-light
+                tr
+                  th Tên nhà cung cấp
+                  th Địa chỉ
+                  th Số điện thoại
+                  th Trạng thái
+                  th.text-end Hành động
+              tbody
+                if supplierList.length
+                  each supplier in supplierList
+                    tr
+                      td.fw-semibold #{supplier.name}
+                      td #{supplier.address}
+                      td #{supplier.phone}
+                      td
+                        if supplier.status === "active"
+                          span.badge.bg-success Hoạt động
+                        else
+                          span.badge.bg-secondary Tạm dừng
+                      td.text-end
+                        a.btn.btn-sm.btn-outline-secondary.me-2(href=`/${pathAdmin}/inventory/supplier/edit/${supplier._id}`) Sửa
+                        button.btn.btn-sm.btn-outline-danger.supplier-delete(type="button", data-id=supplier._id) Vô hiệu hóa
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="5") Chưa có nhà cung cấp nào.
+
+block script
+  script(src="/admin/assets/js/supplier.js")

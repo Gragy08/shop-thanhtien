@@ -32,6 +32,11 @@ const schema = new mongoose.Schema(
       min: 1,
       default: 1
     },
+    purchasePrice: {
+      type: Number,
+      min: 0,
+      default: null
+    },
     status: {
       type: String,
       enum: ["available", "sold", "warranty", "returned", "damaged", "liquidated"],
@@ -45,7 +50,12 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "StockReceipt",
       default: null
-    }
+    },
+    deleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: Date
   },
   { timestamps: true }
 );

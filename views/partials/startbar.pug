@@ -24,11 +24,11 @@
                   li.nav-item
                     a.nav-link(href="#") Danh sách sản phẩm
                   li.nav-item
-                    a.nav-link(href="#") Tạo sản phẩm
+                    a.nav-link(href=`/${pathAdmin}/product/create`) Tạo sản phẩm
                   li.nav-item
                     a.nav-link(href=`/${pathAdmin}/product/category`) Danh mục sản phẩm
                   li.nav-item
-                    a.nav-link(href="#") Thuộc tính sản phẩm
+                    a.nav-link(href=`/${pathAdmin}/product/attribute`) Thuộc tính sản phẩm
           if permissions.includes("inventory:read") || permissions.includes("admin:all")
             li.nav-item
               a.nav-link(aria-controls="sidebarInventory" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarInventory")
@@ -37,9 +37,13 @@
               #sidebarInventory.collapse
                 ul.nav.flex-column
                   li.nav-item
-                    a.nav-link(href="#") Tồn kho
+                    a.nav-link(href=`/${pathAdmin}/inventory`) Tồn kho
                   li.nav-item
-                    a.nav-link(href="#") Phiếu nhập kho
+                    a.nav-link(href=`/${pathAdmin}/inventory/receipt`) Danh sách phiếu nhập
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/inventory/receipt/create`) Phiếu nhập kho
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/inventory/supplier`) Nhà cung cấp
           if permissions.includes("admin:all")
             li.nav-item
               a.nav-link(aria-controls="sidebarAccountAdmin" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarAccountAdmin")

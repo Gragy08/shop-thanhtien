@@ -1,0 +1,98 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          h4.card-title #{pageTitle}
+          p.text-muted.mb-0 Nhập tồn kho sau khi sản phẩm và variant đã được tạo.
+        .card-body.pt-0
+          if !canCreate
+            .alert.alert-warning
+              strong Chưa thể nhập kho.
+              |  Cần có ít nhất một variant đang hoạt động và một nhà cung cấp đang hoạt động.
+              .mt-2
+                a.btn.btn-sm.btn-outline-primary.me-2(href=`/${pathAdmin}/product/create`) Tạo sản phẩm/variant
+                a.btn.btn-sm.btn-outline-primary(href=`/${pathAdmin}/inventory/supplier/create`) Tạo nhà cung cấp
+          form#receiptForm
+            .row
+              .col-md-6
+                .mb-3
+                  label.form-label(for="supplierId") Nhà cung cấp *
+                  select#supplierId.form-select(name="supplierId", required)
+                    option(value="") -- Chọn nhà cung cấp --
+                    each supplier in suppliers
+                      option(value=supplier._id) #{supplier.name} · #{supplier.phone}
+              .col-md-6
+                .mb-3
+                  label.form-label(for="supplierContactName") Nhân viên bên nhà cung cấp *
+                  input#supplierContactName.form-control(name="supplierContactName", required, placeholder="Nhập tên nhân viên giao hàng/liên hệ")
+              
+              .col-md-6
+                .mb-3
+                  .form-check.form-switch.pt-md-4
+                    input#hasInvoice.form-check-input(type="checkbox", name="hasInvoice")
+                    label.form-check-label.fw-semibold(for="hasInvoice") Có hóa đơn từ nhà cung cấp
+                  small.text-muted Tích chọn nếu đơn hàng có hóa đơn tài chính / phiếu xuất từ NCC
+              .col-md-6#invoiceNumberGroup(style="display: none")
+                .mb-3
+                  label.form-label(for="invoiceNumber") Số hóa đơn NCC *
+                  input#invoiceNumber.form-control(name="invoiceNumber", placeholder="Ví dụ: HD-2026-00891")
+              
+              .col-md-6
+                .mb-3
+                  label.form-label(for="totalCost") Tổng chi phí hóa đơn (Tiền trả NCC - VNĐ) *
+                  .input-group
+                    input#totalCost.form-control(name="totalCost", type="number", min="0", value="0", required)
+                    button#btnCalcTotal.btn.btn-outline-secondary(type="button", title="Tính lại tổng từ các dòng") Tự động tính
+                  small.text-muted Tự động cập nhật từ các dòng nhập hoặc điều chỉnh theo số tiền thực tế trên hóa đơn.
+              .col-md-6
+                .mb-3
+                  label.form-label(for="note") Ghi chú
+                  input#note.form-control(name="note", placeholder="Ví dụ: Nhập hàng đợt tháng 10")
+              
+              .col-12
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  label.form-label.mb-0 Danh sách hàng nhập *
+                  button#addReceiptLine.btn.btn-outline-info(type="button") Thêm dòng
+                .table-responsive(style="min-height: 180px;")
+                  table#receiptLines.table.table-bordered.align-middle
+                    thead.table-light
+                      tr
+                        th(style="min-width: 320px") Tìm & chọn Variant sản phẩm *
+                        th(style="min-width: 250px") IMEI / Serial
+                        th(style="width: 110px") Số lượng
+                        th(style="width: 160px") Giá nhập (VNĐ)
+                        th(style="width: 160px") Thành tiền
+                        th(style="width: 50px")
+                    tbody
+                      tr.receipt-line
+                        td
+                          .variant-autocomplete-wrapper
+                            .input-group
+                              span.input-group-text
+                                i.las.la-search
+                              input.form-control.variant-search-input(type="text", placeholder="Gõ tên hoặc SKU để tìm kiếm...", autocomplete="off")
+                              button.btn.btn-outline-secondary.variant-clear-btn(type="button", title="Xóa chọn") ×
+                            input.variant-id-input(type="hidden", name="variantId")
+                        td
+                          textarea.form-control.variant-identifiers(rows="2", placeholder="Chọn variant sản phẩm trước", disabled)
+                        td
+                          input.form-control.variant-quantity(type="number", min="1", value="1", disabled)
+                        td
+                          input.form-control.variant-price(type="number", min="0", value="0", placeholder="0")
+                        td
+                          input.form-control.variant-total(type="text", readonly, value="0 đ")
+                        td.text-center
+                          button.btn.btn-sm.btn-outline-danger.remove-line(type="button" aria-label="Xóa dòng") ×
+            .d-flex.gap-2.mt-3
+              a.btn.btn-light(href=`/${pathAdmin}/protected-health`) Hủy
+              button.btn.btn-primary(type="submit", disabled=!canCreate) Ghi nhận nhập kho
+            p#receiptMessage.form-message.mt-3.mb-0(role="alert")
+
+block script
+  script.
+    window.variantList = !{JSON.stringify(variantClientData || [])};
+    window.createProductUrl = "/#{pathAdmin}/product/create";
+  script(src="/admin/assets/js/inventory.js")

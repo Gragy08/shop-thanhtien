@@ -1,0 +1,51 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          h4.card-title #{pageTitle}
+          p.text-muted.mb-0 Chỉ chỉnh sửa thông tin chứng từ; danh sách hàng và tồn kho đã nhập được giữ nguyên.
+        .card-body.pt-0
+          form#receiptEditForm(data-id=receipt._id)
+            .row
+              .col-md-6
+                .mb-3
+                  label.form-label(for="supplierId") Nhà cung cấp *
+                  select#supplierId.form-select(name="supplierId", required)
+                    each supplier in suppliers
+                      option(value=supplier._id, selected=String(receipt.supplierId) === String(supplier._id)) #{supplier.name} · #{supplier.phone}
+              .col-md-6
+                .mb-3
+                  label.form-label(for="supplierContactName") Nhân viên bên nhà cung cấp *
+                  input#supplierContactName.form-control(name="supplierContactName", required, value=receipt.supplierContactName)
+              
+              .col-md-6
+                .mb-3
+                  .form-check.form-switch.pt-md-4
+                    input#hasInvoice.form-check-input(type="checkbox", name="hasInvoice", checked=Boolean(receipt.hasInvoice))
+                    label.form-check-label.fw-semibold(for="hasInvoice") Có hóa đơn từ nhà cung cấp
+                  small.text-muted Tích chọn nếu đơn hàng có hóa đơn tài chính / phiếu xuất từ NCC
+              .col-md-6#invoiceNumberGroup(style=receipt.hasInvoice ? "display: block" : "display: none")
+                .mb-3
+                  label.form-label(for="invoiceNumber") Số hóa đơn NCC *
+                  input#invoiceNumber.form-control(name="invoiceNumber", value=receipt.invoiceNumber, placeholder="Ví dụ: HD-2026-00891")
+              
+              .col-md-6
+                .mb-3
+                  label.form-label(for="totalCost") Tổng chi phí hóa đơn (Tiền trả NCC - VNĐ)
+                  input#totalCost.form-control(name="totalCost", type="number", min="0", value=receipt.totalCost || 0)
+              
+              .col-md-6
+                .mb-3
+                  label.form-label(for="note") Ghi chú
+                  input#note.form-control(name="note", value=receipt.note, placeholder="Ví dụ: Đã thanh toán chuyển khoản")
+            
+            .d-flex.gap-2.mt-2
+              a.btn.btn-light(href=`/${pathAdmin}/inventory/receipt/${receipt._id}`) Hủy
+              button.btn.btn-primary(type="submit") Cập nhật phiếu
+            p#receiptEditMessage.form-message.mt-3.mb-0(role="alert")
+
+block script
+  script(src="/admin/assets/js/receipt.js")

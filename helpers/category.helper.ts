@@ -42,12 +42,29 @@ export const flattenCategoryTree = (
   ]);
 };
 
-export const collectDescendantIds = (tree: CategoryTreeItem[], categoryId: string): string[] => {
-  const target = tree.find((category) => category.id === categoryId);
+export const findCategoryInTree = (
+  tree: CategoryTreeItem[],
+  categoryId: string
+): CategoryTreeItem | null => {
+  for (const node of tree) {
+    if (node.id === categoryId) return node;
+    if (node.children && node.children.length > 0) {
+      const found = findCategoryInTree(node.children, categoryId);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+export const collectDescendantIds = (
+  tree: CategoryTreeItem[],
+  categoryId: string
+): string[] => {
+  const target = findCategoryInTree(tree, categoryId);
   if (!target) return [];
 
   return target.children.flatMap((child) => [
     child.id,
-    ...collectDescendantIds(tree, child.id)
+    ...collectDescendantIds([child], child.id)
   ]);
 };

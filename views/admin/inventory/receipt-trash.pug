@@ -1,0 +1,75 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              a.text-decoration-none.small.mb-2.d-inline-block(href=`/${pathAdmin}/inventory/receipt`)
+                i.las.la-arrow-left.me-1
+                | Quay lại danh sách phiếu nhập
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Các phiếu nhập đã xóa mềm. Bạn có thể khôi phục lại kho hoặc xóa vĩnh viễn.
+        .card-body.pt-0
+          form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/inventory/receipt/trash`)
+            .col-md-5
+              label.form-label.small Từ ngày
+              input.form-control(type="date", name="from", value=filters.from)
+            .col-md-5
+              label.form-label.small Đến ngày
+              input.form-control(type="date", name="to", value=filters.to)
+            .col-md-2.d-flex.align-items-end
+              button.btn.btn-outline-primary.w-100(type="submit")
+                i.las.la-search.me-1
+                | Lọc
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
+                tr
+                  th Mã phiếu
+                  th Nhà cung cấp
+                  th Hóa đơn NCC
+                  th.text-end Tổng chi phí
+                  th Nhân viên liên hệ
+                  th Người tạo
+                  th Thời gian xóa
+                  th.text-end(style="min-width: 180px") Hoạt động
+              tbody
+                if trashList.length
+                  each receipt in trashList
+                    tr
+                      td
+                        span.fw-semibold.text-danger #{receipt.receiptCode}
+                      td
+                        if receipt.supplierId
+                          | #{receipt.supplierId.name}
+                        else
+                          span.text-muted Không xác định
+                      td
+                        if receipt.hasInvoice
+                          span.badge.bg-light.text-dark #{receipt.invoiceNumber || "Có HĐ"}
+                        else
+                          span.text-muted Không
+                      td.text-end.fw-semibold
+                        | #{receipt.totalCost ? receipt.totalCost.toLocaleString("vi-VN") + " đ" : "0 đ"}
+                      td #{receipt.supplierContactName}
+                      td #{receipt.createdBy ? receipt.createdBy.fullName : "Không xác định"}
+                      td.text-muted.small #{receipt.deletedAt ? new Date(receipt.deletedAt).toLocaleString("vi-VN") : "--"}
+                      td.text-end
+                        if canWrite
+                          button.btn.btn-sm.btn-outline-success.receipt-restore.me-1(type="button", data-id=receipt._id, title="Khôi phục phiếu nhập và hàng hóa trong kho")
+                            i.las.la-undo.me-1
+                            | Khôi phục
+                        if permissions.includes("admin:all") || canWrite
+                          button.btn.btn-sm.btn-outline-danger.receipt-hard-delete(type="button", data-id=receipt._id, title="Xóa vĩnh viễn khỏi hệ thống")
+                            i.las.la-trash-alt.me-1
+                            | Xóa cứng
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="8") Thùng rác trống, không có phiếu nhập nào bị xóa.
+
+block script
+  script(src="/admin/assets/js/receipt.js")
+

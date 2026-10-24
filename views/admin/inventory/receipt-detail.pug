@@ -1,0 +1,132 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .d-flex.justify-content-between.align-items-center.mb-4
+        div
+          a.text-decoration-none(href=`/${pathAdmin}/inventory/receipt`) ← Danh sách phiếu nhập
+          h1.h3.mt-3.mb-1 #{pageTitle}
+          p.text-muted.mb-0 #{new Date(receipt.createdAt).toLocaleString("vi-VN")}
+        .d-flex.gap-2
+          a.btn.btn-outline-primary(href=`/${pathAdmin}/inventory/receipt/edit/${receipt._id}`) Sửa phiếu
+          a.btn.btn-primary(href=`/${pathAdmin}/inventory`) Xem tồn kho
+      
+      .card.mb-4
+        .card-body
+          .row.g-3
+            .col-md-3
+              small.text-muted Nhà cung cấp
+              p.fw-semibold.mb-0
+                if receipt.supplierId
+                  | #{receipt.supplierId.name}
+                  if receipt.supplierId.phone
+                    br
+                    small.text-muted #{receipt.supplierId.phone}
+                else
+                  | Không xác định
+            .col-md-3
+              small.text-muted Nhân viên bên NCC
+              p.fw-semibold.mb-0 #{receipt.supplierContactName}
+            .col-md-3
+              small.text-muted Hóa đơn NCC
+              p.mb-0
+                if receipt.hasInvoice
+                  span.badge.bg-success-subtle.text-success.fs-6
+                    i.las.la-file-invoice.me-1
+                    | #{receipt.invoiceNumber || "Có hóa đơn"}
+                else
+                  span.badge.bg-light.text-muted Không có hóa đơn
+            .col-md-3
+              small.text-muted Tổng chi phí trả NCC
+              p.fw-bold.fs-5.text-primary.mb-0
+                | #{receipt.totalCost ? receipt.totalCost.toLocaleString("vi-VN") + " đ" : "0 đ"}
+            .col-md-6
+              small.text-muted Người tạo
+              p.fw-semibold.mb-0 #{receipt.createdBy ? receipt.createdBy.fullName : "Không xác định"} (#{new Date(receipt.createdAt).toLocaleString("vi-VN")})
+            if receipt.note
+              .col-md-6
+                small.text-muted Ghi chú
+                p.mb-0 #{receipt.note}
+
+      if receipt.items && receipt.items.length
+        .card.mb-4
+          .card-header
+            h4.card-title Chi tiết dòng nhập theo hóa đơn (#{receipt.items.length} dòng)
+          .card-body.pt-0
+            .table-responsive
+              table.table.table-bordered.align-middle.mb-0
+                thead.table-light
+                  tr
+                    th Variant sản phẩm / SKU
+                    th Kiểu
+                    th.text-center Số lượng
+                    th.text-end Đơn giá nhập
+                    th.text-end Thành tiền
+                    th Chi tiết IMEI/Serial dòng
+                tbody
+                  each line in receipt.items
+                    - const product = line.productId
+                    - const variant = line.variantId
+                    tr
+                      td
+                        strong #{product ? product.name : "Không xác định"}
+                        if variant && variant.sku
+                          br
+                          code.text-dark #{variant.sku}
+                        if variant && variant.attributeValues && variant.attributeValues.length
+                          br
+                          small.text-muted #{variant.attributeValues.map((val) => val.label).join(" / ")}
+                      td
+                        if line.trackingType === "imei"
+                          span.badge.bg-primary IMEI
+                        else if line.trackingType === "serial"
+                          span.badge.bg-info.text-dark Serial
+                        else
+                          span.badge.bg-secondary Số lượng
+                      td.text-center.fw-bold #{line.quantity}
+                      td.text-end #{line.purchasePrice ? line.purchasePrice.toLocaleString("vi-VN") + " đ" : "0 đ"}
+                      td.text-end.fw-semibold.text-primary #{line.totalPrice ? line.totalPrice.toLocaleString("vi-VN") + " đ" : "0 đ"}
+                      td
+                        if line.identifiers && line.identifiers.length
+                          .d-flex.flex-wrap.gap-1(style="max-height: 80px; overflow-y: auto;")
+                            each idVal in line.identifiers
+                              span.badge.bg-light.text-dark.font-monospace.border #{idVal}
+                        else
+                          span.text-muted Không có mã định danh
+
+      .card
+        .card-header
+          h4.card-title Danh sách tồn kho được tạo từ phiếu (#{inventoryList.length} thiết bị/lô)
+        .card-body.pt-0
+          .table-responsive
+            table.table.table-striped.align-middle.mb-0
+              thead.table-light
+                tr
+                  th Sản phẩm / Variant
+                  th Kiểu
+                  th IMEI / Serial
+                  th Số lượng
+                  th Đơn giá nhập
+                  th Trạng thái hiện tại
+              tbody
+                each item in inventoryList
+                  - const product = item.productId
+                  - const variant = item.variantId
+                  tr
+                    td
+                      strong #{product ? product.name : "Không xác định"}
+                      if variant && variant.sku
+                        br
+                        code.text-dark #{variant.sku}
+                    td #{item.trackingType}
+                    td.font-monospace #{item.identifier || "Không có"}
+                    td #{item.quantity}
+                    td #{item.purchasePrice ? item.purchasePrice.toLocaleString("vi-VN") + " đ" : "--"}
+                    td
+                      if item.status === "available"
+                        span.badge.bg-success Có sẵn
+                      else if item.status === "sold"
+                        span.badge.bg-dark Đã bán
+                      else
+                        span.badge.bg-secondary #{item.status}

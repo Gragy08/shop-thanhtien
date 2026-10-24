@@ -1,0 +1,105 @@
+extends ../../layouts/admin.pug
+
+mixin categoryCheckboxes(items, level)
+  each item in items
+    label.category-check(class=`category-level-${level}`, data-category-name=item.name.toLowerCase())
+      input.form-check-input(type="checkbox", name="categoryId", value=item.id)
+      span.ms-2 #{item.name}
+    if item.children.length
+      +categoryCheckboxes(item.children, level + 1)
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          h4.card-title #{pageTitle}
+        .card-body.pt-0
+          form#productForm
+            .row
+              .col-md-6
+                .mb-3
+                  label.form-label(for="name") Tên sản phẩm *
+                  input#name.form-control(name="name", required, placeholder="Ví dụ: iPhone 15")
+              .col-md-6
+                .mb-3
+                  label.form-label(for="slug") Đường dẫn
+                  .input-group
+                    button#generateProductSlug.btn.btn-outline-info(type="button") Tự động
+                    input#slug.form-control(name="slug", placeholder="iphone-15")
+              .col-md-6
+                .mb-3
+                  label.form-label(for="inventoryType") Kiểu quản lý tồn kho *
+                  select#inventoryType.form-select(name="inventoryType", required)
+                    option(value="imei") IMEI - Điện thoại
+                    option(value="serial") Serial - Đồng hồ
+                    option(value="quantity") Số lượng - Phụ kiện/mặt hàng
+              .col-md-6
+                .mb-3
+                  label.form-label(for="status") Trạng thái
+                  select#status.form-select(name="status")
+                    option(value="draft") Bản nháp
+                    option(value="active") Hoạt động
+                    option(value="inactive") Tạm dừng
+              .col-md-6
+                .mb-3
+                  label.form-label Giá nhập mặc định *
+                  input.form-control(name="purchasePrice", type="number", min="0", required)
+              .col-md-6
+                .mb-3
+                  label.form-label Giá bán mặc định *
+                  input.form-control(name="salePrice", type="number", min="0", required)
+              .col-md-6
+                .mb-3
+                  label.form-label Danh mục *
+                  .category-picker
+                    .input-group.input-group-sm.mb-2
+                      span.input-group-text
+                        i.las.la-search
+                      input#categorySearch.form-control(type="search", placeholder="Tìm danh mục...")
+                    .category-list
+                      +categoryCheckboxes(categoryTree, 0)
+              .col-md-6
+                .mb-3
+                  label.form-label Thuộc tính áp dụng
+                  .attribute-picker
+                    .input-group.input-group-sm.mb-2
+                      span.input-group-text
+                        i.las.la-search
+                      input#attributeSearch.form-control(type="search", placeholder="Tìm thuộc tính...")
+                    p.form-text Chọn tối đa 2 thuộc tính để sinh các biến thể.
+                    .attribute-list
+                      each attribute in attributeList
+                        label.attribute-check-row(data-attribute-name=`${attribute.name} ${attribute.code}`.toLowerCase())
+                          input.form-check-input.attribute-check(type="checkbox", value=attribute._id, data-type=attribute.type)
+                          span.ms-2 #{attribute.name}
+                          code.ms-auto #{attribute.code}
+              .col-12
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  label.form-label.mb-0 Danh sách variant *
+                  button#generateVariants.btn.btn-outline-info(type="button") Tạo biến thể
+                .table-responsive
+                  table#variantTable.table.table-bordered.align-middle
+                    thead.table-light
+                      tr
+                        th Trạng thái
+                        th Thuộc tính
+                        th SKU
+                        th Giá nhập
+                        th Giá bán
+                    tbody
+                      tr
+                        td.text-muted.text-center.py-4(colspan="5") Chọn thuộc tính rồi bấm “Tạo biến thể”.
+              .col-12
+                .mb-3
+                  label.form-label(for="description") Mô tả
+                  textarea#description.form-control(name="description", rows="4")
+            .d-flex.gap-2
+              a.btn.btn-light(href=`/${pathAdmin}/protected-health`) Hủy
+              button.btn.btn-primary(type="submit") Tạo sản phẩm
+            p#productMessage.form-message.mt-3.mb-0(role="alert")
+            script.
+              window.attributeList = !{JSON.stringify(attributeList)};
+
+block script
+  script(src="/admin/assets/js/product.js")

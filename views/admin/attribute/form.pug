@@ -1,0 +1,68 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          h4.card-title #{pageTitle}
+        .card-body.pt-0
+          form#attributeForm(data-id=attribute ? attribute._id : "", data-edit=isEdit ? "true" : "false")
+            .row
+              .col-md-4
+                .mb-3
+                  label.form-label(for="name") Tên thuộc tính *
+                  input#name.form-control(name="name", required, value=attribute ? attribute.name : "", placeholder="Ví dụ: Màu sắc")
+              .col-md-4
+                .mb-3
+                  label.form-label(for="code") Mã thuộc tính *
+                  input#code.form-control(name="code", required, value=attribute ? attribute.code : "", placeholder="color")
+              .col-md-4
+                .mb-3
+                  label.form-label(for="type") Loại thuộc tính *
+                  select#type.form-select(name="type", required)
+                    option(value="text", selected=!attribute || attribute.type === "text") text
+                    option(value="select", selected=attribute && attribute.type === "select") select
+                    option(value="color", selected=attribute && attribute.type === "color") color
+              .col-md-4
+                .mb-3
+                  label.form-label(for="status") Trạng thái
+                  select#status.form-select(name="status")
+                    option(value="active", selected=!attribute || attribute.status === "active") Hoạt động
+                    option(value="inactive", selected=attribute && attribute.status === "inactive") Tạm dừng
+              .col-12
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  label.form-label.mb-0 Danh sách giá trị *
+                  button#addOption.btn.btn-outline-primary.btn-sm(type="button") Thêm giá trị
+                .table-responsive
+                  table.table.table-bordered.align-middle
+                    thead.table-light
+                      tr
+                        th Nhãn hiển thị
+                        th Giá trị lưu trữ
+                        th(style="width: 80px")
+                    tbody#optionList
+                      if attribute && attribute.options.length
+                        each option in attribute.options
+                          tr.attribute-option
+                            td
+                              input.form-control.option-label(name="optionLabel", required, value=option.label, placeholder="Đen")
+                            td
+                              input.form-control.option-value(name="optionValue", required, value=option.value, placeholder="den")
+                            td.text-center
+                              button.btn.btn-sm.btn-outline-danger.remove-option(type="button" aria-label="Xóa giá trị") ×
+                      else
+                        tr.attribute-option
+                          td
+                            input.form-control.option-label(name="optionLabel", required, placeholder="Đen")
+                          td
+                            input.form-control.option-value(name="optionValue", required, placeholder="den")
+                          td.text-center
+                            button.btn.btn-sm.btn-outline-danger.remove-option(type="button" aria-label="Xóa giá trị") ×
+            .d-flex.gap-2
+              a.btn.btn-light(href=`/${pathAdmin}/product/attribute`) Hủy
+              button.btn.btn-primary(type="submit") #{isEdit ? "Cập nhật" : "Tạo mới"}
+            p#attributeMessage.form-message.mt-3.mb-0(role="alert")
+
+block script
+  script(src="/admin/assets/js/attribute.js")

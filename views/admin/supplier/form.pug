@@ -1,0 +1,36 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          h4.card-title #{pageTitle}
+        .card-body.pt-0
+          form#supplierForm(data-id=supplier ? supplier._id : "", data-edit=isEdit ? "true" : "false")
+            .row
+              .col-md-6
+                .mb-3
+                  label.form-label(for="name") Tên nhà cung cấp *
+                  input#name.form-control(name="name", required, value=supplier ? supplier.name : "", placeholder="Ví dụ: Công ty ABC")
+              .col-md-6
+                .mb-3
+                  label.form-label(for="phone") Số điện thoại *
+                  input#phone.form-control(name="phone", required, value=supplier ? supplier.phone : "", placeholder="0900000000")
+              .col-md-8
+                .mb-3
+                  label.form-label(for="address") Địa chỉ *
+                  input#address.form-control(name="address", required, value=supplier ? supplier.address : "", placeholder="Địa chỉ nhà cung cấp")
+              .col-md-4
+                .mb-3
+                  label.form-label(for="status") Trạng thái
+                  select#status.form-select(name="status")
+                    option(value="active", selected=!supplier || supplier.status === "active") Hoạt động
+                    option(value="inactive", selected=supplier && supplier.status === "inactive") Tạm dừng
+            .d-flex.gap-2
+              a.btn.btn-light(href=`/${pathAdmin}/inventory/supplier`) Hủy
+              button.btn.btn-primary(type="submit") #{isEdit ? "Cập nhật" : "Tạo mới"}
+            p#supplierMessage.form-message.mt-3.mb-0(role="alert")
+
+block script
+  script(src="/admin/assets/js/supplier.js")

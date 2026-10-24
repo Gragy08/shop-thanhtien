@@ -1,0 +1,150 @@
+extends ../../layouts/admin.pug
+
+mixin categorySelectOptions(items, level = 0)
+  each item in items
+    - const prefix = level > 0 ? `${"--".repeat(level)} ` : ""
+    option(value=item.id, selected=filters.categoryId === item.id) #{prefix}#{item.name}
+    if item.children && item.children.length
+      +categorySelectOptions(item.children, level + 1)
+
+block main
+  .row
+    .col-12
+      // Thống kê nhanh kho hàng
+      .row.mb-3
+        .col-md-4
+          .card.mb-3.mb-md-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-primary-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center
+                  i.las.la-boxes.fs-3.text-primary
+                div
+                  h6.text-muted.mb-1 Tổng số SKU
+                  h4.mb-0 #{stats ? stats.totalSKUs : 0}
+        .col-md-4
+          .card.mb-3.mb-md-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-success-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center
+                  i.las.la-warehouse.fs-3.text-success
+                div
+                  h6.text-muted.mb-1 Tổng số lượng tồn (IMEI + SL)
+                  h4.mb-0 #{stats ? stats.totalStock : 0}
+        .col-md-4
+          .card.mb-3.mb-md-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-info-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center
+                  i.las.la-check-circle.fs-3.text-info
+                div
+                  h6.text-muted.mb-1 Đang có sẵn để bán
+                  h4.mb-0 #{stats ? stats.totalAvailable : 0}
+
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Danh sách tồn kho theo từng SKU sản phẩm, tính tổng số lượng theo số IMEI/Serial thực tế.
+            .col-auto
+              if canWrite
+                a.btn.btn-primary(href=`/${pathAdmin}/inventory/receipt/create`)
+                  i.las.la-plus.me-1
+                  | Nhập kho
+        .card-body.pt-0
+          form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/inventory`)
+            .col-md-6
+              .input-group
+                span.input-group-text
+                  i.las.la-search
+                input.form-control(name="keyword", value=filters.keyword, placeholder="Tìm tên sản phẩm, SKU, hoặc IMEI cụ thể...")
+            .col-md-4
+              select.form-select(name="categoryId")
+                option(value="") -- Tất cả danh mục --
+                if categoryTree && categoryTree.length
+                  +categorySelectOptions(categoryTree)
+            .col-md-2.d-grid
+              button.btn.btn-outline-primary(type="submit")
+                i.las.la-filter.me-1
+                | Lọc
+
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
+                tr
+                  th(style="min-width: 260px") Sản phẩm / Biến thể
+                  th Kiểu quản lý
+                  th.text-center(style="min-width: 140px") Số lượng tồn
+                  th(style="min-width: 320px") Chi tiết IMEI / Serial
+                  th Nhà cung cấp
+                  th Phiếu nhập gần nhất
+              tbody
+                if inventoryList.length
+                  each item in inventoryList
+                    - const product = item.product
+                    - const variant = item.variant
+                    tr
+                      td
+                        strong.text-primary #{product ? product.name : "Không xác định"}
+                        if variant && variant.sku
+                          br
+                          code.text-dark.fw-semibold #{variant.sku}
+                        if variant && variant.attributeValues && variant.attributeValues.length
+                          br
+                          small.text-muted #{variant.attributeValues.map((val) => val.label).join(" / ")}
+                      td
+                        if item.trackingType === "imei"
+                          span.badge.bg-primary IMEI
+                        else if item.trackingType === "serial"
+                          span.badge.bg-info.text-dark Serial
+                        else
+                          span.badge.bg-secondary Số lượng
+                      td.text-center
+                        .fs-5.fw-bold.text-dark #{item.totalQuantity}
+                        .d-flex.flex-wrap.justify-content-center.gap-1.mt-1
+                          if item.availableCount > 0
+                            span.badge.bg-success-subtle.text-success(title="Có sẵn") #{item.availableCount} sẵn
+                          if item.soldCount > 0
+                            span.badge.bg-dark-subtle.text-dark(title="Đã bán") #{item.soldCount} bán
+                          if item.otherCount > 0
+                            span.badge.bg-warning-subtle.text-warning(title="Bảo hành/Lỗi") #{item.otherCount} khác
+                      td
+                        if item.trackingType === "quantity"
+                          span.text-muted Quản lý tồn kho theo số lượng
+                        else
+                          if item.identifiers && item.identifiers.length
+                            .d-flex.align-items-center.gap-2.mb-1
+                              span.fw-semibold #{item.identifiers.length} #{item.trackingType === "imei" ? "mã IMEI" : "serial"}
+                              button.btn.btn-sm.btn-outline-secondary.py-0.px-2(type="button", data-bs-toggle="collapse", data-bs-target=`#collapse-imei-${item.variantId}`, aria-expanded="false")
+                                | Xem danh sách
+                            .collapse(id=`collapse-imei-${item.variantId}`)
+                              .p-2.bg-light.rounded.mt-2.border(style="max-height: 180px; overflow-y: auto;")
+                                .d-flex.flex-wrap.gap-1
+                                  each idObj in item.identifiers
+                                    - const isAvail = idObj.status === "available"
+                                    - const isSold = idObj.status === "sold"
+                                    span.badge.font-monospace.border(
+                                      class=isAvail ? "bg-white text-success border-success" : (isSold ? "bg-light text-muted border-secondary text-decoration-line-through" : "bg-warning-subtle text-warning border-warning")
+                                      title=`Trạng thái: ${idObj.status}${idObj.receiptCode ? ' | Phiếu: ' + idObj.receiptCode : ''}`
+                                    )
+                                      | #{idObj.identifier}
+                                      if isSold
+                                        small.ms-1 (đã bán)
+                          else
+                            span.text-muted Chưa có mã IMEI/serial
+                      td
+                        if item.suppliers && item.suppliers.length
+                          each sup in item.suppliers
+                            span.badge.bg-light.text-dark.me-1 #{sup.name}
+                        else
+                          span.text-muted Không có
+                      td
+                        if item.latestReceipt
+                          a.fw-semibold(href=`/${pathAdmin}/inventory/receipt/${item.latestReceipt.id}`) #{item.latestReceipt.code}
+                          br
+                          small.text-muted #{new Date(item.latestReceipt.date).toLocaleDateString("vi-VN")}
+                        else
+                          span.text-muted --
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="6") Không tìm thấy dữ liệu tồn kho phù hợp.

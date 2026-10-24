@@ -1,0 +1,56 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Các thuộc tính dùng để tạo variant sản phẩm.
+            .col-auto
+              a.btn.btn-primary(href=`/${pathAdmin}/product/attribute/create`)
+                i.las.la-plus.me-1
+                | Tạo thuộc tính
+        .card-body.pt-0
+          .table-responsive
+            table.table.table-striped.align-middle.mb-0
+              thead.table-light
+                tr
+                  th Tên thuộc tính
+                  th Mã
+                  th Kiểu
+                  th Giá trị
+                  th Trạng thái
+                  th.text-end Hành động
+              tbody
+                if attributeList.length
+                  each attribute in attributeList
+                    tr
+                      td.fw-semibold #{attribute.name}
+                      td
+                        code #{attribute.code}
+                      td
+                        span.badge.bg-light.text-dark #{attribute.type}
+                      td
+                        each option in attribute.options
+                          span.badge.bg-info.me-1.mb-1 #{option.label}
+                      td
+                        if attribute.status === "active"
+                          span.badge.bg-success Hoạt động
+                        else
+                          span.badge.bg-secondary Tạm dừng
+                      td.text-end
+                        a.btn.btn-sm.btn-outline-secondary.me-2(href=`/${pathAdmin}/product/attribute/edit/${attribute._id}`)
+                          i.las.la-pen
+                          |  Sửa
+                        button.btn.btn-sm.btn-outline-danger.attribute-delete(type="button" data-id=attribute._id)
+                          i.las.la-trash-alt
+                          |  Xóa
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="6") Chưa có thuộc tính nào.
+
+block script
+  script(src="/admin/assets/js/attribute.js")

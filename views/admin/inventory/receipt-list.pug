@@ -1,0 +1,83 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Lịch sử các lần nhập hàng vào kho từ nhà cung cấp.
+            .col-auto
+              if canWrite
+                a.btn.btn-primary(href=`/${pathAdmin}/inventory/receipt/create`)
+                  i.las.la-plus.me-1
+                  | Tạo phiếu nhập
+        .card-body.pt-0
+          form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/inventory/receipt`)
+            .col-md-4
+              label.form-label.small Từ ngày
+              input.form-control(type="date", name="from", value=filters.from)
+            .col-md-4
+              label.form-label.small Đến ngày
+              input.form-control(type="date", name="to", value=filters.to)
+            .col-md-4.d-flex.align-items-end.gap-2
+              button.btn.btn-outline-primary.flex-grow-1(type="submit")
+                i.las.la-search.me-1
+                | Tìm kiếm
+              a.btn.btn-outline-secondary.text-nowrap(href=`/${pathAdmin}/inventory/receipt/trash`, title="Xem danh sách phiếu nhập đã xóa mềm")
+                i.las.la-archive.me-1
+                | Lưu trữ
+                if trashCount > 0
+                  span.badge.bg-danger.ms-1 #{trashCount}
+
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
+                tr
+                  th Mã phiếu
+                  th Nhà cung cấp
+                  th Hóa đơn NCC
+                  th.text-end Tổng chi phí
+                  th Nhân viên liên hệ
+                  th.text-center Số dòng
+                  th Người tạo
+                  th Thời gian
+                  th.text-end Hành động
+              tbody
+                if receiptList.length
+                  each receipt in receiptList
+                    tr
+                      td
+                        a.fw-semibold(href=`/${pathAdmin}/inventory/receipt/${receipt._id}`) #{receipt.receiptCode}
+                      td
+                        if receipt.supplierId
+                          strong #{receipt.supplierId.name}
+                        else
+                          span.text-muted Không xác định
+                      td
+                        if receipt.hasInvoice
+                          span.badge.bg-success-subtle.text-success(title="Có hóa đơn NCC")
+                            i.las.la-file-invoice.me-1
+                            | #{receipt.invoiceNumber || "Có HĐ"}
+                        else
+                          span.badge.bg-light.text-muted Không có HĐ
+                      td.text-end.fw-bold.text-primary
+                        | #{receipt.totalCost ? receipt.totalCost.toLocaleString("vi-VN") + " đ" : "0 đ"}
+                      td #{receipt.supplierContactName}
+                      td.text-center
+                        span.badge.bg-light.text-dark #{receipt.lineCount}
+                      td #{receipt.createdBy ? receipt.createdBy.fullName : "Không xác định"}
+                      td.text-muted.small #{new Date(receipt.createdAt).toLocaleString("vi-VN")}
+                      td.text-end
+                        a.btn.btn-sm.btn-outline-secondary.me-1(href=`/${pathAdmin}/inventory/receipt/${receipt._id}`) Chi tiết
+                        if canWrite
+                          a.btn.btn-sm.btn-outline-primary.me-1(href=`/${pathAdmin}/inventory/receipt/edit/${receipt._id}`) Sửa
+                          button.btn.btn-sm.btn-outline-danger.receipt-soft-delete(type="button", data-id=receipt._id, title="Xóa mềm vào thùng rác") Xóa
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="9") Chưa có phiếu nhập kho.
+
+block script
+  script(src="/admin/assets/js/receipt.js")

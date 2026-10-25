@@ -1,0 +1,237 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      // Tiêu đề & thanh điều hướng nhanh
+      .d-flex.justify-content-between.align-items-center.mb-3
+        div
+          h4.fw-bold.text-primary.mb-0
+            i.las.la-cash-register.me-2
+            | Bán Hàng Tại Quầy (POS)
+          p.text-muted.small.mb-0 Quét mã vạch IMEI hoặc tìm kiếm sản phẩm để lên đơn và xuất kho.
+        div.d-flex.gap-2
+          a.btn.btn-outline-secondary.btn-sm(href=`/${pathAdmin}/order`)
+            i.las.la-list.me-1
+            | Danh sách đơn hàng
+          a.btn.btn-outline-primary.btn-sm(href=`/${pathAdmin}/inventory`)
+            i.las.la-boxes.me-1
+            | Tồn kho
+
+  .row.g-3
+    // CỘT TRÁI: TÌM KIẾM SẢN PHẨM & GIỎ HÀNG (Chiếm 8/12 cột)
+    .col-xl-8.col-lg-7
+      // Ô tìm kiếm / quét mã vạch (z-index: 30 cao hơn giỏ hàng z-index: 1 nhưng thấp hơn Modal Bootstrap 1050/1055)
+      .card.border.shadow-sm.mb-3(style="position: relative; z-index: 30;")
+        .card-body.p-3
+          .position-relative
+            .input-group.input-group-lg
+              span.input-group-text.bg-primary-subtle.text-primary
+                i.las.la-barcode.fs-2
+              input#posSearchInput.form-control.form-control-lg(
+                type="text",
+                placeholder="Quét mã IMEI/Serial trên hộp, hoặc gõ tên sản phẩm, SKU...",
+                autocomplete="off",
+                autofocus
+              )
+              button#btnClearSearch.btn.btn-outline-secondary(type="button", style="display: none;")
+                i.las.la-times
+            
+            // Menu thả xuống hiển thị kết quả tìm kiếm sản phẩm (Nổi bật trên giỏ hàng, nền trắng đục hoàn toàn)
+            #posSearchResults.dropdown-menu.w-100.p-2(
+              style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.22); max-height: 420px; overflow-y: auto; display: none;"
+            )
+              // Kết quả đổ động qua JS
+
+      // Bảng Giỏ hàng
+      .card.border.shadow-sm(style="position: relative; z-index: 1;")
+        .card-header.bg-light.py-2.d-flex.justify-content-between.align-items-center
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-shopping-cart.me-1.text-primary
+            | Giỏ hàng hiện tại (
+            span#cartTotalItemsCount 0
+            |  sản phẩm)
+          button#btnResetCart.btn.btn-outline-danger.btn-sm.py-0(type="button", title="Xóa toàn bộ giỏ hàng")
+            i.las.la-trash.me-1
+            | Làm mới giỏ
+        .card-body.p-0
+          .table-responsive(style="min-height: 280px; max-height: 480px;")
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
+                tr
+                  th.text-center(style="width: 40px") #
+                  th(style="min-width: 220px") Sản phẩm & Phiên bản
+                  th.text-end(style="min-width: 120px") Đơn giá
+                  th.text-center(style="min-width: 110px") Số lượng
+                  th(style="min-width: 200px") IMEI / Serial xuất bán
+                  th.text-end(style="min-width: 120px") Thành tiền
+                  th.text-center(style="width: 50px")
+              tbody#cartTableBody
+                // Đổ dữ liệu động qua JS
+                tr#cartEmptyRow
+                  td.text-center.text-muted.py-5(colspan="7")
+                    i.las.la-shopping-cart.fs-1.d-block.mb-2.text-muted.opacity-50
+                    span.fw-semibold Giỏ hàng đang trống
+                    p.small.text-muted.mb-0 Quét trực tiếp mã IMEI trên máy hoặc tìm sản phẩm ở ô phía trên để thêm vào đơn.
+
+    // CỘT PHẢI: KHÁCH HÀNG & THANH TOÁN (Chiếm 4/12 cột)
+    .col-xl-4.col-lg-5
+      // Thẻ Thông tin khách hàng
+      .card.border.shadow-sm.mb-3
+        .card-header.bg-light.py-2
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-user.me-1.text-primary
+            | Thông tin khách mua hàng
+        .card-body.p-3
+          .mb-2
+            label.form-label.small.mb-1 Số điện thoại (dùng tra cứu bảo hành)
+            .input-group.input-group-sm
+              span.input-group-text
+                i.las.la-phone
+              input#customerPhone.form-control(type="text", placeholder="Ví dụ: 0912345678...")
+          .mb-2
+            label.form-label.small.mb-1 Tên khách hàng
+            .input-group.input-group-sm
+              span.input-group-text
+                i.las.la-user-circle
+              input#customerName.form-control(type="text", placeholder="Khách lẻ vãng lai", value="Khách lẻ vãng lai")
+          .mb-0
+            label.form-label.small.mb-1 Địa chỉ (tùy chọn)
+            input#customerAddress.form-control.form-control-sm(type="text", placeholder="Địa chỉ giao/nhận...")
+
+      // Thẻ Thanh toán & Xuất hóa đơn
+      .card.border.shadow-sm
+        .card-header.bg-light.py-2
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-receipt.me-1.text-primary
+            | Thanh toán đơn hàng
+        .card-body.p-3
+          // Tổng tiền hàng
+          .d-flex.justify-content-between.align-items-center.mb-2
+            span.text-muted Tổng tiền hàng:
+            strong#subTotalDisplay.fs-6 0 đ
+
+          // Chiết khấu / Giảm giá
+          .d-flex.justify-content-between.align-items-center.mb-2
+            div
+              span.text-muted Giảm giá / Chiết khấu:
+              button#btnRoundDiscount.btn.btn-link.btn-sm.p-0.ms-2.text-decoration-none(
+                type="button",
+                title="Tự động bớt số tiền lẻ để hóa đơn tròn nghìn đồng"
+              )
+                i.las.la-magic.me-1
+                | [Làm tròn bill]
+            .input-group.input-group-sm(style="width: 150px;")
+              input#orderDiscountInput.form-control.text-end(type="number", min="0", value="0", placeholder="0")
+              span.input-group-text đ
+
+          hr.my-2
+
+          // Tổng số tiền khách cần thanh toán
+          .d-flex.justify-content-between.align-items-center.mb-3
+            span.fw-bold.text-dark.fs-6 KHÁCH PHẢI TRẢ:
+            h4#totalAmountDisplay.fw-bold.text-primary.mb-0 0 đ
+
+          // Phương thức thanh toán
+          .mb-3
+            label.form-label.small.fw-bold.mb-1 Phương thức thanh toán
+            .row.g-1
+              .col-6
+                input#payCash.btn-check(type="radio", name="paymentMethod", value="cash", checked)
+                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1(for="payCash")
+                  i.las.la-money-bill-wave
+                  | Tiền mặt
+              .col-6
+                input#payBank.btn-check(type="radio", name="paymentMethod", value="bank_transfer")
+                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1(for="payBank")
+                  i.las.la-qrcode
+                  | Chuyển khoản
+              .col-6
+                input#payCard.btn-check(type="radio", name="paymentMethod", value="credit_card")
+                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1(for="payCard")
+                  i.las.la-credit-card
+                  | Thẻ Pos
+              .col-6
+                input#payInstallment.btn-check(type="radio", name="paymentMethod", value="installment")
+                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1(for="payInstallment")
+                  i.las.la-handshake
+                  | Trả góp
+
+          // Tiền khách đưa
+          .mb-2
+            .d-flex.justify-content-between.align-items-center.mb-1
+              label.form-label.small.mb-0 Tiền khách đưa (VNĐ)
+              button#btnExactAmount.btn.btn-link.btn-sm.p-0.text-decoration-none(type="button") [Đúng số tiền]
+            input#paidAmountInput.form-control.text-end.fw-bold(type="number", min="0", placeholder="Nhập tiền khách đưa...")
+            // Các nút tiền nhanh
+            .d-flex.gap-1.mt-1.flex-wrap
+              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="500000") 500k
+              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="1000000") 1tr
+              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="2000000") 2tr
+              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="5000000") 5tr
+              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="10000000") 10tr
+
+          // Tiền thừa trả khách & Tùy chọn xử lý tiền lẻ
+          .p-2.bg-light.rounded.mb-3
+            .d-flex.justify-content-between.align-items-center
+              span.small.fw-bold.text-muted Tiền thừa trả lại:
+              strong#changeAmountDisplay.fs-6.text-success 0 đ
+            #keepSmallChangeContainer.mt-2.pt-2.border-top(style="display: none;")
+              .form-check
+                input#keepSmallChangeCheck.form-check-input(type="checkbox")
+                label.form-check-label.small.text-secondary(for="keepSmallChangeCheck")
+                  | Khách tặng lại / Không nhận tiền lẻ thừa (
+                  strong#smallChangeAmountText 0 đ
+                  | )
+
+          // Ghi chú đơn hàng
+          .mb-3
+            label.form-label.small.mb-1 Ghi chú đơn hàng (tùy chọn)
+            textarea#orderNote.form-control(rows="2", placeholder="Ghi chú thêm về đơn hàng hoặc yêu cầu khách...")
+
+          // Nút thanh toán lớn
+          .d-grid
+            button#btnCheckout.btn.btn-success.btn-lg.fw-bold.py-3.shadow-sm(type="button")
+              i.las.la-check-circle.fs-4.me-1
+              | THANH TOÁN &amp; XUẤT HÓA ĐƠN
+
+          p#posMessage.form-message.mt-2.mb-0.text-center
+
+  // Modal Chọn IMEI / Serial cho dòng sản phẩm trong giỏ
+  #selectImeiModal.modal.fade(tabindex="-1", aria-hidden="true")
+    .modal-dialog.modal-dialog-centered.modal-lg
+      .modal-content
+        .modal-header.bg-light
+          div
+            h5.modal-title.fw-bold.text-primary.d-inline-block Chọn mã IMEI / Serial xuất bán
+            span#modalImeiProductName.ms-2.text-dark.fw-semibold
+          button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+        .modal-body
+          .alert.alert-info.d-flex.justify-content-between.align-items-center.py-2.px-3.mb-3
+            span
+              i.las.la-info-circle.me-1
+              | Yêu cầu chọn đúng 
+              strong#modalRequiredCount 1
+              |  mã thiết bị trong kho:
+            span
+              | Đã chọn: 
+              strong#modalSelectedCount 0
+              |  / 
+              span#modalMaxCount 1
+          
+          .input-group.input-group-sm.mb-3
+            span.input-group-text
+              i.las.la-search
+            input#modalImeiSearch.form-control(type="text", placeholder="Lọc tìm nhanh trong danh sách IMEI có sẵn...")
+
+          #modalImeiList.d-flex.flex-wrap.gap-2.p-3.bg-light.rounded.border(style="max-height: 320px; overflow-y: auto;")
+            // Các chip IMEI được render động tại đây
+
+        .modal-footer.bg-light
+          button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Hủy
+          button#btnConfirmImeis.btn.btn-primary(type="button")
+            i.las.la-check.me-1
+            | Xác nhận chọn
+
+block script
+  script(src="/admin/assets/js/order-pos.js")

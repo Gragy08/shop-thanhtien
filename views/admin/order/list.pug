@@ -1,0 +1,228 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      // Tiêu đề & thanh công cụ
+      .d-flex.justify-content-between.align-items-center.mb-3
+        div
+          h4.fw-bold.text-primary.mb-0
+            i.las.la-file-invoice-dollar.me-2
+            | Quản Lý Đơn Hàng &amp; Hóa Đơn
+          p.text-muted.small.mb-0 Theo dõi lịch sử bán hàng, tình trạng hóa đơn và quản lý hoàn hủy thiết bị.
+        div.d-flex.gap-2
+          a.btn.btn-outline-primary(href=`/${pathAdmin}/inventory/tracker`, title="Tra cứu vòng đời thiết bị")
+            i.las.la-barcode.me-1
+            | Tra cứu IMEI
+          if canWrite
+            a.btn.btn-success(href=`/${pathAdmin}/order/pos`)
+              i.las.la-cash-register.me-1
+              | Bán hàng tại quầy (POS)
+
+      // Thẻ Thống Kê Nhanh (KPIs)
+      .row.g-3.mb-3
+        .col-xl-3.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-success-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                  i.las.la-money-bill-wave.fs-2.text-success
+                div
+                  h6.text-muted.small.mb-1 TỔNG DOANH THU
+                  h4.mb-0.fw-bold.text-success #{stats ? Number(stats.totalRevenue).toLocaleString("vi-VN") : 0} đ
+        .col-xl-3.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-primary-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                  i.las.la-file-invoice.fs-2.text-primary
+                div
+                  h6.text-muted.small.mb-1 TỔNG SỐ ĐƠN
+                  h4.mb-0.fw-bold #{stats ? stats.totalOrders : 0}
+        .col-xl-3.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-info-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                  i.las.la-check-circle.fs-2.text-info
+                div
+                  h6.text-muted.small.mb-1 ĐƠN HOÀN TẤT
+                  h4.mb-0.fw-bold.text-info #{stats ? stats.completedCount : 0}
+        .col-xl-3.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-danger-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                  i.las.la-times-circle.fs-2.text-danger
+                div
+                  h6.text-muted.small.mb-1 ĐƠN ĐÃ HỦY
+                  h4.mb-0.fw-bold.text-danger #{stats ? stats.cancelledCount : 0}
+
+      // Bộ lọc và Bảng danh sách đơn hàng
+      .card.border.shadow-sm
+        .card-header.bg-light.py-3
+          form.row.g-2(method="get", action=`/${pathAdmin}/order`)
+            .col-xl-3.col-md-6
+              .input-group
+                span.input-group-text
+                  i.las.la-search
+                input.form-control(
+                  type="text",
+                  name="keyword",
+                  value=filters.keyword,
+                  placeholder="Mã đơn, tên/SĐT khách, IMEI đã bán..."
+                )
+            .col-xl-2.col-md-3
+              select.form-select(name="orderStatus")
+                option(value="") -- Tất cả trạng thái --
+                option(value="completed", selected=filters.orderStatus === "completed") Hoàn tất (Đã bán)
+                option(value="cancelled", selected=filters.orderStatus === "cancelled") Đã hủy
+            .col-xl-2.col-md-3
+              select.form-select(name="paymentMethod")
+                option(value="") -- Phương thức trả --
+                option(value="cash", selected=filters.paymentMethod === "cash") Tiền mặt
+                option(value="bank_transfer", selected=filters.paymentMethod === "bank_transfer") Chuyển khoản
+                option(value="credit_card", selected=filters.paymentMethod === "credit_card") Thẻ POS
+                option(value="installment", selected=filters.paymentMethod === "installment") Trả góp
+            .col-xl-2.col-md-4
+              input.form-control(
+                type="date",
+                name="from",
+                value=filters.from,
+                title="Từ ngày"
+              )
+            .col-xl-2.col-md-4
+              input.form-control(
+                type="date",
+                name="to",
+                value=filters.to,
+                title="Đến ngày"
+              )
+            .col-xl-1.col-md-4.d-grid
+              button.btn.btn-primary(type="submit")
+                i.las.la-filter.me-1
+                | Lọc
+
+        .card-body.p-0
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
+                tr
+                  th.text-center(style="width: 50px") #
+                  th(style="min-width: 150px") Mã đơn hàng
+                  th(style="min-width: 140px") Thời gian tạo
+                  th(style="min-width: 170px") Khách hàng
+                  th(style="min-width: 250px") Sản phẩm &amp; IMEI xuất bán
+                  th(style="min-width: 120px") Thanh toán
+                  th.text-end(style="min-width: 130px") Tổng tiền
+                  th.text-center(style="min-width: 110px") Trạng thái
+                  th.text-center(style="min-width: 100px") Hành động
+              tbody
+                if orders && orders.length
+                  each order, index in orders
+                    tr
+                      td.text-center.text-muted #{index + 1}
+                      td
+                        a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/order/${order._id}`)
+                          | #{order.orderCode}
+                        if order.createdBy
+                          div.small.text-muted
+                            i.las.la-user.me-1
+                            | #{order.createdBy.fullName || order.createdBy.email}
+                      td
+                        span.d-block #{order.createdAt ? new Date(order.createdAt).toLocaleDateString("vi-VN") : "--"}
+                        small.text-muted #{order.createdAt ? new Date(order.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : ""}
+                      td
+                        strong.text-dark #{order.customerInfo ? order.customerInfo.fullName : "Khách lẻ"}
+                        if order.customerInfo && order.customerInfo.phone
+                          div.small.text-muted
+                            i.las.la-phone.me-1
+                            | #{order.customerInfo.phone}
+                      td
+                        if order.items && order.items.length
+                          each item in order.items
+                            div.mb-1
+                              span.fw-semibold #{item.productName}
+                              if item.variantName
+                                small.text-muted.ms-1 (#{item.variantName})
+                              span.badge.bg-light.text-dark.border.ms-1 x#{item.quantity}
+                              if item.identifiers && item.identifiers.length
+                                div.d-flex.flex-wrap.gap-1.mt-1
+                                  each id in item.identifiers
+                                    a.badge.bg-primary-subtle.text-primary.border.border-primary.font-monospace.text-decoration-none(
+                                      href=`/${pathAdmin}/inventory/tracker?keyword=${id}`,
+                                      title="Bấm để tra cứu vòng đời thiết bị này"
+                                    )
+                                      | #{id}
+                      td
+                        case order.paymentMethod
+                          when "cash"
+                            span.badge.bg-success-subtle.text-success Tiền mặt
+                          when "bank_transfer"
+                            span.badge.bg-info-subtle.text-info Chuyển khoản
+                          when "credit_card"
+                            span.badge.bg-primary-subtle.text-primary Thẻ POS
+                          when "installment"
+                            span.badge.bg-warning-subtle.text-warning Trả góp
+                          default
+                            span.badge.bg-secondary #{order.paymentMethod}
+                      td.text-end
+                        strong.text-primary.fs-6 #{Number(order.totalAmount).toLocaleString("vi-VN")} đ
+                        if order.discount > 0
+                          div.small.text-muted -#{Number(order.discount).toLocaleString("vi-VN")} đ
+                      td.text-center
+                        if order.orderStatus === "completed"
+                          span.badge.bg-success-subtle.text-success.fs-7 Hoàn tất
+                        else if order.orderStatus === "cancelled"
+                          span.badge.bg-danger-subtle.text-danger.fs-7 Đã hủy
+                        else
+                          span.badge.bg-secondary.fs-7 #{order.orderStatus}
+                      td.text-center
+                        .btn-group.btn-group-sm
+                          a.btn.btn-outline-primary(href=`/${pathAdmin}/order/${order._id}`, title="Xem & In hóa đơn")
+                            i.las.la-eye
+                          if canWrite && order.orderStatus !== "cancelled"
+                            button.btn.btn-outline-danger.btn-cancel-order(
+                              type="button",
+                              title="Hủy đơn và hoàn trả thiết bị về kho",
+                              data-id=order._id,
+                              data-code=order.orderCode
+                            )
+                              i.las.la-ban
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="9")
+                      i.las.la-receipt.fs-1.d-block.mb-2.text-muted.opacity-50
+                      span.fw-semibold Không tìm thấy đơn hàng nào!
+                      p.small.text-muted.mb-0 Hãy thử thay đổi bộ lọc tìm kiếm hoặc tạo đơn hàng mới tại quầy POS.
+
+  // Modal Xác nhận Hủy đơn hàng
+  #modalCancelOrder.modal.fade(tabindex="-1", aria-hidden="true")
+    .modal-dialog.modal-dialog-centered
+      .modal-content
+        .modal-header.bg-danger-subtle
+          h5.modal-title.fw-bold.text-danger
+            i.las.la-exclamation-triangle.me-1
+            | Xác nhận hủy đơn hàng
+          button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+        .modal-body
+          p Bạn có chắc chắn muốn hủy đơn hàng 
+            strong#cancelOrderCode.text-primary --
+            | ?
+          .alert.alert-warning.small.mb-3
+            i.las.la-info-circle.me-1
+            | Khi hủy đơn, toàn bộ các thiết bị (IMEI/Serial) đã xuất bán trong đơn hàng này sẽ được 
+            strong tự động hoàn trả về kho với trạng thái "Có sẵn" (Available)
+            | .
+          .mb-3
+            label.form-label.small.fw-bold Lý do hủy đơn
+            textarea#cancelOrderReason.form-control(rows="2", placeholder="Ví dụ: Khách đổi ý không mua nữa, thanh toán lỗi...") Khách hủy đơn hàng
+        .modal-footer.bg-light
+          button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Đóng
+          button#btnConfirmCancelOrder.btn.btn-danger(type="button")
+            i.las.la-ban.me-1
+            | Xác nhận hủy &amp; Hoàn kho
+
+block script
+  script(src="/admin/assets/js/order-list.js")
+

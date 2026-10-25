@@ -16,6 +16,8 @@ export const rolePermissions: Record<AdminRole, string[]> = {
 		"attribute:write",
 		"inventory:read",
 		"inventory:write",
+		"order:read",
+		"order:write",
 		"media:read",
 		"media:write",
 		"price:purchase:read",

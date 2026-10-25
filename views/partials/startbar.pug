@@ -46,6 +46,17 @@
                     a.nav-link(href=`/${pathAdmin}/inventory/receipt/create`) Phiếu nhập kho
                   li.nav-item
                     a.nav-link(href=`/${pathAdmin}/inventory/supplier`) Nhà cung cấp
+          if permissions.includes("order:read") || permissions.includes("admin:all")
+            li.nav-item
+              a.nav-link(aria-controls="sidebarOrder" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarOrder")
+                i.iconoir-shopping-bag.menu-icon
+                span Bán hàng & Đơn
+              #sidebarOrder.collapse
+                ul.nav.flex-column
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/order/pos`) Bán hàng tại quầy (POS)
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/order`) Danh sách đơn hàng
           if permissions.includes("admin:all")
             li.nav-item
               a.nav-link(aria-controls="sidebarAccountAdmin" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarAccountAdmin")

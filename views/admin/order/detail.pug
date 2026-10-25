@@ -1,0 +1,509 @@
+extends ../../layouts/admin.pug
+
+block main
+  // CSS chuyên dụng cho chế độ Xem & In Hóa Đơn (Hỗ trợ cả A4/A5 và Xprinter K80)
+  style.
+    .invoice-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .k80-receipt {
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      background: #fff;
+      font-family: 'Courier New', Courier, monospace, 'Segoe UI', Tahoma, sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+      border: 1px dashed #ced4da;
+      padding: 16px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .border-dashed {
+      border-style: dashed !important;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+
+      /* 1. CHẾ ĐỘ IN BILL XPRINTER K80 */
+      body.print-k80 {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body.print-k80 @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+      body.print-k80 #printableInvoiceK80,
+      body.print-k80 #printableInvoiceK80 * {
+        visibility: visible !important;
+      }
+      body.print-k80 #printableInvoiceK80 {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 76mm;
+        margin: 0 auto;
+        padding: 2mm 3mm;
+        color: #000 !important;
+        background: #fff !important;
+        font-family: 'Courier New', Courier, monospace, Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.35;
+        border: none !important;
+        box-shadow: none !important;
+      }
+
+      /* 2. CHẾ ĐỘ IN HÓA ĐƠN A4/A5 GỌN 1 TRANG */
+      body.print-a4 {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body.print-a4 @page {
+        size: A4 portrait;
+        margin: 8mm 10mm;
+      }
+      body.print-a4 #printableInvoiceA4,
+      body.print-a4 #printableInvoiceA4 * {
+        visibility: visible !important;
+      }
+      body.print-a4 #printableInvoiceA4 {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: #fff !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      body.print-a4 .signature-block {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+
+  .row
+    .col-12
+      // Thanh công cụ điều hướng & Nút In (Ẩn khi in)
+      .d-flex.justify-content-between.align-items-center.flex-wrap.gap-2.mb-3.no-print
+        div.d-flex.align-items-center.gap-2
+          a.btn.btn-outline-secondary.btn-sm(href=`/${pathAdmin}/order`)
+            i.las.la-arrow-left.me-1
+            | Danh sách đơn
+          h5.fw-bold.text-primary.mb-0
+            | Đơn hàng: 
+            span.text-dark #{order.orderCode}
+          if order.orderStatus === "completed"
+            span.badge.bg-success-subtle.text-success Hoàn tất
+          else if order.orderStatus === "cancelled"
+            span.badge.bg-danger-subtle.text-danger Đã hủy
+        
+        div.d-flex.gap-2
+          // Nút in hóa đơn nhiệt Xprinter K80
+          button#btnPrintK80.btn.btn-primary.btn-sm(type="button", title="In hóa đơn khổ nhỏ 80mm cho máy in Xprinter")
+            i.las.la-receipt.me-1
+            | In bill Xprinter (K80)
+          
+          // Nút in hóa đơn A4/A5 thu gọn 1 trang
+          button#btnPrintA4.btn.btn-outline-primary.btn-sm(type="button", title="In hóa đơn khổ chuẩn A4/A5 (Gọn trong 1 trang)")
+            i.las.la-file-invoice.me-1
+            | In hóa đơn A4/A5
+          
+          a.btn.btn-outline-success.btn-sm(href=`/${pathAdmin}/order/pos`)
+            i.las.la-cash-register.me-1
+            | Bán hàng POS
+          
+          if order.orderStatus !== "cancelled"
+            button#btnCancelThisOrder.btn.btn-outline-danger.btn-sm(
+              type="button",
+              data-id=order._id,
+              data-code=order.orderCode
+            )
+              i.las.la-ban.me-1
+              | Hủy đơn
+
+      if order.orderStatus === "cancelled"
+        .alert.alert-danger.mb-3.no-print
+          .d-flex.align-items-center
+            i.las.la-exclamation-circle.fs-3.me-2
+            div
+              strong Đơn hàng này đã bị hủy vào #{order.cancelledAt ? new Date(order.cancelledAt).toLocaleString("vi-VN") : "--"}.
+              if order.cancelledBy
+                span.ms-2 (Bởi: #{order.cancelledBy.fullName || order.cancelledBy.email})
+              div.small Lý do hủy: #{order.cancelReason || "Không nêu rõ"}
+              div.small.mt-1 Các thiết bị trong đơn đã được tự động hoàn lại kho với trạng thái "Có sẵn".
+
+      // Tabs chọn xem trước: Mẫu A4/A5 hoặc Mẫu Bill Xprinter K80 (Chỉ hiển thị trên màn hình, không in)
+      ul.nav.nav-tabs.mb-3.no-print#invoicePreviewTabs(role="tablist")
+        li.nav-item(role="presentation")
+          button.nav-link.active#tab-a4-btn(
+            data-bs-toggle="tab",
+            data-bs-target="#tab-a4-pane",
+            type="button",
+            role="tab"
+          )
+            i.las.la-file-alt.me-1
+            | Xem trước Hóa đơn A4/A5 (Gọn 1 trang)
+        li.nav-item(role="presentation")
+          button.nav-link#tab-k80-btn(
+            data-bs-toggle="tab",
+            data-bs-target="#tab-k80-pane",
+            type="button",
+            role="tab"
+          )
+            i.las.la-receipt.me-1
+            | Xem trước Bill nhiệt Xprinter (K80)
+
+      .tab-content
+        // ==========================================
+        // TAB 1 & KHUNG IN A4/A5 (ĐÃ TINH CHỈNH GỌN TRONG 1 TRANG)
+        // ==========================================
+        .tab-pane.fade.show.active#tab-a4-pane(role="tabpanel")
+          .card.border.shadow-sm#printableInvoiceA4
+            .card-body.p-4
+              // Tiêu đề & Thông tin cửa hàng (Thu gọn padding & margin)
+              .row.align-items-center.border-bottom.pb-2.mb-3
+                .col-sm-7
+                  h4.fw-bold.text-primary.mb-1 SHOP THANH TIỀN
+                  p.text-muted.small.mb-0
+                    i.las.la-map-marker.me-1
+                    | Hệ thống bán lẻ điện thoại, máy tính bảng &amp; phụ kiện chính hãng
+                  p.text-muted.small.mb-0
+                    i.las.la-phone.me-1
+                    | Hotline: 0988.xxx.xxx | Website: shopthanhtien.vn
+                .col-sm-5.text-sm-end.mt-2.mt-sm-0
+                  .invoice-title.text-dark HÓA ĐƠN BÁN HÀNG
+                  div.text-muted.small Mã hóa đơn: 
+                    strong.text-primary #{order.orderCode}
+                  div.text-muted.small Ngày lập: 
+                    strong #{order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : "--"}
+                  if order.createdBy
+                    div.text-muted.small Thu ngân: 
+                      strong #{order.createdBy.fullName || order.createdBy.email}
+
+              // Thông tin khách hàng & Giao nhận
+              .row.mb-3
+                .col-sm-6
+                  h6.text-muted.text-uppercase.small.fw-bold.mb-1 Thông tin khách hàng
+                  strong.fs-6.text-dark #{order.customerInfo ? order.customerInfo.fullName : "Khách lẻ vãng lai"}
+                  if order.customerInfo && order.customerInfo.phone
+                    div.text-muted.small
+                      i.las.la-phone.me-1
+                      | Số điện thoại: #{order.customerInfo.phone}
+                  if order.customerInfo && order.customerInfo.address
+                    div.text-muted.small
+                      i.las.la-map-pin.me-1
+                      | Địa chỉ: #{order.customerInfo.address}
+                .col-sm-6.text-sm-end.mt-2.mt-sm-0
+                  h6.text-muted.text-uppercase.small.fw-bold.mb-1 Trạng thái thanh toán
+                  div.small.mb-0
+                    span.text-muted Hình thức: 
+                    case order.paymentMethod
+                      when "cash"
+                        strong Tiền mặt
+                      when "bank_transfer"
+                        strong Chuyển khoản ngân hàng
+                      when "credit_card"
+                        strong Quẹt thẻ POS
+                      when "installment"
+                        strong Trả góp
+                      default
+                        strong #{order.paymentMethod}
+                  div.text-muted.small
+                    | Trạng thái đơn: 
+                    if order.orderStatus === "completed"
+                      span.text-success.fw-bold Đã thanh toán &amp; Xuất kho
+                    else if order.orderStatus === "cancelled"
+                      span.text-danger.fw-bold Đã hủy giao dịch
+                    else
+                      strong #{order.orderStatus}
+
+              // Bảng chi tiết sản phẩm & IMEI xuất bán (Dùng table-sm)
+              .table-responsive.mb-3
+                table.table.table-sm.table-bordered.align-middle.mb-0
+                  thead.table-light
+                    tr
+                      th.text-center(style="width: 40px") #
+                      th Sản phẩm &amp; Phiên bản
+                      th.text-center(style="width: 80px") Số lượng
+                      th.text-end(style="width: 120px") Đơn giá
+                      th.text-end(style="width: 110px") Chiết khấu
+                      th.text-end(style="width: 130px") Thành tiền
+                  tbody
+                    if order.items && order.items.length
+                      each item, idx in order.items
+                        tr
+                          td.text-center.text-muted #{idx + 1}
+                          td
+                            strong.text-dark #{item.productName}
+                            if item.variantName
+                              span.text-muted.ms-1 (#{item.variantName})
+                            if item.variantSku
+                              code.ms-1.small #{item.variantSku}
+                            if item.identifiers && item.identifiers.length
+                              .mt-1
+                                small.text-muted.d-block Mã IMEI / Serial thiết bị:
+                                .d-flex.flex-wrap.gap-1.mt-1
+                                  each id in item.identifiers
+                                    span.badge.bg-primary-subtle.text-primary.border.border-primary.font-monospace #{id}
+                          td.text-center.fw-bold #{item.quantity}
+                          td.text-end #{Number(item.unitPrice).toLocaleString("vi-VN")} đ
+                          td.text-end #{item.discount ? Number(item.discount).toLocaleString("vi-VN") : 0} đ
+                          td.text-end.fw-bold.text-dark #{Number(item.totalPrice).toLocaleString("vi-VN")} đ
+                    else
+                      tr
+                        td.text-center.py-2.text-muted(colspan="6") Không có thông tin sản phẩm.
+
+              // Tổng kết thanh toán & Ghi chú
+              .row.mb-2
+                .col-sm-7
+                  if order.note
+                    .p-2.bg-light.rounded.border.mb-2
+                      strong.small.text-muted.d-block Ghi chú đơn hàng:
+                      p.small.mb-0.text-dark #{order.note}
+                  
+                  .p-2.border.rounded.bg-light-subtle.small.text-muted
+                    strong.d-block.mb-1.text-dark
+                      i.las.la-shield-alt.me-1.text-primary
+                      | CHÍNH SÁCH BẢO HÀNH &amp; HẬU MÃI:
+                    ul.mb-0.ps-3
+                      li Thiết bị được bảo hành chính hãng căn cứ theo số IMEI / Serial trên hóa đơn.
+                      li Quý khách có thể tự tra cứu bảo hành tại website của shop.
+                      li Đổi trả trong 7 ngày đầu nếu có lỗi phần cứng từ nhà sản xuất.
+
+                .col-sm-5
+                  .table-responsive
+                    table.table.table-sm.table-borderless.mb-0
+                      tr
+                        td.text-muted.py-1 Tổng tiền hàng:
+                        td.text-end.fw-semibold.py-1 #{Number(order.subTotal).toLocaleString("vi-VN")} đ
+                      if order.discount > 0
+                        tr
+                          td.text-muted.py-1 Giảm giá / Chiết khấu:
+                          td.text-end.text-danger.py-1 -#{Number(order.discount).toLocaleString("vi-VN")} đ
+                      tr.border-top
+                        td.fw-bold.fs-6.py-1 TỔNG THANH TOÁN:
+                        td.text-end.fw-bold.fs-5.text-primary.py-1 #{Number(order.totalAmount).toLocaleString("vi-VN")} đ
+                      if totalInWords
+                        tr
+                          td.text-muted.fst-italic.small.py-0(colspan="2") (#{totalInWords})
+                      tr
+                        td.text-muted.py-1 Tiền khách đưa:
+                        td.text-end.py-1 #{Number(order.paidAmount).toLocaleString("vi-VN")} đ
+                      tr
+                        td.text-muted.py-1 Tiền thừa trả lại:
+                        td.text-end.text-success.fw-bold.py-1 #{Number(order.changeAmount).toLocaleString("vi-VN")} đ
+
+              // Chữ ký xác nhận cuối hóa đơn (Thu gọn khoảng cách để vừa in trong 1 trang)
+              .row.text-center.mt-3.pt-2.signature-block(style="break-inside: avoid; page-break-inside: avoid;")
+                .col-6
+                  p.small.text-muted.mb-1 NGƯỜI MUA HÀNG
+                  div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, ghi rõ họ tên)
+                .col-6
+                  p.small.text-muted.mb-1 THU NGÂN / ĐẠI DIỆN BÁN HÀNG
+                  div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, đóng dấu)
+                  div.fw-semibold.text-dark.mt-1 #{order.createdBy ? (order.createdBy.fullName || order.createdBy.email) : "Administrator"}
+
+        // ==========================================
+        // TAB 2 & KHUNG IN XPRINTER K80 (80MM THERMAL RECEIPT)
+        // ==========================================
+        .tab-pane.fade#tab-k80-pane(role="tabpanel")
+          .d-flex.justify-content-center.py-2
+            // Vùng in hóa đơn cuộn nhiệt Xprinter K80
+            .k80-receipt#printableInvoiceK80
+              // Đầu phiếu in
+              .text-center.mb-2
+                .fw-bold.fs-6.text-uppercase SHOP THANH TIỀN
+                .small.text-muted Hệ thống bán lẻ điện thoại &amp; phụ kiện
+                .small.text-muted Hotline: 0988.xxx.xxx
+                .border-bottom.border-dark.border-dashed.my-2
+                .fw-bold.fs-6.text-uppercase HÓA ĐƠN BÁN HÀNG
+                .small Ngày #{order.createdAt ? new Date(order.createdAt).toLocaleDateString("vi-VN") : "--"}
+              
+              // Thông tin thu ngân & khách hàng
+              .small.mb-2
+                .d-flex.justify-content-between
+                  span Thu ngân:
+                  strong #{order.createdBy ? (order.createdBy.fullName || order.createdBy.email) : "Administrator"}
+                .d-flex.justify-content-between
+                  span In lúc:
+                  strong #{order.createdAt ? new Date(order.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : ""}
+                .d-flex.justify-content-between
+                  span Khách hàng:
+                  strong #{order.customerInfo && order.customerInfo.fullName ? order.customerInfo.fullName : "Khách lẻ"}
+                if order.customerInfo && order.customerInfo.phone
+                  .d-flex.justify-content-between
+                    span SĐT:
+                    span #{order.customerInfo.phone}
+                .d-flex.justify-content-between
+                  span Mã HĐ:
+                  strong #{order.orderCode}
+
+              .border-bottom.border-dark.border-dashed.my-2
+
+              // Bảng sản phẩm theo chuẩn máy in nhiệt (Mặt hàng | SL | T.Tiền)
+              table.w-100.small.mb-1
+                thead
+                  tr.border-bottom.border-dark.border-dashed
+                    th.text-start.pb-1(style="width: 55%") Mặt hàng
+                    th.text-center.pb-1(style="width: 15%") SL
+                    th.text-end.pb-1(style="width: 30%") T.Tiền
+                tbody
+                  if order.items && order.items.length
+                    each item in order.items
+                      tr
+                        td.pt-1.text-start
+                          div.fw-bold #{item.productName}
+                          if item.variantName
+                            div.text-muted.small (#{item.variantName})
+                          if item.identifiers && item.identifiers.length
+                            each id in item.identifiers
+                              div.font-monospace.small(style="font-size: 11px;") &bull; #{id}
+                        td.pt-1.text-center.align-top.fw-bold #{item.quantity}
+                        td.pt-1.text-end.align-top #{Number(item.totalPrice).toLocaleString("vi-VN")}
+                  else
+                    tr
+                      td.text-center.py-2(colspan="3") Không có sản phẩm
+
+              .border-bottom.border-dark.border-dashed.my-2
+
+              // Tổng kết tiền
+              - const totalQty = order.items ? order.items.reduce((acc, i) => acc + i.quantity, 0) : 0
+              .small
+                .d-flex.justify-content-between
+                  span Tổng SL:
+                  strong #{totalQty}
+                if order.discount > 0
+                  .d-flex.justify-content-between
+                    span Chiết khấu:
+                    span -#{Number(order.discount).toLocaleString("vi-VN")} đ
+                .d-flex.justify-content-between.align-items-center.my-1
+                  strong.fs-6 Tổng:
+                  strong.fs-6 #{Number(order.totalAmount).toLocaleString("vi-VN")}
+                if totalInWords
+                  .text-center.fst-italic.small.mb-2(style="font-size: 11px;") #{totalInWords}
+              
+              .border-bottom.border-dark.border-dashed.my-2
+
+              .small
+                .d-flex.justify-content-between
+                  span Hình thức:
+                  span #{order.paymentMethod === 'cash' ? 'Tiền mặt' : (order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : order.paymentMethod)}
+                .d-flex.justify-content-between
+                  span Tiền khách đưa:
+                  span #{Number(order.paidAmount).toLocaleString("vi-VN")} đ
+                .d-flex.justify-content-between
+                  span Tiền thừa:
+                  strong #{Number(order.changeAmount).toLocaleString("vi-VN")} đ
+                if order.note
+                  .fst-italic.mt-1(style="font-size: 11px;") * Ghi chú: #{order.note}
+
+              .border-bottom.border-dark.border-dashed.my-2
+
+              // Lời cảm ơn & Chân trang
+              .text-center.small.mt-2
+                .fw-bold Cảm ơn Quý Khách &amp; Hẹn Gặp Lại!
+                div(style="font-size: 11px;") Tra cứu bảo hành theo IMEI tại:
+                div.fw-semibold(style="font-size: 11px;") website shopthanhtien.vn
+
+  // Modal Xác nhận Hủy đơn hàng
+  if order.orderStatus !== "cancelled"
+    #modalCancelOrder.modal.fade(tabindex="-1", aria-hidden="true")
+      .modal-dialog.modal-dialog-centered
+        .modal-content
+          .modal-header.bg-danger-subtle
+            h5.modal-title.fw-bold.text-danger
+              i.las.la-exclamation-triangle.me-1
+              | Xác nhận hủy đơn hàng
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+          .modal-body
+            p Bạn có chắc chắn muốn hủy đơn hàng 
+              strong.text-primary #{order.orderCode}
+              | ?
+            .alert.alert-warning.small.mb-3
+              i.las.la-info-circle.me-1
+              | Toàn bộ #{order.items ? order.items.reduce((acc, i) => acc + (i.identifiers ? i.identifiers.length : 0), 0) : 0} thiết bị trong đơn hàng này sẽ được 
+              strong tự động hoàn trả về kho với trạng thái "Có sẵn"
+              | .
+            .mb-3
+              label.form-label.small.fw-bold Lý do hủy đơn
+              textarea#cancelOrderReason.form-control(rows="2", placeholder="Nhập lý do hủy...") Khách hủy đơn hàng
+          .modal-footer.bg-light
+            button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Đóng
+            button#btnConfirmCancelOrder.btn.btn-danger(type="button")
+              i.las.la-ban.me-1
+              | Xác nhận hủy &amp; Hoàn kho
+
+block script
+  script.
+    document.addEventListener("DOMContentLoaded", () => {
+      const btnPrintK80 = document.querySelector("#btnPrintK80");
+      const btnPrintA4 = document.querySelector("#btnPrintA4");
+
+      // In hóa đơn nhiệt máy Xprinter K80 (80mm)
+      btnPrintK80?.addEventListener("click", () => {
+        document.body.classList.remove("print-a4");
+        document.body.classList.add("print-k80");
+        window.print();
+      });
+
+      // In hóa đơn A4/A5 thu gọn 1 trang
+      btnPrintA4?.addEventListener("click", () => {
+        document.body.classList.remove("print-k80");
+        document.body.classList.add("print-a4");
+        window.print();
+      });
+
+      // Xử lý hủy đơn
+      const cancelBtn = document.querySelector("#btnCancelThisOrder");
+      const modalEl = document.querySelector("#modalCancelOrder");
+      const modal = modalEl && window.bootstrap ? window.bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+      const confirmBtn = document.querySelector("#btnConfirmCancelOrder");
+      const reasonInput = document.querySelector("#cancelOrderReason");
+
+      cancelBtn?.addEventListener("click", () => {
+        if (modal) modal.show();
+      });
+
+      confirmBtn?.addEventListener("click", async () => {
+        const cancelReason = reasonInput?.value.trim() || "Khách hủy đơn hàng";
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang hủy...';
+
+        try {
+          const response = await fetch("/admin/order/cancel/#{order._id}", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ cancelReason })
+          });
+          const result = await response.json();
+          if (!response.ok || result.code !== "success") {
+            window.alert(result.message || "Lỗi khi hủy đơn hàng!");
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="las la-ban me-1"></i> Xác nhận hủy &amp; Hoàn kho';
+            return;
+          }
+          window.alert(result.message);
+          window.location.reload();
+        } catch (e) {
+          console.error(e);
+          window.alert("Lỗi kết nối khi gửi yêu cầu hủy đơn!");
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = '<i class="las la-ban me-1"></i> Xác nhận hủy &amp; Hoàn kho';
+        }
+      });
+    });

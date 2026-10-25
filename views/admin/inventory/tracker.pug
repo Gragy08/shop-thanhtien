@@ -1,0 +1,245 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      // Thanh tìm kiếm tra cứu IMEI / Serial
+      .card.mb-3
+        .card-body.p-4
+          .text-center.mb-3
+            h4.card-title.fw-bold.text-primary
+              i.las.la-barcode.me-2
+              | Tra Cứu Thiết Bị (IMEI / Serial Tracker)
+            p.text-muted.mb-0 Tra cứu toàn bộ lý lịch máy: nguồn gốc phiếu nhập, nhà cung cấp, giá vốn và nhật ký biến động trạng thái.
+          form.row.justify-content-center(method="get", action=`/${pathAdmin}/inventory/tracker`)
+            .col-lg-8.col-md-10
+              .input-group.input-group-lg.shadow-sm
+                span.input-group-text.bg-primary-subtle.text-primary
+                  i.las.la-qrcode.fs-3
+                input.form-control.form-control-lg(type="text", name="keyword", value=keyword, placeholder="Nhập hoặc quét mã IMEI / Serial (Ví dụ: 356789123456789)...", autofocus, required)
+                button.btn.btn-primary.px-4(type="submit")
+                  i.las.la-search.me-1
+                  | Tra cứu
+
+      if item
+        - const product = item.productId
+        - const variant = item.variantId
+        - const receipt = item.receiptId
+        .row
+          // Cột trái: Thẻ căn cước thiết bị
+          .col-lg-6.mb-3
+            .card.h-100.border
+              .card-header.bg-light.d-flex.justify-content-between.align-items-center
+                h5.card-title.mb-0.fw-bold
+                  i.las.la-id-card.me-2.text-primary
+                  | Căn Cước Thiết Bị
+                div
+                  if item.status === "available"
+                    span.badge.bg-success-subtle.text-success.fs-6 Có sẵn (Còn hàng)
+                  else if item.status === "sold"
+                    span.badge.bg-dark-subtle.text-dark.fs-6 Đã bán
+                  else if item.status === "warranty"
+                    span.badge.bg-warning-subtle.text-warning.fs-6 Đi bảo hành NCC
+                  else if item.status === "damaged"
+                    span.badge.bg-danger-subtle.text-danger.fs-6 Hàng lỗi / hỏng
+                  else if item.status === "returned"
+                    span.badge.bg-purple-subtle.text-purple.fs-6 Đã trả NCC
+                  else if item.status === "liquidated"
+                    span.badge.bg-secondary-subtle.text-secondary.fs-6 Đã thanh lý
+              .card-body
+                .text-center.py-3.border-bottom.mb-3.bg-light.rounded
+                  small.text-muted.d-block.text-uppercase.fw-semibold #{item.trackingType === "imei" ? "Mã IMEI thiết bị" : "Mã Serial thiết bị"}
+                  h3.font-monospace.fw-bold.text-primary.mb-0.letter-spacing-1 #{item.identifier}
+
+                .row.g-3
+                  .col-6
+                    small.text-muted.d-block Tên sản phẩm:
+                    strong.text-dark #{product ? product.name : "Không xác định"}
+                  .col-6
+                    small.text-muted.d-block Kiểu quản lý:
+                    if item.trackingType === "imei"
+                      span.badge.bg-primary IMEI - Điện thoại
+                    else if item.trackingType === "serial"
+                      span.badge.bg-info.text-dark Serial - Đồng hồ
+                    else
+                      span.badge.bg-secondary Số lượng
+                  .col-6
+                    small.text-muted.d-block Mã SKU biến thể:
+                    if variant && variant.sku
+                      code.text-dark.fw-bold #{variant.sku}
+                    else
+                      span.text-muted --
+                  .col-6
+                    small.text-muted.d-block Thuộc tính / Phiên bản:
+                    if variant && variant.attributeValues && variant.attributeValues.length
+                      span.badge.bg-light.text-dark.border #{variant.attributeValues.map(a => a.label).join(" / ")}
+                    else
+                      span.text-muted Mặc định
+                  .col-6
+                    small.text-muted.d-block Giá bán niêm yết:
+                    strong.text-primary
+                      - const sPrice = (variant && variant.salePriceOverride != null) ? variant.salePriceOverride : (product ? product.salePrice : null)
+                      | #{sPrice != null ? Number(sPrice).toLocaleString("vi-VN") + " đ" : "--"}
+                  if canViewPurchasePrice
+                    .col-6
+                      small.text-muted.d-block Giá vốn nhập kho:
+                      strong.text-muted
+                        | #{item.purchasePrice != null ? Number(item.purchasePrice).toLocaleString("vi-VN") + " đ" : "--"}
+
+                hr.my-3
+
+                h6.fw-bold.text-secondary.mb-2
+                  i.las.la-file-invoice.me-1
+                  | Nguồn gốc nhập kho
+                .row.g-2.small
+                  .col-6
+                    span.text-muted Phiếu nhập: 
+                    if receipt
+                      a.fw-semibold(href=`/${pathAdmin}/inventory/receipt/${receipt._id}`) #{receipt.receiptCode}
+                    else
+                      span.text-muted Không rõ
+                  .col-6
+                    span.text-muted Ngày nhập: 
+                    strong #{item.receivedAt ? new Date(item.receivedAt).toLocaleDateString("vi-VN") : "--"}
+                  .col-6
+                    span.text-muted Nhà cung cấp: 
+                    strong #{receipt && receipt.supplierId ? receipt.supplierId.name : "Không rõ"}
+                  .col-6
+                    span.text-muted Hóa đơn NCC: 
+                    if receipt && receipt.hasInvoice
+                      span.badge.bg-success-subtle.text-success #{receipt.invoiceNumber || "Có HĐ"}
+                    else
+                      span.text-muted Không có
+
+                if item.note
+                  .alert.alert-warning.mt-3.mb-0.p-2.small
+                    strong Ghi chú hiện tại: 
+                    | #{item.note}
+
+              if canWrite
+                .card-footer.bg-light.d-flex.justify-content-end.gap-2
+                  button.btn.btn-outline-primary.btn-sm.btn-quick-change-status(
+                    type="button",
+                    data-id=item._id,
+                    data-identifier=item.identifier,
+                    data-status=item.status,
+                    data-note=item.note || ""
+                  )
+                    i.las.la-exchange-alt.me-1
+                    | Cập nhật trạng thái máy
+
+          // Cột phải: Dòng thời gian vòng đời thiết bị (Timeline)
+          .col-lg-6.mb-3
+            .card.h-100.border
+              .card-header.bg-light
+                h5.card-title.mb-0.fw-bold
+                  i.las.la-history.me-2.text-primary
+                  | Nhật Ký Vòng Đời Thiết Bị (Lifecycle Timeline)
+              .card-body
+                .timeline.p-2
+                  // Mốc 1: Nhập kho lần đầu
+                  .timeline-item.d-flex.gap-3.mb-4
+                    .timeline-icon.bg-primary.text-white.rounded-circle.d-flex.align-items-center.justify-content-center.flex-shrink-0(style="width: 38px; height: 38px;")
+                      i.las.la-box-open.fs-4
+                    .timeline-content.bg-light.p-3.rounded.border.flex-grow-1
+                      .d-flex.justify-content-between.align-items-center.mb-1
+                        strong.text-primary Nhập kho từ Nhà cung cấp
+                        small.text-muted #{item.receivedAt ? new Date(item.receivedAt).toLocaleString("vi-VN") : "--"}
+                      p.mb-1.small Thiết bị được ghi nhận vào kho hàng qua phiếu nhập 
+                        if receipt
+                          a.fw-bold(href=`/${pathAdmin}/inventory/receipt/${receipt._id}`) #{receipt.receiptCode}
+                        else
+                          strong ban đầu
+                        |  từ 
+                        strong #{receipt && receipt.supplierId ? receipt.supplierId.name : "nhà cung cấp"}
+                        |.
+                      span.badge.bg-success-subtle.text-success Trạng thái ban đầu: Có sẵn (Available)
+
+                  // Các mốc chuyển đổi trạng thái tiếp theo
+                  if item.statusLogs && item.statusLogs.length
+                    each log, index in item.statusLogs
+                      .timeline-item.d-flex.gap-3.mb-4
+                        .timeline-icon.bg-warning.text-white.rounded-circle.d-flex.align-items-center.justify-content-center.flex-shrink-0(style="width: 38px; height: 38px;")
+                          i.las.la-exchange-alt.fs-4
+                        .timeline-content.bg-light.p-3.rounded.border.flex-grow-1
+                          .d-flex.justify-content-between.align-items-center.mb-1
+                            strong.text-dark Thay đổi trạng thái thiết bị ##{index + 1}
+                            small.text-muted #{log.updatedAt ? new Date(log.updatedAt).toLocaleString("vi-VN") : "--"}
+                          .mb-1
+                            span.badge.bg-secondary #{log.fromStatus || "available"}
+                            i.las.la-arrow-right.mx-1
+                            span.badge.bg-primary #{log.toStatus}
+                          if log.reason
+                            p.mb-1.small
+                              strong Lý do: 
+                              | #{log.reason}
+                          if log.note
+                            p.mb-1.small.text-muted
+                              em Ghi chú: #{log.note}
+                          if log.updatedBy
+                            small.text-muted.d-block.mt-1
+                              i.las.la-user.me-1
+                              | Người thực hiện: #{log.updatedBy.fullName || log.updatedBy.email}
+                  else
+                    .alert.alert-light.border.text-muted.small.p-3
+                      i.las.la-info-circle.me-1
+                      | Thiết bị chưa có thêm biến động trạng thái nào kể từ thời điểm nhập kho.
+
+      else if keyword
+        .card.border-warning
+          .card-body.text-center.py-5
+            i.las.la-exclamation-triangle.fs-1.text-warning.d-block.mb-3
+            h5.text-danger Không tìm thấy thiết bị nào với mã "#{keyword}"!
+            p.text-muted.mb-0 Hãy kiểm tra lại số IMEI / Serial của máy hoặc kiểm tra xem thiết bị đã được tạo phiếu nhập kho chưa.
+      else
+        .card.border-0.bg-light
+          .card-body.text-center.py-5
+            i.las.la-barcode.fs-1.text-muted.d-block.mb-3
+            h5.text-secondary Hướng dẫn tra cứu thiết bị
+            p.text-muted.mb-0 Nhập hoặc dùng máy quét mã vạch quét trực tiếp số IMEI (Điện thoại) hoặc Serial (Đồng hồ) vào ô trên để truy xuất toàn bộ hồ sơ nguồn gốc và lịch sử của máy.
+
+  // Modal đổi trạng thái nhanh
+  #changeStatusModal.modal.fade(tabindex="-1", aria-hidden="true")
+    .modal-dialog.modal-dialog-centered
+      .modal-content
+        .modal-header.bg-light
+          h5.modal-title.fw-bold Cập nhật trạng thái thiết bị
+          button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+        .modal-body
+          form#changeStatusForm
+            input#statusItemId(type="hidden", name="id")
+            .mb-3
+              label.form-label Mã IMEI / Serial
+              input#statusItemIdentifier.form-control.font-monospace.fw-bold(type="text", readonly)
+            .mb-3
+              label.form-label.fw-semibold Trạng thái mới *
+              select#statusSelect.form-select(name="status", required)
+                option(value="available") Có sẵn (Còn hàng để bán)
+                option(value="warranty") Đi bảo hành NCC
+                option(value="damaged") Hàng lỗi / hỏng
+                option(value="returned") Trả hàng về Nhà cung cấp
+                option(value="liquidated") Thanh lý xả hàng
+                option(value="sold") Đã bán
+            .mb-3
+              label.form-label.fw-semibold Lý do thay đổi
+              select#reasonSelect.form-select.mb-2
+                option(value="") -- Chọn lý do mẫu hoặc gõ tự do --
+                option(value="Gửi nhà cung cấp bảo hành lỗi nguồn/màn hình") Gửi nhà cung cấp bảo hành lỗi nguồn/màn hình
+                option(value="Máy bị trầy xước / cấn móp trong kho") Máy bị trầy xước / cấn móp trong kho
+                option(value="Nhà cung cấp đã sửa chữa / bảo hành xong, nhập lại kho") Nhà cung cấp đã sửa chữa / bảo hành xong, nhập lại kho
+                option(value="Xuất trả nhà cung cấp do hàng lỗi ban đầu") Xuất trả nhà cung cấp do hàng lỗi ban đầu
+                option(value="Hàng tồn lâu ngày, giảm giá xả thanh lý") Hàng tồn lâu ngày, giảm giá xả thanh lý
+              input#reasonCustom.form-control(type="text", name="reason", placeholder="Hoặc nhập lý do cụ thể...")
+            .mb-3
+              label.form-label Ghi chú kỹ thuật / thủ kho
+              textarea#statusNote.form-control(name="note", rows="3", placeholder="Chi tiết tình trạng lỗi hoặc thông tin người nhận bảo hành...")
+            .d-flex.justify-content-end.gap-2.mt-4
+              button.btn.btn-light(type="button", data-bs-dismiss="modal") Hủy
+              button.btn.btn-primary(type="submit")
+                i.las.la-save.me-1
+                | Lưu thay đổi
+            p#statusChangeMessage.form-message.mt-2.mb-0
+
+block script
+  script(src="/admin/assets/js/inventory-tracker.js")
+

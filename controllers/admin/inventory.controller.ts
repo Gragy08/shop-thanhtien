@@ -6,6 +6,7 @@ import ProductVariant from "../../models/product-variant.model";
 import StockReceipt from "../../models/stock-receipt.model";
 import Supplier from "../../models/supplier.model";
 import Category from "../../models/category.model";
+import AccountAdmin from "../../models/account-admin.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { buildCategoryTree, collectDescendantIds } from "../../helpers/category.helper";
 
@@ -561,4 +562,246 @@ export const deleteHard = async (req: Request, res: Response) => {
   await InventoryItem.deleteMany({ receiptId: receipt._id });
   await StockReceipt.deleteOne({ _id: receipt._id });
   res.json({ code: "success", message: "Đã xóa vĩnh viễn phiếu nhập và toàn bộ tồn kho liên quan!" });
+};
+
+export const variantItemsJson = async (req: Request, res: Response) => {
+  try {
+    const variantId = typeof req.params.variantId === "string" ? req.params.variantId : "";
+    if (!mongoose.isValidObjectId(variantId)) {
+      res.status(400).json({ code: "error", message: "Mã biến thể không hợp lệ!" });
+      return;
+    }
+
+    const status = typeof req.query.status === "string" ? req.query.status : "";
+    const find: Record<string, unknown> = {
+      variantId: new mongoose.Types.ObjectId(variantId),
+      deleted: { $ne: true }
+    };
+
+    if (["available", "sold", "warranty", "returned", "damaged", "liquidated"].includes(status)) {
+      find.status = status;
+    }
+
+    const [items, variant] = await Promise.all([
+      InventoryItem.find(find)
+        .populate("productId", "name slug inventoryType")
+        .populate("variantId", "sku attributeValues")
+        .populate({
+          path: "receiptId",
+          select: "receiptCode supplierId createdAt invoiceNumber",
+          populate: { path: "supplierId", select: "name phone" }
+        })
+        .populate("statusLogs.updatedBy", "fullName email")
+        .sort({ createdAt: -1 })
+        .lean(),
+      ProductVariant.findById(variantId).populate("productId", "name inventoryType").lean()
+    ]);
+
+    const permissions: string[] = res.locals.permissions || [];
+    const canViewPurchasePrice = permissions.includes("admin:all") || permissions.includes("price:purchase:read");
+
+    const sanitizedItems = items.map((item) => ({
+      ...item,
+      purchasePrice: canViewPurchasePrice ? item.purchasePrice : undefined
+    }));
+
+    res.json({
+      code: "success",
+      variant,
+      items: sanitizedItems,
+      canViewPurchasePrice
+    });
+  } catch (error) {
+    console.error("Error variantItemsJson:", error);
+    res.status(500).json({ code: "error", message: "Lỗi khi tải danh sách thiết bị!" });
+  }
+};
+
+export const changeItemStatus = async (req: RequestAccount, res: Response) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    if (!mongoose.isValidObjectId(id)) {
+      res.status(400).json({ code: "error", message: "ID thiết bị không hợp lệ!" });
+      return;
+    }
+
+    const { status, reason, note } = req.body;
+    const validStatuses = ["available", "sold", "warranty", "returned", "damaged", "liquidated"];
+    if (!validStatuses.includes(status)) {
+      res.status(400).json({ code: "error", message: "Trạng thái thiết bị không hợp lệ!" });
+      return;
+    }
+
+    const item = await InventoryItem.findOne({ _id: id, deleted: { $ne: true } });
+    if (!item) {
+      res.status(404).json({ code: "error", message: "Thiết bị không tồn tại hoặc đã bị xóa!" });
+      return;
+    }
+
+    const fromStatus = item.status;
+    const toStatus = status;
+
+    if (fromStatus !== toStatus) {
+      item.status = toStatus;
+      if (typeof note === "string") {
+        item.note = note.trim();
+      }
+
+      item.statusLogs.push({
+        fromStatus,
+        toStatus,
+        reason: typeof reason === "string" ? reason.trim() : "",
+        note: typeof note === "string" ? note.trim() : "",
+        updatedBy: req.adminId && mongoose.isValidObjectId(req.adminId) ? new mongoose.Types.ObjectId(req.adminId) : undefined,
+        updatedAt: new Date()
+      });
+
+      await item.save();
+    }
+
+    res.json({
+      code: "success",
+      message: `Đã đổi trạng thái thiết bị ${item.identifier || ""} sang "${toStatus}"!`,
+      status: toStatus
+    });
+  } catch (error) {
+    console.error("Error changeItemStatus:", error);
+    res.status(500).json({ code: "error", message: "Không thể đổi trạng thái thiết bị!" });
+  }
+};
+
+export const bulkChangeItemStatus = async (req: RequestAccount, res: Response) => {
+  try {
+    const { itemIds, status, reason, note } = req.body;
+    const validStatuses = ["available", "sold", "warranty", "returned", "damaged", "liquidated"];
+
+    if (!Array.isArray(itemIds) || !itemIds.length || !validStatuses.includes(status)) {
+      res.status(400).json({ code: "error", message: "Danh sách thiết bị hoặc trạng thái không hợp lệ!" });
+      return;
+    }
+
+    const validIds = itemIds.filter((id) => mongoose.isValidObjectId(id)).map((id) => new mongoose.Types.ObjectId(id));
+    if (!validIds.length) {
+      res.status(400).json({ code: "error", message: "Không có thiết bị hợp lệ nào được chọn!" });
+      return;
+    }
+
+    const items = await InventoryItem.find({ _id: { $in: validIds }, deleted: { $ne: true } });
+    let updatedCount = 0;
+
+    for (const item of items) {
+      const fromStatus = item.status;
+      if (fromStatus !== status) {
+        item.status = status;
+        if (typeof note === "string" && note.trim()) {
+          item.note = note.trim();
+        }
+        item.statusLogs.push({
+          fromStatus,
+          toStatus: status,
+          reason: typeof reason === "string" ? reason.trim() : "",
+          note: typeof note === "string" ? note.trim() : "",
+          updatedBy: req.adminId && mongoose.isValidObjectId(req.adminId) ? new mongoose.Types.ObjectId(req.adminId) : undefined,
+          updatedAt: new Date()
+        });
+        await item.save();
+        updatedCount++;
+      }
+    }
+
+    res.json({
+      code: "success",
+      message: `Đã cập nhật trạng thái sang "${status}" cho ${updatedCount} thiết bị!`
+    });
+  } catch (error) {
+    console.error("Error bulkChangeItemStatus:", error);
+    res.status(500).json({ code: "error", message: "Không thể cập nhật trạng thái hàng loạt!" });
+  }
+};
+
+export const trackerPage = async (req: Request, res: Response) => {
+  const keyword = typeof req.query.keyword === "string" ? req.query.keyword.trim().toUpperCase() : "";
+  let matchedItem: any = null;
+
+  if (keyword) {
+    matchedItem = await InventoryItem.findOne({
+      identifier: keyword,
+      deleted: { $ne: true }
+    })
+      .populate("productId", "name slug inventoryType salePrice description")
+      .populate("variantId", "sku attributeValues salePriceOverride")
+      .populate({
+        path: "receiptId",
+        select: "receiptCode supplierId createdAt invoiceNumber createdBy hasInvoice totalCost",
+        populate: [
+          { path: "supplierId", select: "name phone contactPerson" },
+          { path: "createdBy", select: "fullName email" }
+        ]
+      })
+      .populate("statusLogs.updatedBy", "fullName email")
+      .lean();
+  }
+
+  const permissions: string[] = res.locals.permissions || [];
+  const canViewPurchasePrice = permissions.includes("admin:all") || permissions.includes("price:purchase:read");
+
+  if (matchedItem && !canViewPurchasePrice) {
+    matchedItem.purchasePrice = undefined;
+  }
+
+  res.render("admin/inventory/tracker", {
+    pageTitle: "Tra cứu thiết bị (IMEI / Serial Tracker)",
+    keyword,
+    item: matchedItem,
+    canViewPurchasePrice,
+    canWrite: permissions.includes("admin:all") || permissions.includes("inventory:write")
+  });
+};
+
+export const trackerSearch = async (req: Request, res: Response) => {
+  try {
+    const keyword = typeof req.query.keyword === "string" ? req.query.keyword.trim().toUpperCase() : "";
+    if (!keyword) {
+      res.status(400).json({ code: "error", message: "Vui lòng nhập mã IMEI hoặc Serial để tra cứu!" });
+      return;
+    }
+
+    const item = await InventoryItem.findOne({
+      identifier: keyword,
+      deleted: { $ne: true }
+    })
+      .populate("productId", "name slug inventoryType salePrice")
+      .populate("variantId", "sku attributeValues salePriceOverride")
+      .populate({
+        path: "receiptId",
+        select: "receiptCode supplierId createdAt invoiceNumber createdBy hasInvoice",
+        populate: [
+          { path: "supplierId", select: "name phone contactPerson" },
+          { path: "createdBy", select: "fullName email" }
+        ]
+      })
+      .populate("statusLogs.updatedBy", "fullName email")
+      .lean();
+
+    if (!item) {
+      res.status(404).json({ code: "error", message: `Không tìm thấy thiết bị nào có IMEI/Serial "${keyword}"!` });
+      return;
+    }
+
+    const permissions: string[] = res.locals.permissions || [];
+    const canViewPurchasePrice = permissions.includes("admin:all") || permissions.includes("price:purchase:read");
+
+    if (!canViewPurchasePrice) {
+      item.purchasePrice = undefined;
+    }
+
+    res.json({
+      code: "success",
+      item,
+      canViewPurchasePrice
+    });
+  } catch (error) {
+    console.error("Error trackerSearch:", error);
+    res.status(500).json({ code: "error", message: "Lỗi tra cứu thiết bị!" });
+  }
 };

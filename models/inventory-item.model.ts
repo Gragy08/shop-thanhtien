@@ -1,5 +1,36 @@
 import mongoose from "mongoose";
 
+const statusLogSchema = new mongoose.Schema(
+  {
+    fromStatus: {
+      type: String,
+      enum: ["available", "sold", "warranty", "returned", "damaged", "liquidated"]
+    },
+    toStatus: {
+      type: String,
+      enum: ["available", "sold", "warranty", "returned", "damaged", "liquidated"],
+      required: true
+    },
+    reason: {
+      type: String,
+      default: ""
+    },
+    note: {
+      type: String,
+      default: ""
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AccountAdmin"
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  { _id: true }
+);
+
 const schema = new mongoose.Schema(
   {
     productId: {
@@ -41,6 +72,14 @@ const schema = new mongoose.Schema(
       type: String,
       enum: ["available", "sold", "warranty", "returned", "damaged", "liquidated"],
       default: "available"
+    },
+    note: {
+      type: String,
+      default: ""
+    },
+    statusLogs: {
+      type: [statusLogSchema],
+      default: []
     },
     receivedAt: {
       type: Date,

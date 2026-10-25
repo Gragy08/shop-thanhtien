@@ -46,7 +46,10 @@ block main
             .col
               h4.card-title #{pageTitle}
               p.text-muted.mb-0 Danh sách tồn kho theo từng SKU sản phẩm, tính tổng số lượng theo số IMEI/Serial thực tế.
-            .col-auto
+            .col-auto.d-flex.gap-2
+              a.btn.btn-outline-primary(href=`/${pathAdmin}/inventory/tracker`, title="Tra cứu nhanh lịch sử và hồ sơ thiết bị theo IMEI/Serial")
+                i.las.la-barcode.me-1
+                | Tra cứu IMEI
               if canWrite
                 a.btn.btn-primary(href=`/${pathAdmin}/inventory/receipt/create`)
                   i.las.la-plus.me-1
@@ -122,8 +125,15 @@ block main
                           if item.identifiers && item.identifiers.length
                             .d-flex.align-items-center.gap-2.mb-1
                               span.fw-semibold #{item.identifiers.length} #{item.trackingType === "imei" ? "mã IMEI" : "serial"}
-                              button.btn.btn-sm.btn-outline-secondary.py-0.px-2(type="button", data-bs-toggle="collapse", data-bs-target=`#collapse-imei-${item.variantId}`, aria-expanded="false")
-                                | Xem danh sách
+                              button.btn.btn-sm.btn-outline-primary.py-0.px-2.btn-open-imei-modal(
+                                type="button",
+                                data-variant-id=item.variantId,
+                                data-variant-name=(product ? product.name : "") + (variant && variant.attributeValues && variant.attributeValues.length ? " (" + variant.attributeValues.map(v => v.label).join(" / ") + ")" : ""),
+                                data-tracking-type=item.trackingType,
+                                title="Quản lý chi tiết & đổi trạng thái từng IMEI/Serial"
+                              )
+                                i.las.la-cogs.me-1
+                                | Quản lý IMEI
                             .collapse(id=`collapse-imei-${item.variantId}`)
                               .p-2.bg-light.rounded.mt-2.border(style="max-height: 180px; overflow-y: auto;")
                                 .d-flex.flex-wrap.gap-1
@@ -155,3 +165,124 @@ block main
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="6") Không tìm thấy dữ liệu tồn kho phù hợp.
+
+  // Modal Quản lý chi tiết IMEI / Serial của từng biến thể
+  #imeiManagementModal.modal.fade(tabindex="-1", aria-hidden="true")
+    .modal-dialog.modal-xl.modal-dialog-centered.modal-dialog-scrollable
+      .modal-content
+        .modal-header.bg-light
+          div
+            h5.modal-title.fw-bold.text-primary.d-inline-block Quản lý IMEI / Serial
+            span#modalVariantTitle.ms-2.fw-semibold.text-dark
+            span#modalTrackingTypeBadge.ms-2
+          button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+        .modal-body
+          #imeiModalLoadingSpinner.text-center.py-5
+            .spinner-border.text-primary(role="status")
+              span.visually-hidden Đang tải...
+            p.text-muted.mt-2.mb-0 Đang tải danh sách thiết bị...
+          #imeiModalContent(style="display: none;")
+            // Bộ lọc & Thanh thao tác nhanh trong modal
+            .card.border.mb-3
+              .card-body.p-2
+                .row.g-2.align-items-center
+                  .col-md-5
+                    .input-group.input-group-sm
+                      span.input-group-text
+                        i.las.la-search
+                      input#imeiSearchInput.form-control(type="text", placeholder="Tìm nhanh theo số IMEI / Serial...")
+                  .col-md-4
+                    select#imeiStatusFilter.form-select.form-select-sm
+                      option(value="") -- Tất cả trạng thái --
+                      option(value="available") Có sẵn (Còn hàng để bán)
+                      option(value="warranty") Đi bảo hành NCC
+                      option(value="damaged") Hàng lỗi / hỏng
+                      option(value="returned") Trả hàng về Nhà cung cấp
+                      option(value="liquidated") Thanh lý xả hàng
+                      option(value="sold") Đã bán
+                  .col-md-3.text-end
+                    span#imeiCountBadge.badge.bg-primary.fs-6 0 thiết bị
+            
+            // Thanh thao tác hàng loạt (Bulk Actions)
+            #bulkActionBar.alert.alert-info.d-flex.justify-content-between.align-items-center.p-2.mb-3(style="display: none !important;")
+              div
+                i.las.la-check-square.me-1
+                | Đã chọn: 
+                strong#selectedImeiCount 0
+                |  thiết bị
+              button#btnOpenBulkStatusModal.btn.btn-warning.btn-sm.fw-semibold(type="button")
+                i.las.la-exchange-alt.me-1
+                | Đổi trạng thái hàng loạt
+
+            // Bảng danh sách thiết bị IMEI / Serial
+            .table-responsive(style="max-height: 420px;")
+              table.table.table-hover.table-bordered.align-middle.mb-0
+                thead.table-light.sticky-top
+                  tr
+                    th.text-center(style="width: 40px")
+                      input#checkAllImei.form-check-input(type="checkbox")
+                    th.text-center(style="width: 50px") STT
+                    th(style="min-width: 170px") Mã IMEI / Serial
+                    th.text-center(style="min-width: 140px") Trạng thái
+                    th(style="min-width: 170px") Phiếu nhập / Ngày nhập
+                    th(style="min-width: 160px") Nhà cung cấp
+                    th.text-end.imei-cost-col(style="min-width: 130px") Giá vốn nhập
+                    th(style="min-width: 150px") Ghi chú tình trạng
+                    th.text-center(style="width: 130px") Thao tác
+                tbody#imeiTableBody
+                  // Đổ dữ liệu động từ JS
+
+        .modal-footer.bg-light
+          button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Đóng
+
+  // Modal cập nhật trạng thái thiết bị (Đơn lẻ & Hàng loạt)
+  #changeStatusModal.modal.fade(tabindex="-1", aria-hidden="true")
+    .modal-dialog.modal-dialog-centered
+      .modal-content
+        .modal-header.bg-light
+          h5#changeStatusModalTitle.modal-title.fw-bold Cập nhật trạng thái thiết bị
+          button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+        .modal-body
+          form#changeStatusForm
+            input#statusItemId(type="hidden")
+            input#isBulkMode(type="hidden", value="false")
+            .mb-3#singleIdentifierGroup
+              label.form-label Mã IMEI / Serial
+              input#statusItemIdentifier.form-control.font-monospace.fw-bold(type="text", readonly)
+            .mb-3#bulkCountGroup(style="display: none;")
+              .alert.alert-warning.p-2.small.mb-0
+                i.las.la-info-circle.me-1
+                | Bạn đang cập nhật trạng thái cho 
+                strong#bulkSelectedCountDisplay 0
+                |  thiết bị đã chọn.
+            .mb-3
+              label.form-label.fw-semibold Trạng thái mới *
+              select#statusSelect.form-select(required)
+                option(value="available") Có sẵn (Còn hàng để bán)
+                option(value="warranty") Đi bảo hành NCC
+                option(value="damaged") Hàng lỗi / hỏng
+                option(value="returned") Trả hàng về Nhà cung cấp
+                option(value="liquidated") Thanh lý xả hàng
+                option(value="sold") Đã bán
+            .mb-3
+              label.form-label.fw-semibold Lý do thay đổi
+              select#reasonSelect.form-select.mb-2
+                option(value="") -- Chọn lý do mẫu hoặc gõ tự do --
+                option(value="Gửi nhà cung cấp bảo hành lỗi nguồn/màn hình") Gửi nhà cung cấp bảo hành lỗi nguồn/màn hình
+                option(value="Máy bị trầy xước / cấn móp trong kho") Máy bị trầy xước / cấn móp trong kho
+                option(value="Nhà cung cấp đã sửa chữa / bảo hành xong, nhập lại kho") Nhà cung cấp đã sửa chữa / bảo hành xong, nhập lại kho
+                option(value="Xuất trả nhà cung cấp do hàng lỗi ban đầu") Xuất trả nhà cung cấp do hàng lỗi ban đầu
+                option(value="Hàng tồn lâu ngày, giảm giá xả thanh lý") Hàng tồn lâu ngày, giảm giá xả thanh lý
+              input#reasonCustom.form-control(type="text", placeholder="Hoặc nhập lý do cụ thể...")
+            .mb-3
+              label.form-label Ghi chú kỹ thuật / thủ kho
+              textarea#statusNote.form-control(rows="3", placeholder="Chi tiết tình trạng lỗi hoặc thông tin người nhận bảo hành...")
+            .d-flex.justify-content-end.gap-2.mt-4
+              button.btn.btn-light(type="button", data-bs-dismiss="modal") Hủy
+              button.btn.btn-primary(type="submit")
+                i.las.la-save.me-1
+                | Lưu thay đổi
+            p#statusChangeMessage.form-message.mt-2.mb-0
+
+block script
+  script(src="/admin/assets/js/inventory-list.js")

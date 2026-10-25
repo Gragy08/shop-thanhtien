@@ -1,0 +1,81 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              a.text-decoration-none.small.mb-2.d-inline-block(href=`/${pathAdmin}/product`)
+                i.las.la-arrow-left.me-1
+                | Quay lại danh sách sản phẩm
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Các sản phẩm đã xóa mềm. Bạn có thể khôi phục lại hoạt động hoặc xóa vĩnh viễn (nếu chưa phát sinh dữ liệu kho).
+        .card-body.pt-0
+          form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/product/trash`)
+            .col-md-10
+              .input-group
+                span.input-group-text
+                  i.las.la-search
+                input.form-control(name="keyword", value=keyword, placeholder="Tìm tên sản phẩm hoặc SKU trong thùng rác...")
+            .col-md-2.d-grid
+              button.btn.btn-outline-primary(type="submit")
+                i.las.la-filter.me-1
+                | Lọc
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
+                tr
+                  th(style="min-width: 240px") Sản phẩm
+                  th Danh mục
+                  th Kiểu quản lý
+                  th.text-center Số biến thể
+                  th.text-end Giá bán
+                  th Thời gian xóa
+                  th.text-end(style="min-width: 180px") Hành động
+              tbody
+                if trashList.length
+                  each product in trashList
+                    tr
+                      td
+                        span.fw-semibold.text-danger #{product.name}
+                        br
+                        small.text-muted /#{product.slug}
+                      td
+                        if product.categoryIds && product.categoryIds.length
+                          each cat in product.categoryIds
+                            span.badge.bg-secondary-subtle.text-secondary.me-1.mb-1 #{cat.name}
+                        else
+                          span.text-muted.small --
+                      td
+                        if product.inventoryType === "imei"
+                          span.badge.bg-primary IMEI
+                        else if product.inventoryType === "serial"
+                          span.badge.bg-info.text-dark Serial
+                        else
+                          span.badge.bg-secondary Số lượng
+                      td.text-center
+                        span.badge.bg-light.text-dark #{product.variantCount}
+                      td.text-end.fw-semibold
+                        | #{product.salePrice != null ? product.salePrice.toLocaleString("vi-VN") + " đ" : "--"}
+                      td.text-muted.small
+                        | #{product.deletedAt ? new Date(product.deletedAt).toLocaleString("vi-VN") : "--"}
+                      td.text-end
+                        if canWrite
+                          button.btn.btn-sm.btn-outline-success.product-restore.me-1(type="button", data-id=product._id, title="Khôi phục sản phẩm")
+                            i.las.la-undo.me-1
+                            | Khôi phục
+                        if permissions.includes("admin:all") || permissions.includes("product:delete")
+                          button.btn.btn-sm.btn-outline-danger.product-hard-delete(type="button", data-id=product._id, title="Xóa vĩnh viễn khỏi cơ sở dữ liệu")
+                            i.las.la-trash-alt.me-1
+                            | Xóa cứng
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="7")
+                      i.las.la-trash.fs-1.d-block.mb-2.text-muted
+                      | Thùng rác trống, không có sản phẩm nào bị xóa.
+
+block script
+  script(src="/admin/assets/js/product-list.js")
+

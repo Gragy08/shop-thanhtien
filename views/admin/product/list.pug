@@ -1,0 +1,253 @@
+extends ../../layouts/admin.pug
+
+mixin categorySelectOptions(items, level = 0)
+  each item in items
+    - const prefix = level > 0 ? `${"--".repeat(level)} ` : ""
+    option(value=item.id, selected=filters.categoryId === item.id) #{prefix}#{item.name}
+    if item.children && item.children.length
+      +categorySelectOptions(item.children, level + 1)
+
+block main
+  .row
+    .col-12
+      // Thống kê nhanh sản phẩm
+      .row.mb-3
+        .col-md-3
+          .card.mb-3.mb-md-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-primary-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center
+                  i.las.la-boxes.fs-3.text-primary
+                div
+                  h6.text-muted.mb-1 Tổng sản phẩm
+                  h4.mb-0 #{stats ? stats.totalProducts : 0}
+        .col-md-3
+          .card.mb-3.mb-md-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-success-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center
+                  i.las.la-check-circle.fs-3.text-success
+                div
+                  h6.text-muted.mb-1 Đang hoạt động
+                  h4.mb-0 #{stats ? stats.activeCount : 0}
+        .col-md-3
+          .card.mb-3.mb-md-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-warning-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center
+                  i.las.la-edit.fs-3.text-warning
+                div
+                  h6.text-muted.mb-1 Bản nháp
+                  h4.mb-0 #{stats ? stats.draftCount : 0}
+        .col-md-3
+          .card.mb-3.mb-md-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-danger-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center
+                  i.las.la-pause-circle.fs-3.text-danger
+                div
+                  h6.text-muted.mb-1 Tạm dừng
+                  h4.mb-0 #{stats ? stats.inactiveCount : 0}
+
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Quản lý thông tin sản phẩm, phân loại danh mục, giá niêm yết và trạng thái kinh doanh.
+            .col-auto
+              if canWrite
+                a.btn.btn-primary(href=`/${pathAdmin}/product/create`)
+                  i.las.la-plus.me-1
+                  | Thêm sản phẩm
+        .card-body.pt-0
+          form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/product`)
+            .col-md-4
+              .input-group
+                span.input-group-text
+                  i.las.la-search
+                input.form-control(name="keyword", value=filters.keyword, placeholder="Tìm tên sản phẩm, SKU...")
+            .col-md-3
+              select.form-select(name="categoryId")
+                option(value="") -- Tất cả danh mục --
+                if categoryTree && categoryTree.length
+                  +categorySelectOptions(categoryTree)
+            .col-md-2
+              select.form-select(name="status")
+                option(value="") -- Tất cả trạng thái --
+                option(value="active", selected=filters.status === "active") Đang hoạt động
+                option(value="draft", selected=filters.status === "draft") Bản nháp
+                option(value="inactive", selected=filters.status === "inactive") Tạm dừng
+            .col-md-3.d-flex.align-items-center.gap-2
+              button.btn.btn-outline-primary.flex-grow-1(type="submit")
+                i.las.la-filter.me-1
+                | Lọc
+              a.btn.btn-outline-secondary.text-nowrap(href=`/${pathAdmin}/product/trash`, title="Xem danh sách sản phẩm trong thùng rác")
+                i.las.la-archive.me-1
+                | Lưu trữ
+                if trashCount > 0
+                  span.badge.bg-danger.ms-1 #{trashCount}
+
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
+                tr
+                  th(style="min-width: 240px") Sản phẩm
+                  th Danh mục
+                  th Kiểu quản lý
+                  th.text-end Giá bán mặc định
+                  if permissions.includes("admin:all") || permissions.includes("price:purchase:read")
+                    th.text-end Giá nhập mặc định
+                  th.text-center Biến thể
+                  th.text-center Tồn khả dụng
+                  th.text-center Trạng thái
+                  th.text-end(style="min-width: 140px") Hành động
+              tbody
+                if productList.length
+                  each product in productList
+                    tr
+                      td
+                        a.fw-semibold.text-primary.text-decoration-none(href=`/${pathAdmin}/product/edit/${product._id}`) #{product.name}
+                        br
+                        small.text-muted /#{product.slug}
+                      td
+                        if product.categoryIds && product.categoryIds.length
+                          each cat in product.categoryIds
+                            span.badge.bg-secondary-subtle.text-secondary.me-1.mb-1 #{cat.name}
+                        else
+                          span.text-muted.small --
+                      td
+                        if product.inventoryType === "imei"
+                          span.badge.bg-primary IMEI
+                        else if product.inventoryType === "serial"
+                          span.badge.bg-info.text-dark Serial
+                        else
+                          span.badge.bg-secondary Số lượng
+                      td.text-end.fw-bold.text-dark
+                        | #{product.salePrice != null ? product.salePrice.toLocaleString("vi-VN") + " đ" : "--"}
+                      if permissions.includes("admin:all") || permissions.includes("price:purchase:read")
+                        td.text-end.text-muted
+                          | #{product.purchasePrice != null ? product.purchasePrice.toLocaleString("vi-VN") + " đ" : "--"}
+                      td.text-center
+                        span.badge.bg-light.text-dark.fs-6 #{product.variantCount}
+                        if product.variantCount > 0
+                          br
+                          small.text-muted #{product.activeVariantCount} bật
+                      td.text-center
+                        if product.stockQuantity > 0
+                          span.badge.bg-success-subtle.text-success.fw-bold.fs-6 #{product.stockQuantity}
+                        else
+                          span.badge.bg-light.text-muted 0
+                      td.text-center
+                        if canWrite
+                          .form-check.form-switch.form-switch-success.d-inline-block
+                            input.form-check-input.product-status-switch(type="checkbox", role="switch", data-id=product._id, checked=product.status === "active", title="Bật: Hoạt động / Tắt: Tạm dừng")
+                          div
+                            if product.status === "active"
+                              span.badge.bg-success-subtle.text-success.status-badge Hoạt động
+                            else if product.status === "draft"
+                              span.badge.bg-warning-subtle.text-warning.status-badge Bản nháp
+                            else
+                              span.badge.bg-danger-subtle.text-danger.status-badge Tạm dừng
+                        else
+                          if product.status === "active"
+                            span.badge.bg-success Hoạt động
+                          else if product.status === "draft"
+                            span.badge.bg-warning Bản nháp
+                          else
+                            span.badge.bg-danger Tạm dừng
+                      td.text-end
+                        button.btn.btn-sm.btn-outline-info.btn-view-product.me-1(type="button", data-id=product._id, title="Xem chi tiết sản phẩm & các biến thể")
+                          i.las.la-eye
+                        if canWrite
+                          a.btn.btn-sm.btn-outline-primary.me-1(href=`/${pathAdmin}/product/edit/${product._id}`, title="Chỉnh sửa sản phẩm")
+                            i.las.la-pen
+                          button.btn.btn-sm.btn-outline-danger.product-soft-delete(type="button", data-id=product._id, title="Chuyển vào thùng rác")
+                            i.las.la-trash-alt
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="9")
+                      i.las.la-box-open.fs-1.d-block.mb-2.text-muted
+                      | Không tìm thấy sản phẩm nào phù hợp.
+
+      // Modal xem chi tiết sản phẩm và các biến thể
+      #productDetailModal.modal.fade(tabindex="-1", aria-labelledby="productDetailModalLabel", aria-hidden="true")
+        .modal-dialog.modal-xl.modal-dialog-centered.modal-dialog-scrollable
+          .modal-content
+            .modal-header.bg-light
+              div
+                h5#productDetailModalLabel.modal-title.fw-bold.text-primary.d-inline-block Chi tiết sản phẩm
+                span#modalProductStatusBadge.ms-2
+                span#modalProductTypeBadge.ms-1
+              button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+            .modal-body
+              #modalLoadingSpinner.text-center.py-5
+                .spinner-border.text-primary(role="status")
+                  span.visually-hidden Đang tải...
+                p.text-muted.mt-2.mb-0 Đang tải thông tin chi tiết sản phẩm & biến thể...
+              #modalContent(style="display: none;")
+                // Thẻ thông tin chung
+                .card.border.mb-3
+                  .card-header.bg-light.py-2
+                    h6.mb-0.fw-semibold Thông tin tổng quan sản phẩm
+                  .card-body.p-3
+                    .row.g-3
+                      .col-md-6
+                        .row.mb-2
+                          .col-4.text-muted Tên sản phẩm:
+                          .col-8.fw-semibold#modalProductName --
+                        .row.mb-2
+                          .col-4.text-muted Đường dẫn (Slug):
+                          .col-8#modalProductSlug --
+                        .row.mb-2
+                          .col-4.text-muted Danh mục:
+                          .col-8#modalProductCategories --
+                        .row.mb-2
+                          .col-4.text-muted Kiểu quản lý:
+                          .col-8#modalProductInventoryType --
+                      .col-md-6
+                        .row.mb-2
+                          .col-4.text-muted Giá bán mặc định:
+                          .col-8.fw-bold.text-primary#modalProductSalePrice --
+                        .row.mb-2#modalPurchasePriceRow
+                          .col-4.text-muted Giá nhập mặc định:
+                          .col-8.fw-semibold.text-dark#modalProductPurchasePrice --
+                        .row.mb-2
+                          .col-4.text-muted Tồn khả dụng:
+                          .col-8.fw-bold.text-success#modalProductStockQuantity --
+                        .row.mb-2
+                          .col-4.text-muted Ngày tạo:
+                          .col-8.text-muted#modalProductCreatedAt --
+                      .col-12#modalDescriptionRow
+                        .border-top.pt-2.mt-1
+                          span.text-muted.d-block.mb-1 Mô tả sản phẩm:
+                          p#modalProductDescription.text-dark.mb-0.bg-light.p-2.rounded(style="white-space: pre-line;") --
+
+                // Thẻ danh sách biến thể
+                .card.border.mb-0
+                  .card-header.bg-light.py-2.d-flex.justify-content-between.align-items-center
+                    h6.mb-0.fw-semibold Danh sách các biến thể hiện có (Variants)
+                    span#modalVariantCountBadge.badge.bg-primary 0 biến thể
+                  .card-body.p-0
+                    .table-responsive(style="max-height: 380px;")
+                      table.table.table-hover.table-bordered.align-middle.mb-0
+                        thead.table-light.sticky-top
+                          tr
+                            th.text-center(style="width: 50px") STT
+                            th(style="min-width: 180px") Thuộc tính
+                            th(style="min-width: 140px") Mã SKU
+                            th.text-end(style="min-width: 130px") Giá bán
+                            th.text-end.modal-cost-col(style="min-width: 130px") Giá nhập
+                            th.text-center(style="min-width: 120px") Tồn khả dụng
+                            th.text-center(style="width: 100px") Trạng thái
+                        tbody#modalVariantTableBody
+                          // Javascript will render rows here
+
+            .modal-footer.bg-light
+              a#modalEditProductBtn.btn.btn-outline-primary(href="#")
+                i.las.la-pen.me-1
+                | Chỉnh sửa sản phẩm
+              button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Đóng
+
+block script
+  script(src="/admin/assets/js/product-list.js")

@@ -141,5 +141,5 @@ productForm?.addEventListener("submit", async (event) => {
   const message = document.querySelector("#productMessage");
   message.textContent = result.message || "";
   message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
-  if (response.ok) window.location.href = "/admin/protected-health";
+  if (response.ok) window.location.href = "/admin/product";
 });

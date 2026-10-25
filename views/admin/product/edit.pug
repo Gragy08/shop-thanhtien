@@ -1,0 +1,127 @@
+extends ../../layouts/admin.pug
+
+mixin categoryCheckboxes(items, level)
+  each item in items
+    - const isChecked = selectedCategoryIds && selectedCategoryIds.includes(String(item.id))
+    label.category-check(class=`category-level-${level}`, data-category-name=item.name.toLowerCase())
+      input.form-check-input(type="checkbox", name="categoryId", value=item.id, checked=isChecked)
+      span.ms-2 #{item.name}
+    if item.children && item.children.length
+      +categoryCheckboxes(item.children, level + 1)
+
+block main
+  .row
+    .col-12
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              a.text-decoration-none.small.mb-2.d-inline-block(href=`/${pathAdmin}/product`)
+                i.las.la-arrow-left.me-1
+                | Quay lại danh sách sản phẩm
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Cập nhật thông tin chi tiết của sản phẩm, giá mặc định và các biến thể hiện có.
+        .card-body.pt-0
+          form#productEditForm(data-id=product._id)
+            .row
+              .col-md-6
+                .mb-3
+                  label.form-label(for="name") Tên sản phẩm *
+                  input#name.form-control(name="name", value=product.name, required, placeholder="Ví dụ: iPhone 15")
+              .col-md-6
+                .mb-3
+                  label.form-label(for="slug") Đường dẫn
+                  .input-group
+                    button#generateProductSlug.btn.btn-outline-info(type="button") Tự động
+                    input#slug.form-control(name="slug", value=product.slug, placeholder="iphone-15")
+              .col-md-6
+                .mb-3
+                  label.form-label(for="inventoryType") Kiểu quản lý tồn kho *
+                  if hasInventory
+                    select#inventoryType.form-select(name="inventoryType", disabled)
+                      option(value="imei", selected=product.inventoryType === "imei") IMEI - Điện thoại
+                      option(value="serial", selected=product.inventoryType === "serial") Serial - Đồng hồ
+                      option(value="quantity", selected=product.inventoryType === "quantity") Số lượng - Phụ kiện/mặt hàng
+                    input(type="hidden", name="inventoryType", value=product.inventoryType)
+                    p.form-text.text-warning.small.mt-1
+                      i.las.la-lock.me-1
+                      | Sản phẩm đã phát sinh dữ liệu trong kho, không thể thay đổi kiểu quản lý.
+                  else
+                    select#inventoryType.form-select(name="inventoryType", required)
+                      option(value="imei", selected=product.inventoryType === "imei") IMEI - Điện thoại
+                      option(value="serial", selected=product.inventoryType === "serial") Serial - Đồng hồ
+                      option(value="quantity", selected=product.inventoryType === "quantity") Số lượng - Phụ kiện/mặt hàng
+              .col-md-6
+                .mb-3
+                  label.form-label(for="status") Trạng thái
+                  select#status.form-select(name="status")
+                    option(value="draft", selected=product.status === "draft") Bản nháp
+                    option(value="active", selected=product.status === "active") Hoạt động
+                    option(value="inactive", selected=product.status === "inactive") Tạm dừng
+              .col-md-6
+                .mb-3
+                  label.form-label Giá nhập mặc định (VNĐ) *
+                  input.form-control(name="purchasePrice", type="number", min="0", value=product.purchasePrice, required)
+              .col-md-6
+                .mb-3
+                  label.form-label Giá bán mặc định (VNĐ) *
+                  input.form-control(name="salePrice", type="number", min="0", value=product.salePrice, required)
+              .col-md-12
+                .mb-3
+                  label.form-label Danh mục sản phẩm *
+                  .category-picker
+                    .input-group.input-group-sm.mb-2
+                      span.input-group-text
+                        i.las.la-search
+                      input#categorySearch.form-control(type="search", placeholder="Tìm danh mục...")
+                    .category-list
+                      +categoryCheckboxes(categoryTree, 0)
+              .col-12
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  label.form-label.mb-0 Danh sách biến thể (Variant)
+                  span.text-muted.small Tổng cộng: #{variants.length} biến thể
+                .table-responsive
+                  table#variantEditTable.table.table-bordered.align-middle
+                    thead.table-light
+                      tr
+                        th.text-center(style="width: 80px") Trạng thái
+                        th(style="min-width: 180px") Thuộc tính
+                        th(style="min-width: 180px") SKU
+                        th(style="min-width: 160px") Giá nhập ghi đè (VNĐ)
+                        th(style="min-width: 160px") Giá bán ghi đè (VNĐ)
+                    tbody
+                      if variants.length
+                        each variant in variants
+                          tr(data-variant-id=variant._id)
+                            td.text-center
+                              .form-check.form-switch.form-switch-success.d-inline-block
+                                input.form-check-input.variant-status(type="checkbox", checked=variant.status === "active", title="Bật: Hoạt động / Tắt: Tạm dừng")
+                            td
+                              if variant.attributeValues && variant.attributeValues.length
+                                each val in variant.attributeValues
+                                  span.badge.bg-light.text-dark.border.me-1 #{val.attributeName}: #{val.label}
+                              else
+                                span.text-muted Mặc định
+                            td
+                              input.form-control.variant-sku(type="text", value=variant.sku || "", placeholder="Mã SKU...")
+                            td
+                              input.form-control.variant-purchase(type="number", min="0", value=variant.purchasePriceOverride != null ? variant.purchasePriceOverride : "", placeholder="Theo giá mặc định")
+                            td
+                              input.form-control.variant-sale(type="number", min="0", value=variant.salePriceOverride != null ? variant.salePriceOverride : "", placeholder="Theo giá mặc định")
+                      else
+                        tr
+                          td.text-center.text-muted.py-4(colspan="5") Sản phẩm chưa có biến thể nào.
+              .col-12
+                .mb-3
+                  label.form-label(for="description") Mô tả sản phẩm
+                  textarea#description.form-control(name="description", rows="4") #{product.description || ""}
+            .d-flex.gap-2.mt-2
+              a.btn.btn-light(href=`/${pathAdmin}/product`) Hủy
+              button.btn.btn-primary(type="submit")
+                i.las.la-save.me-1
+                | Lưu thay đổi
+            p#productEditMessage.form-message.mt-3.mb-0(role="alert")
+
+block script
+  script(src="/admin/assets/js/product-edit.js")
+

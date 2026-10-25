@@ -232,8 +232,13 @@ export const createPost = async (req: RequestAccount, res: Response) => {
 export const list = async (req: Request, res: Response) => {
   const keyword = typeof req.query.keyword === "string" ? req.query.keyword.trim() : "";
   const categoryId = typeof req.query.categoryId === "string" ? req.query.categoryId : "";
+  const status = typeof req.query.status === "string" ? req.query.status : "";
 
   const find: Record<string, unknown> = { deleted: { $ne: true } };
+
+  if (["available", "sold", "warranty", "returned", "damaged", "liquidated"].includes(status)) {
+    find.status = status;
+  }
 
   if (mongoose.isValidObjectId(categoryId)) {
     const allCategories = await Category.find({ deleted: false }).select("_id parentId name slug status").lean();
@@ -373,7 +378,7 @@ export const list = async (req: Request, res: Response) => {
     pageTitle: "Tồn kho",
     inventoryList,
     stats: { totalSKUs, totalStock, totalAvailable },
-    filters: { keyword, categoryId },
+    filters: { keyword, categoryId, status },
     categoryTree,
     canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:write")
   });

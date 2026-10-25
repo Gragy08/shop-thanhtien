@@ -53,17 +53,24 @@ block main
                   | Nhập kho
         .card-body.pt-0
           form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/inventory`)
-            .col-md-6
+            .col-md-5
               .input-group
                 span.input-group-text
                   i.las.la-search
                 input.form-control(name="keyword", value=filters.keyword, placeholder="Tìm tên sản phẩm, SKU, hoặc IMEI cụ thể...")
-            .col-md-4
+            .col-md-3
               select.form-select(name="categoryId")
                 option(value="") -- Tất cả danh mục --
                 if categoryTree && categoryTree.length
                   +categorySelectOptions(categoryTree)
-            .col-md-2.d-grid
+            .col-md-3
+              select.form-select(name="status")
+                option(value="") -- Tất cả trạng thái --
+                option(value="available", selected=filters.status === "available") Có sẵn (Còn hàng)
+                option(value="sold", selected=filters.status === "sold") Đã bán
+                option(value="warranty", selected=filters.status === "warranty") Bảo hành
+                option(value="damaged", selected=filters.status === "damaged") Hỏng / lỗi
+            .col-md-1.d-grid
               button.btn.btn-outline-primary(type="submit")
                 i.las.la-filter.me-1
                 | Lọc

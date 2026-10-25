@@ -1,0 +1,368 @@
+extends ../../layouts/admin.pug
+
+block main
+  style.
+    .stat-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08) !important;
+    }
+    .avatar-kpi {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .table-dashboard th {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background-color: #f8fafc;
+    }
+    .table-dashboard td {
+      font-size: 13px;
+      vertical-align: middle;
+      padding: 0.65rem 0.6rem;
+    }
+
+  // 1. THANH TIÊU ĐỀ & BỘ LỌC THỜI GIAN
+  .row.align-items-center.mb-3
+    .col-lg-6
+      h4.fw-bold.text-primary.mb-1
+        i.las.la-chart-pie.me-2
+        | Bảng Điều Khiển Tổng Quan
+      p.text-muted.small.mb-0
+        | Trung tâm phân tích số liệu kinh doanh, hiệu quả bán hàng POS và quản lý thiết bị tồn kho.
+
+    .col-lg-6.mt-2.mt-lg-0
+      form.d-flex.justify-content-lg-end.align-items-center.gap-2.flex-wrap(method="get", action=`/${pathAdmin}/dashboard`)
+        .btn-group.btn-group-sm(role="group")
+          a.btn(class=(period === "today" ? "btn-primary fw-bold" : "btn-outline-secondary"), href=`/${pathAdmin}/dashboard?period=today`) Hôm nay
+          a.btn(class=(period === "7days" ? "btn-primary fw-bold" : "btn-outline-secondary"), href=`/${pathAdmin}/dashboard?period=7days`) 7 ngày
+          a.btn(class=(period === "thisMonth" ? "btn-primary fw-bold" : "btn-outline-secondary"), href=`/${pathAdmin}/dashboard?period=thisMonth`) Tháng này
+          a.btn(class=(period === "30days" || !period ? "btn-primary fw-bold" : "btn-outline-secondary"), href=`/${pathAdmin}/dashboard?period=30days`) 30 ngày
+
+        .d-flex.align-items-center.gap-1
+          input.form-control.form-control-sm(type="date", name="from", value=filters.from, title="Từ ngày", style="max-width: 130px;")
+          input.form-control.form-control-sm(type="date", name="to", value=filters.to, title="Đến ngày", style="max-width: 130px;")
+          input(type="hidden", name="period", value="custom")
+          button.btn.btn-sm.btn-primary(type="submit", title="Áp dụng khoảng ngày")
+            i.las.la-filter
+
+  // 2. HÀNG THẺ KPI CARDS THỜI GIAN THỰC
+  .row.g-3.mb-4
+    // KPI 1: Doanh Thu Bán Hàng
+    .col-xl-3.col-md-6
+      .card.stat-card.shadow-sm.h-100
+        .card-body.p-3
+          .d-flex.align-items-center.justify-content-between.mb-2
+            span.small.text-muted.fw-semibold DOANH THU THUẦN (#{periodLabel})
+            .avatar-kpi.bg-success-subtle.text-success
+              i.las.la-wallet
+          h3.fw-bold.text-dark.mb-1
+            | #{kpis.totalRevenue ? Number(kpis.totalRevenue).toLocaleString("vi-VN") : "0"} 
+            small.fs-6.text-muted đ
+          .d-flex.align-items-center.gap-2.small.text-muted
+            span.text-success.fw-semibold
+              i.las.la-check-circle.me-1
+              | #{kpis.allCompletedOrdersCount || 0} đơn hoàn tất
+            if kpis.cancelledOrdersCount > 0
+              span.text-danger (#{kpis.cancelledOrdersCount} đơn hủy)
+
+    // KPI 2: Giá Trị Vốn Tồn Kho Hoặc Số Lượng Tồn
+    .col-xl-3.col-md-6
+      .card.stat-card.shadow-sm.h-100
+        .card-body.p-3
+          .d-flex.align-items-center.justify-content-between.mb-2
+            span.small.text-muted.fw-semibold TỒN KHO KHẢ DỤNG
+            .avatar-kpi.bg-primary-subtle.text-primary
+              i.las.la-boxes
+          if canViewCost
+            h3.fw-bold.text-primary.mb-1
+              | #{kpis.totalStockValue ? Number(kpis.totalStockValue).toLocaleString("vi-VN") : "0"} 
+              small.fs-6.text-muted đ
+            .small.text-muted
+              | Tổng vốn lưu động: 
+              strong.text-dark #{kpis.availableStockCount || 0}
+              |  thiết bị sẵn sàng bán
+          else
+            h3.fw-bold.text-primary.mb-1
+              | #{kpis.availableStockCount || 0} 
+              small.fs-6.text-muted thiết bị
+            .small.text-muted Thiết bị sẵn có trong kho sẵn sàng xuất bán
+
+    // KPI 3: Bảo Hành & Dịch Vụ Sửa Chữa
+    .col-xl-3.col-md-6
+      .card.stat-card.shadow-sm.h-100
+        .card-body.p-3
+          .d-flex.align-items-center.justify-content-between.mb-2
+            span.small.text-muted.fw-semibold ĐANG XỬ LÝ BẢO HÀNH
+            .avatar-kpi.bg-warning-subtle.text-warning-emphasis
+              i.las.la-tools
+          h3.fw-bold.text-warning-emphasis.mb-1
+            | #{kpis.activeWarrantyCount || 0} 
+            small.fs-6.text-muted máy
+          .small.text-muted
+            | Đã bàn giao trong kỳ: 
+            strong.text-success #{kpis.deliveredWarrantyPeriod || 0}
+            |  thiết bị
+
+    // KPI 4: Lợi Nhuận Gộp Hoặc Khách Hàng
+    .col-xl-3.col-md-6
+      .card.stat-card.shadow-sm.h-100
+        .card-body.p-3
+          .d-flex.align-items-center.justify-content-between.mb-2
+            if canViewCost
+              span.small.text-muted.fw-semibold LỢI NHUẬN GỘP ƯỚC TÍNH
+              .avatar-kpi.bg-info-subtle.text-info
+                i.las.la-hand-holding-usd
+            else
+              span.small.text-muted.fw-semibold TỔNG KHÁCH HÀNG
+              .avatar-kpi.bg-info-subtle.text-info
+                i.las.la-user-friends
+          if canViewCost
+            h3.fw-bold.text-info.mb-1
+              | #{kpis.grossProfit ? Number(kpis.grossProfit).toLocaleString("vi-VN") : "0"} 
+              small.fs-6.text-muted đ
+            .small.text-muted
+              | Giá trị trung bình/đơn: 
+              strong.text-dark #{Number(kpis.avgOrderValue || 0).toLocaleString("vi-VN")} đ
+          else
+            h3.fw-bold.text-info.mb-1
+              | #{kpis.totalCustomers || 0} 
+              small.fs-6.text-muted khách
+            .small.text-muted
+              | Mới trong kỳ: 
+              strong.text-success +#{kpis.newCustomersInPeriod || 0}
+              |  khách hàng
+
+  // 3. HÀNG BIỂU ĐỒ TRỰC QUAN
+  .row.g-3.mb-4
+    // Biểu đồ Doanh thu từng ngày
+    .col-xl-8
+      .card.shadow-sm.h-100
+        .card-header.bg-light.py-3.d-flex.justify-content-between.align-items-center
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-chart-area.me-1.text-primary
+            | Xu Hướng Doanh Thu &amp; Số Lượng Đơn Hàng (#{periodLabel})
+          span.badge.bg-primary-subtle.text-primary.fs-8 Bán Hàng POS
+        .card-body.p-3
+          div(style="height: 310px; position: relative;")
+            canvas#chartDailyRevenue
+
+    // Biểu đồ Cơ cấu trạng thái kho hàng
+    .col-xl-4
+      .card.shadow-sm.h-100
+        .card-header.bg-light.py-3
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-pie-chart.me-1.text-primary
+            | Cơ Cấu Trạng Thái Thiết Bị Trong Kho
+        .card-body.p-3.d-flex.flex-column.justify-content-center
+          div(style="height: 240px; position: relative;")
+            canvas#chartInventoryStatus
+          .text-center.mt-2.small.text-muted
+            | Quản lý vòng đời chặt chẽ qua mã IMEI / Serial
+
+  // 4. HÀNG BẢNG: TOP SẢN PHẨM BÁN CHẠY & CẢNH BÁO TỒN KHO THẤP
+  .row.g-3.mb-4
+    // Bảng 1: Top 5 Sản phẩm bán chạy nhất
+    .col-xl-6
+      .card.shadow-sm.h-100
+        .card-header.bg-light.py-3.d-flex.justify-content-between.align-items-center
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-trophy.me-1.text-warning
+            | Top 5 Sản Phẩm Bán Chạy Nhất (#{periodLabel})
+          a.small.text-primary.text-decoration-none(href=`/${pathAdmin}/order`) Xem đơn hàng &rarr;
+        .card-body.p-0
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0.table-dashboard
+              thead
+                tr
+                  th.text-center(style="width: 45px;") #
+                  th Sản phẩm &amp; Phiên bản
+                  th.text-center(style="width: 90px;") Số lượng
+                  th.text-end(style="width: 140px;") Doanh số
+              tbody
+                if topProducts && topProducts.length
+                  each tp, idx in topProducts
+                    tr
+                      td.text-center
+                        if idx === 0
+                          span.badge.bg-warning.text-dark.rounded-circle(style="width: 24px; height: 24px; line-height: 18px;") 1
+                        else if idx === 1
+                          span.badge.bg-secondary.text-white.rounded-circle(style="width: 24px; height: 24px; line-height: 18px;") 2
+                        else if idx === 2
+                          span.badge.bg-danger-subtle.text-danger.rounded-circle(style="width: 24px; height: 24px; line-height: 18px;") 3
+                        else
+                          span.text-muted #{idx + 1}
+                      td
+                        strong.text-dark #{tp.productName}
+                        small.text-muted.d-block #{tp.variantSku}
+                      td.text-center
+                        span.badge.bg-success-subtle.text-success.fw-bold.fs-7 #{tp.quantity}
+                      td.text-end.fw-bold.text-primary
+                        | #{Number(tp.revenue).toLocaleString("vi-VN")} đ
+                else
+                  tr
+                    td.text-center.text-muted.py-4(colspan="4")
+                      i.las.la-box-open.fs-3.d-block.mb-1.opacity-50
+                      span Chưa phát sinh doanh số trong kỳ này.
+
+    // Bảng 2: Cảnh báo tồn kho thấp & Hết hàng
+    .col-xl-6
+      .card.shadow-sm.h-100
+        .card-header.bg-light.py-3.d-flex.justify-content-between.align-items-center
+          h6.mb-0.fw-bold.text-danger
+            i.las.la-exclamation-triangle.me-1
+            | Cảnh Báo Tồn Kho Thấp &amp; Hết Hàng
+          a.btn.btn-outline-danger.btn-sm.py-0(href=`/${pathAdmin}/inventory/receipt/create`)
+            i.las.la-plus-circle.me-1
+            | Nhập kho ngay
+        .card-body.p-0
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0.table-dashboard
+              thead
+                tr
+                  th Sản phẩm &amp; Phiên bản SKU
+                  th.text-center(style="width: 110px;") Tồn kho
+                  th.text-center(style="width: 110px;") Trạng thái
+                  th.text-center(style="width: 80px;") Thao tác
+              tbody
+                if lowStockAlerts && lowStockAlerts.length
+                  each ls in lowStockAlerts
+                    tr
+                      td
+                        strong.text-dark #{ls.productName}
+                        small.text-muted.d-block #{ls.variantSku} (#{ls.variantName})
+                      td.text-center
+                        strong.fs-6(class=(ls.isOut ? "text-danger" : "text-warning-emphasis"))
+                          | #{ls.currentStock} 
+                        small.text-muted máy
+                      td.text-center
+                        if ls.isOut
+                          span.badge.bg-danger Hết hàng
+                        else
+                          span.badge.bg-warning-subtle.text-warning-emphasis Sắp hết
+                      td.text-center
+                        a.btn.btn-outline-primary.btn-sm.py-0(
+                          href=`/${pathAdmin}/inventory/receipt/create?sku=${ls.variantSku}`,
+                          title="Nhập thêm hàng"
+                        )
+                          i.las.la-plus
+                else
+                  tr
+                    td.text-center.text-muted.py-4(colspan="4")
+                      i.las.la-check-circle.fs-3.text-success.d-block.mb-1
+                      span Toàn bộ sản phẩm đều có tồn kho ổn định!
+
+  // 5. HÀNG BẢNG: HOẠT ĐỘNG GẦN ĐÂY (ĐƠN HÀNG POS & PHIẾU BẢO HÀNH)
+  .row.g-3
+    // 5 Đơn hàng POS mới nhất
+    .col-xl-6
+      .card.shadow-sm
+        .card-header.bg-light.py-3.d-flex.justify-content-between.align-items-center
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-shopping-bag.me-1.text-primary
+            | Đơn Hàng Mới Nhất Tại Quầy (POS)
+          a.small.text-primary.text-decoration-none(href=`/${pathAdmin}/order`) Tất cả đơn &rarr;
+        .card-body.p-0
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0.table-dashboard
+              thead
+                tr
+                  th Mã Đơn &amp; Khách Hàng
+                  th.text-end(style="width: 120px;") Tổng Tiền
+                  th.text-center(style="width: 100px;") Thanh Toán
+                  th.text-center(style="width: 60px;") Xem
+              tbody
+                if recentOrders && recentOrders.length
+                  each ord in recentOrders
+                    tr
+                      td
+                        a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/order/${ord._id}`)
+                          | #{ord.orderCode}
+                        div.small.text-dark #{ord.customerInfo ? ord.customerInfo.fullName : "Khách lẻ"}
+                        small.text-muted #{new Date(ord.createdAt).toLocaleString("vi-VN")}
+                      td.text-end.fw-bold.text-dark
+                        | #{Number(ord.totalAmount).toLocaleString("vi-VN")} đ
+                      td.text-center
+                        if ord.paymentMethod === "transfer"
+                          span.badge.bg-info-subtle.text-info Chuyển khoản
+                        else
+                          span.badge.bg-success-subtle.text-success Tiền mặt
+                      td.text-center
+                        a.btn.btn-outline-primary.btn-sm.py-0(href=`/${pathAdmin}/order/${ord._id}`)
+                          i.las.la-eye
+                else
+                  tr
+                    td.text-center.text-muted.py-4(colspan="4") Chưa có đơn hàng nào.
+
+    // 5 Phiếu bảo hành gần đây
+    .col-xl-6
+      .card.shadow-sm
+        .card-header.bg-light.py-3.d-flex.justify-content-between.align-items-center
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-tools.me-1.text-warning-emphasis
+            | Phiếu Tiếp Nhận Bảo Hành Gần Đây
+          a.small.text-primary.text-decoration-none(href=`/${pathAdmin}/warranty`) Danh sách phiếu &rarr;
+        .card-body.p-0
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0.table-dashboard
+              thead
+                tr
+                  th Mã Phiếu &amp; Thiết Bị
+                  th Lỗi Khách Báo
+                  th.text-center(style="width: 110px;") Trạng Thái
+                  th.text-center(style="width: 60px;") Xem
+              tbody
+                if recentWarranties && recentWarranties.length
+                  each tk in recentWarranties
+                    tr
+                      td
+                        a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/warranty/${tk._id}`)
+                          | #{tk.ticketCode}
+                        div.small.text-dark #{tk.productName}
+                        span.badge.bg-light.text-dark.font-monospace.border(style="font-size: 11px;") #{tk.identifier}
+                      td
+                        p.mb-0.small.text-danger.text-truncate(style="max-width: 180px;", title=tk.issueDescription)
+                          | #{tk.issueDescription}
+                        small.text-muted Khách: #{tk.customerInfo ? tk.customerInfo.fullName : "Khách lẻ"}
+                      td.text-center
+                        case tk.ticketStatus
+                          when "received"
+                            span.badge.bg-primary-subtle.text-primary Mới nhận
+                          when "in_progress"
+                            span.badge.bg-warning-subtle.text-warning-emphasis Đang sửa
+                          when "completed"
+                            span.badge.bg-info-subtle.text-info Đã xong
+                          when "delivered"
+                            span.badge.bg-success-subtle.text-success Đã bàn giao
+                          when "cancelled"
+                            span.badge.bg-danger-subtle.text-danger Đã hủy
+                      td.text-center
+                        a.btn.btn-outline-primary.btn-sm.py-0(href=`/${pathAdmin}/warranty/${tk._id}`)
+                          i.las.la-eye
+                else
+                  tr
+                    td.text-center.text-muted.py-4(colspan="4") Chưa có phiếu bảo hành nào.
+
+block script
+  // Tải thư viện Chart.js
+  script(src="https://cdn.jsdelivr.net/npm/chart.js")
+  script.
+    window.DASHBOARD_DATA = {
+      dailyLabels: !{charts.dailyLabels},
+      dailyRevenues: !{charts.dailyRevenues},
+      dailyOrders: !{charts.dailyOrders},
+      categoryLabels: !{charts.categoryLabels},
+      categoryData: !{charts.categoryData},
+      inventoryStatus: !{charts.inventoryStatus}
+    };
+  script(src="/admin/assets/js/dashboard.js")
+

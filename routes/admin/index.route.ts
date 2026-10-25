@@ -9,8 +9,10 @@ import supplierRoutes from "./supplier.route";
 import orderRoutes from "./order.route";
 import customerRoutes from "./customer.route";
 import warrantyRoutes from "./warranty.route";
+import dashboardRoutes from "./dashboard.route";
 import { requireAuth } from "../../middlewares/admin/authenticate.middleware";
 import { RequestAccount } from "../../interfaces/request.interface";
+import { pathAdmin } from "../../configs/variable.config";
 
 const router = Router();
 
@@ -22,6 +24,7 @@ router.get("/health", (_req, res) => {
   });
 });
 
+router.use("/dashboard", dashboardRoutes);
 router.use("/account", accountRoutes);
 router.use("/account-admin", accountAdminRoutes);
 router.use("/product", categoryRoutes);
@@ -33,13 +36,21 @@ router.use("/order", orderRoutes);
 router.use("/customer", customerRoutes);
 router.use("/warranty", warrantyRoutes);
 
+router.get("/", requireAuth, (_req, res) => {
+  res.redirect(`/${pathAdmin}/dashboard`);
+});
+
 router.get("/protected-health", requireAuth, (req: RequestAccount, res) => {
-  res.json({
-    code: "success",
-    service: "shop-thanhtien-admin",
-    status: "authenticated",
-    role: req.adminRole
-  });
+  if (req.headers.accept?.includes("application/json")) {
+    res.json({
+      code: "success",
+      service: "shop-thanhtien-admin",
+      status: "authenticated",
+      role: req.adminRole
+    });
+    return;
+  }
+  res.redirect(`/${pathAdmin}/dashboard`);
 });
 
 export default router;

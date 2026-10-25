@@ -1,6 +1,6 @@
 .startbar.d-print-none
   .brand
-    a.logo(href=`/${pathAdmin}/protected-health`)
+    a.logo(href=`/${pathAdmin}/dashboard`)
       span
         img.logo-sm(alt="logo-small" src="/admin/assets/images/logo-sm.png")
       span
@@ -11,7 +11,7 @@
       .d-flex.align-items-start.flex-column.w-100
         ul.navbar-nav.mb-auto.w-100
           li.nav-item
-            a.nav-link(href=`/${pathAdmin}/protected-health`)
+            a.nav-link(href=`/${pathAdmin}/dashboard`)
               i.iconoir-home-simple.menu-icon
               span Tổng quan
           if permissions.includes("product:read") || permissions.includes("admin:all")

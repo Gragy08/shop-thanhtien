@@ -1,0 +1,238 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      // Tiêu đề & thanh điều hướng
+      .d-flex.justify-content-between.align-items-center.mb-3
+        div.d-flex.align-items-center.gap-2
+          a.btn.btn-outline-secondary.btn-sm(href=`/${pathAdmin}/customer`)
+            i.las.la-arrow-left.me-1
+            | Danh sách khách
+          h4.fw-bold.text-primary.mb-0
+            | Hồ Sơ Khách Hàng: 
+            span.text-dark #{customer.fullName}
+          case customer.customerGroup
+            when "vip"
+              span.badge.bg-warning-subtle.text-warning-emphasis.fs-6 Khách VIP
+            when "wholesale"
+              span.badge.bg-info-subtle.text-info.fs-6 Đại lý
+            default
+              span.badge.bg-light.text-dark.border.fs-6 Khách lẻ
+        
+        div.d-flex.gap-2
+          a.btn.btn-outline-warning.btn-sm(href=`/${pathAdmin}/customer/edit/${customer._id}`)
+            i.las.la-edit.me-1
+            | Chỉnh sửa
+          a.btn.btn-outline-primary.btn-sm(href=`/${pathAdmin}/order/pos`)
+            i.las.la-cash-register.me-1
+            | Lên đơn mới tại quầy
+
+  // Hàng thống kê tổng quan khách hàng
+  .row.g-3.mb-3
+    .col-xl-3.col-sm-6
+      .card.border.shadow-sm.mb-0
+        .card-body.p-3
+          .d-flex.align-items-center
+            .avatar-sm.bg-success-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+              i.las.la-wallet.fs-2.text-success
+            div
+              h6.text-muted.small.mb-1 TỔNG CHI TIÊU
+              h4.mb-0.fw-bold.text-success #{Number(customer.totalSpent || 0).toLocaleString("vi-VN")} đ
+    
+    .col-xl-3.col-sm-6
+      .card.border.shadow-sm.mb-0
+        .card-body.p-3
+          .d-flex.align-items-center
+            .avatar-sm.bg-primary-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+              i.las.la-shopping-bag.fs-2.text-primary
+            div
+              h6.text-muted.small.mb-1 TỔNG SỐ ĐƠN MUA
+              h4.mb-0.fw-bold #{customer.orderCount || 0}
+    
+    .col-xl-3.col-sm-6
+      .card.border.shadow-sm.mb-0
+        .card-body.p-3
+          .d-flex.align-items-center
+            .avatar-sm.bg-info-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+              i.las.la-mobile.fs-2.text-info
+            div
+              h6.text-muted.small.mb-1 THIẾT BỊ ĐANG SỞ HỮU
+              h4.mb-0.fw-bold.text-info #{ownedDevices ? ownedDevices.length : 0}
+    
+    .col-xl-3.col-sm-6
+      .card.border.shadow-sm.mb-0
+        .card-body.p-3
+          .d-flex.align-items-center
+            .avatar-sm.bg-secondary-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+              i.las.la-calendar-check.fs-2.text-secondary
+            div
+              h6.text-muted.small.mb-1 ĐƠN MUA GẦN NHẤT
+              h5.mb-0.fw-bold #{customer.lastOrderAt ? new Date(customer.lastOrderAt).toLocaleDateString("vi-VN") : "--"}
+
+  .row.g-3
+    // CỘT TRÁI: THÔNG TIN CHI TIẾT KHÁCH HÀNG
+    .col-xl-4.col-lg-5
+      .card.border.shadow-sm.mb-3
+        .card-header.bg-light.py-2
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-user-circle.me-1.text-primary
+            | Thông tin cá nhân &amp; Nguồn tạo
+        .card-body.p-3
+          .mb-3
+            span.text-muted.small.d-block Số điện thoại:
+            strong.font-monospace.fs-6.text-primary #{customer.phone}
+          .mb-3
+            span.text-muted.small.d-block Họ và tên:
+            strong.text-dark #{customer.fullName}
+          .mb-3
+            span.text-muted.small.d-block Email:
+            span #{customer.email || "Chưa có"}
+          .mb-3
+            span.text-muted.small.d-block Địa chỉ cư trú / giao hàng:
+            span #{customer.address || "Chưa có"}
+          .mb-3
+            span.text-muted.small.d-block Nguồn tạo hồ sơ:
+            if customer.source === "pos"
+              span.badge.bg-success-subtle.text-success.fs-7
+                i.las.la-cash-register.me-1
+                | Tự động lưu từ quầy bán hàng (POS)
+            else
+              span.badge.bg-secondary-subtle.text-secondary.fs-7
+                i.las.la-keyboard.me-1
+                | Nhập tay thủ công
+          .mb-3
+            span.text-muted.small.d-block Ngày tham gia:
+            span #{customer.createdAt ? new Date(customer.createdAt).toLocaleDateString("vi-VN") : "--"}
+          if customer.notes
+            .p-2.bg-light.rounded.border
+              strong.small.text-muted.d-block Ghi chú:
+              p.small.mb-0 #{customer.notes}
+
+    // CỘT PHẢI: TABS THIẾT BỊ SỞ HỮU & LỊCH SỬ ĐƠN HÀNG
+    .col-xl-8.col-lg-7
+      .card.border.shadow-sm
+        .card-header.bg-light.p-2
+          ul.nav.nav-pills.card-header-pills#customerTabs(role="tablist")
+            li.nav-item(role="presentation")
+              button.nav-link.active#tab-devices-btn(
+                data-bs-toggle="tab",
+                data-bs-target="#tab-devices",
+                type="button",
+                role="tab"
+              )
+                i.las.la-barcode.me-1
+                | Thiết bị đang sở hữu (
+                strong #{ownedDevices ? ownedDevices.length : 0}
+                | )
+            li.nav-item(role="presentation")
+              button.nav-link#tab-orders-btn(
+                data-bs-toggle="tab",
+                data-bs-target="#tab-orders",
+                type="button",
+                role="tab"
+              )
+                i.las.la-receipt.me-1
+                | Lịch sử đơn hàng (
+                strong #{orders ? orders.length : 0}
+                | )
+
+        .card-body.p-0
+          .tab-content
+            // TAB 1: THIẾT BỊ ĐANG SỞ HỮU
+            .tab-pane.fade.show.active#tab-devices(role="tabpanel")
+              .table-responsive
+                table.table.table-hover.align-middle.mb-0
+                  thead.table-light
+                    tr
+                      th.text-center(style="width: 40px") #
+                      th Mã IMEI / Serial thiết bị
+                      th Sản phẩm &amp; Phiên bản
+                      th Mã hóa đơn
+                      th Ngày mua
+                      th.text-center(style="width: 90px") Bảo hành
+                  tbody
+                    if ownedDevices && ownedDevices.length
+                      each d, index in ownedDevices
+                        tr
+                          td.text-center.text-muted #{index + 1}
+                          td
+                            a.badge.bg-primary-subtle.text-primary.border.border-primary.font-monospace.fs-6.text-decoration-none(
+                              href=`/${pathAdmin}/inventory/tracker?keyword=${d.identifier}`,
+                              title="Bấm để xem vòng đời thiết bị"
+                            )
+                              | #{d.identifier}
+                          td
+                            strong.text-dark #{d.productName}
+                            if d.variantName
+                              small.text-muted.d-block #{d.variantName}
+                          td
+                            a.fw-semibold.text-decoration-none(href=`/${pathAdmin}/order/${d.orderId}`)
+                              | #{d.orderCode}
+                          td
+                            span #{d.purchaseDate ? new Date(d.purchaseDate).toLocaleDateString("vi-VN") : "--"}
+                          td.text-center
+                            a.btn.btn-sm.btn-outline-info.py-0.px-2(
+                              href=`/${pathAdmin}/inventory/tracker?keyword=${d.identifier}`,
+                              title="Tra cứu bảo hành"
+                            )
+                              i.las.la-search.me-1
+                              | Tra cứu
+                    else
+                      tr
+                        td.text-center.text-muted.py-5(colspan="6")
+                          i.las.la-mobile.fs-1.d-block.mb-2.text-muted.opacity-50
+                          span.fw-semibold Khách hàng chưa sở hữu thiết bị định danh IMEI nào.
+
+            // TAB 2: LỊCH SỬ ĐƠN HÀNG
+            .tab-pane.fade#tab-orders(role="tabpanel")
+              .table-responsive
+                table.table.table-hover.align-middle.mb-0
+                  thead.table-light
+                    tr
+                      th Mã đơn hàng
+                      th Ngày mua
+                      th Phương thức
+                      th.text-end Tổng tiền
+                      th.text-center Trạng thái
+                      th.text-center Hành động
+                  tbody
+                    if orders && orders.length
+                      each ord in orders
+                        tr
+                          td
+                            a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/order/${ord._id}`)
+                              | #{ord.orderCode}
+                          td
+                            span #{ord.createdAt ? new Date(ord.createdAt).toLocaleDateString("vi-VN") : "--"}
+                            small.text-muted.ms-1 #{ord.createdAt ? new Date(ord.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : ""}
+                          td
+                            case ord.paymentMethod
+                              when "cash"
+                                span.badge.bg-success-subtle.text-success Tiền mặt
+                              when "bank_transfer"
+                                span.badge.bg-info-subtle.text-info Chuyển khoản
+                              when "credit_card"
+                                span.badge.bg-primary-subtle.text-primary Thẻ POS
+                              when "installment"
+                                span.badge.bg-warning-subtle.text-warning Trả góp
+                              default
+                                span.badge.bg-secondary #{ord.paymentMethod}
+                          td.text-end.fw-bold.text-dark
+                            | #{Number(ord.totalAmount).toLocaleString("vi-VN")} đ
+                          td.text-center
+                            if ord.orderStatus === "completed"
+                              span.badge.bg-success-subtle.text-success Hoàn tất
+                            else if ord.orderStatus === "cancelled"
+                              span.badge.bg-danger-subtle.text-danger Đã hủy
+                            else
+                              span.badge.bg-secondary #{ord.orderStatus}
+                          td.text-center
+                            a.btn.btn-sm.btn-outline-primary.py-0.px-2(href=`/${pathAdmin}/order/${ord._id}`, title="Xem hóa đơn")
+                              i.las.la-eye
+                    else
+                      tr
+                        td.text-center.text-muted.py-5(colspan="6")
+                          i.las.la-receipt.fs-1.d-block.mb-2.text-muted.opacity-50
+                          span.fw-semibold Khách hàng chưa có đơn hàng nào.
+

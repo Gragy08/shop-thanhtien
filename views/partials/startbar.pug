@@ -57,6 +57,30 @@
                     a.nav-link(href=`/${pathAdmin}/order/pos`) Bán hàng tại quầy (POS)
                   li.nav-item
                     a.nav-link(href=`/${pathAdmin}/order`) Danh sách đơn hàng
+          if permissions.includes("customer:read") || permissions.includes("admin:all")
+            li.nav-item
+              a.nav-link(aria-controls="sidebarCustomer" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarCustomer")
+                i.iconoir-community.menu-icon
+                span Khách hàng
+              #sidebarCustomer.collapse
+                ul.nav.flex-column
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/customer`) Danh sách khách hàng
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/customer/create`) Thêm khách hàng
+          if permissions.includes("warranty:read") || permissions.includes("admin:all")
+            li.nav-item
+              a.nav-link(aria-controls="sidebarWarranty" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarWarranty")
+                i.iconoir-wrench.menu-icon
+                span Bảo hành & Sửa chữa
+              #sidebarWarranty.collapse
+                ul.nav.flex-column
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/warranty`) Danh sách phiếu bảo hành
+                  li.nav-item
+                    a.nav-link(href=`/${pathAdmin}/warranty/create`) Tiếp nhận bảo hành
+                  li.nav-item
+                    a.nav-link(href="/tra-cuu-bao-hanh" target="_blank") Tra cứu bảo hành (Portal)
           if permissions.includes("admin:all")
             li.nav-item
               a.nav-link(aria-controls="sidebarAccountAdmin" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarAccountAdmin")

@@ -1,0 +1,193 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      // Tiêu đề & thanh công cụ
+      .d-flex.justify-content-between.align-items-center.mb-3
+        div
+          h4.fw-bold.text-primary.mb-0
+            i.las.la-users.me-2
+            | Quản Lý Khách Hàng (CRM)
+          p.text-muted.small.mb-0 Theo dõi danh bạ khách hàng, lịch sử mua sắm và quản lý các thiết bị khách đang sở hữu.
+        div.d-flex.gap-2
+          a.btn.btn-outline-primary(href=`/${pathAdmin}/order/pos`)
+            i.las.la-cash-register.me-1
+            | Bán hàng POS
+          if canWrite
+            a.btn.btn-primary(href=`/${pathAdmin}/customer/create`)
+              i.las.la-user-plus.me-1
+              | Thêm khách hàng
+
+      // Thẻ Thống Kê Nhanh (KPIs)
+      .row.g-3.mb-3
+        .col-xl-4.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-primary-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                  i.las.la-user-friends.fs-2.text-primary
+                div
+                  h6.text-muted.small.mb-1 TỔNG KHÁCH HÀNG
+                  h4.mb-0.fw-bold #{stats ? stats.totalCustomers : 0}
+        .col-xl-4.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-info-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                  i.las.la-shopping-bag.fs-2.text-info
+                div
+                  h6.text-muted.small.mb-1 TỔNG SỐ LẦN MUA HÀNG
+                  h4.mb-0.fw-bold.text-info #{stats ? stats.totalOrders : 0}
+        .col-xl-4.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-success-subtle.rounded-circle.me-3.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                  i.las.la-wallet.fs-2.text-success
+                div
+                  h6.text-muted.small.mb-1 TỔNG DOANH SỐ TÍCH LŨY
+                  h4.mb-0.fw-bold.text-success #{stats ? Number(stats.totalSpent).toLocaleString("vi-VN") : 0} đ
+
+      // Bộ lọc và Danh sách khách hàng
+      .card.border.shadow-sm
+        .card-header.bg-light.py-3
+          form.row.g-2(method="get", action=`/${pathAdmin}/customer`)
+            .col-xl-5.col-md-6
+              .input-group
+                span.input-group-text
+                  i.las.la-search
+                input.form-control(
+                  type="text",
+                  name="keyword",
+                  value=filters.keyword,
+                  placeholder="Tìm tên khách hàng, số điện thoại, email, địa chỉ..."
+                )
+            .col-xl-3.col-md-3
+              select.form-select(name="customerGroup")
+                option(value="") -- Tất cả nhóm khách --
+                option(value="retail", selected=filters.customerGroup === "retail") Khách lẻ thông thường
+                option(value="vip", selected=filters.customerGroup === "vip") Khách hàng VIP
+                option(value="wholesale", selected=filters.customerGroup === "wholesale") Đại lý / Khách sỉ
+            .col-xl-3.col-md-3
+              select.form-select(name="source")
+                option(value="") -- Tất cả nguồn tạo --
+                option(value="pos", selected=filters.source === "pos") Mua tại quầy (POS)
+                option(value="manual", selected=filters.source === "manual") Nhập tay thủ công
+            .col-xl-1.col-md-12.d-grid
+              button.btn.btn-primary(type="submit")
+                i.las.la-filter.me-1
+                | Lọc
+
+        .card-body.p-0
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
+                tr
+                  th.text-center(style="width: 50px") #
+                  th(style="min-width: 220px") Khách hàng
+                  th(style="min-width: 140px") Số điện thoại
+                  th(style="min-width: 120px") Phân nhóm
+                  th(style="min-width: 160px") Nhân viên nhập
+                  th.text-center(style="min-width: 90px") Số đơn
+                  th.text-end(style="min-width: 130px") Tổng chi tiêu
+                  th(style="min-width: 130px") Mua gần nhất
+                  th.text-center(style="min-width: 120px") Hành động
+              tbody
+                if customers && customers.length
+                  each c, index in customers
+                    tr
+                      td.text-center.text-muted #{index + 1}
+                      td
+                        a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/customer/${c._id}`)
+                          | #{c.fullName}
+                        if c.email
+                          div.small.text-muted #{c.email}
+                        if c.address
+                          div.small.text-muted.text-truncate(style="max-width: 220px;")
+                            i.las.la-map-marker.me-1
+                            | #{c.address}
+                      td
+                        strong.font-monospace.text-dark #{c.phone}
+                      td
+                        case c.customerGroup
+                          when "vip"
+                            span.badge.bg-warning-subtle.text-warning-emphasis VIP
+                          when "wholesale"
+                            span.badge.bg-info-subtle.text-info Đại lý / Sỉ
+                          default
+                            span.badge.bg-light.text-dark.border Khách lẻ
+                      td
+                        if c.createdBy
+                          strong.text-dark #{c.createdBy.fullName || c.createdBy.email}
+                        else
+                          span.text-muted Administrator
+                        div.small.mt-1
+                          if c.source === "pos"
+                            span.badge.bg-success-subtle.text-success
+                              i.las.la-cash-register.me-1
+                              | Quầy POS
+                          else
+                            span.badge.bg-secondary-subtle.text-secondary
+                              i.las.la-keyboard.me-1
+                              | Nhập tay
+                      td.text-center.fw-bold
+                        span.badge.bg-light.text-dark.border #{c.orderCount || 0}
+                      td.text-end.fw-bold.text-primary
+                        | #{Number(c.totalSpent || 0).toLocaleString("vi-VN")} đ
+                      td
+                        if c.lastOrderAt
+                          span.d-block #{new Date(c.lastOrderAt).toLocaleDateString("vi-VN")}
+                          small.text-muted #{new Date(c.lastOrderAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                        else
+                          span.text-muted.small --
+                      td.text-center
+                        .btn-group.btn-group-sm
+                          a.btn.btn-outline-primary(href=`/${pathAdmin}/customer/${c._id}`, title="Xem hồ sơ 360°")
+                            i.las.la-eye
+                          if canWrite
+                            a.btn.btn-outline-warning(href=`/${pathAdmin}/customer/edit/${c._id}`, title="Chỉnh sửa thông tin")
+                              i.las.la-edit
+                            button.btn.btn-outline-danger.btn-delete-customer(
+                              type="button",
+                              title="Xóa khách hàng",
+                              data-id=c._id,
+                              data-name=c.fullName
+                            )
+                              i.las.la-trash
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="9")
+                      i.las.la-user-slash.fs-1.d-block.mb-2.text-muted.opacity-50
+                      span.fw-semibold Không tìm thấy khách hàng nào!
+                      p.small.text-muted.mb-0 Hãy thử thay đổi bộ lọc tìm kiếm hoặc thêm khách hàng mới.
+
+block script
+  script.
+    document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll(".btn-delete-customer").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.dataset.id;
+          const name = btn.dataset.name || "khách hàng này";
+          if (!window.confirm(`Bạn có chắc chắn muốn xóa khách hàng "${name}" không?`)) return;
+
+          try {
+            const res = await fetch(`/${pathAdmin}/customer/${id}`, {
+              method: "DELETE",
+              credentials: "same-origin"
+            });
+            const data = await res.json();
+            if (data.code === "success") {
+              window.alert(data.message);
+              window.location.reload();
+            } else {
+              window.alert(data.message || "Lỗi khi xóa khách hàng!");
+            }
+          } catch (e) {
+            console.error(e);
+            window.alert("Lỗi kết nối khi gửi yêu cầu xóa!");
+          }
+        });
+      });
+    });
+

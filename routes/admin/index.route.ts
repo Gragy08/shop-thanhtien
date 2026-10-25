@@ -7,6 +7,8 @@ import productRoutes from "./product.route";
 import inventoryRoutes from "./inventory.route";
 import supplierRoutes from "./supplier.route";
 import orderRoutes from "./order.route";
+import customerRoutes from "./customer.route";
+import warrantyRoutes from "./warranty.route";
 import { requireAuth } from "../../middlewares/admin/authenticate.middleware";
 import { RequestAccount } from "../../interfaces/request.interface";
 
@@ -28,6 +30,8 @@ router.use("/product", productRoutes);
 router.use("/inventory", inventoryRoutes);
 router.use("/inventory/supplier", supplierRoutes);
 router.use("/order", orderRoutes);
+router.use("/customer", customerRoutes);
+router.use("/warranty", warrantyRoutes);
 
 router.get("/protected-health", requireAuth, (req: RequestAccount, res) => {
   res.json({

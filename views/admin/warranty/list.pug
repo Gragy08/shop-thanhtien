@@ -1,0 +1,259 @@
+extends ../../layouts/admin.pug
+
+block main
+  // Tinh chỉnh giao diện bảng không bị cuộn ngang trên máy tính
+  style.
+    .warranty-table {
+      table-layout: auto;
+      width: 100%;
+      font-size: 13px;
+    }
+    .warranty-table th, .warranty-table td {
+      padding: 0.65rem 0.45rem;
+      vertical-align: middle;
+    }
+    .table-container-responsive {
+      width: 100%;
+      overflow-x: hidden;
+    }
+    @media (max-width: 1024px) {
+      .table-container-responsive {
+        overflow-x: auto;
+      }
+    }
+    .cursor-pointer {
+      cursor: pointer;
+    }
+
+  .row
+    .col-12
+      // Tiêu đề & thanh công cụ
+      .d-flex.justify-content-between.align-items-center.mb-3
+        div
+          h4.fw-bold.text-primary.mb-0
+            i.las.la-tools.me-2
+            | Quản Lý Bảo Hành &amp; Dịch Vụ Sửa Chữa
+          p.text-muted.small.mb-0 Theo dõi tiến độ xử lý bảo hành, quản lý thiết bị sửa chữa và bàn giao trả khách.
+        div.d-flex.gap-2
+          a.btn.btn-outline-primary(href=`/${pathAdmin}/inventory/tracker`, title="Tra cứu vòng đời thiết bị")
+            i.las.la-barcode.me-1
+            | Tra cứu IMEI
+          if canWrite
+            a.btn.btn-primary(href=`/${pathAdmin}/warranty/create`)
+              i.las.la-plus-circle.me-1
+              | Tiếp nhận bảo hành
+
+      // Thẻ Thống Kê Nhanh (KPIs)
+      .row.g-3.mb-3
+        .col-xl-2.col-md-4.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-secondary-subtle.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 42px; height: 42px;")
+                  i.las.la-clipboard-list.fs-3.text-secondary
+                div
+                  h6.text-muted.small.mb-0 TỔNG SỐ PHIẾU
+                  h4.mb-0.fw-bold #{stats ? stats.totalTickets : 0}
+        
+        .col-xl-2.col-md-4.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-primary-subtle.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 42px; height: 42px;")
+                  i.las.la-inbox.fs-3.text-primary
+                div
+                  h6.text-muted.small.mb-0 MỚI TIẾP NHẬN
+                  h4.mb-0.fw-bold.text-primary #{stats ? stats.receivedCount : 0}
+
+        .col-xl-3.col-md-4.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-warning-subtle.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 42px; height: 42px;")
+                  i.las.la-tools.fs-3.text-warning-emphasis
+                div
+                  h6.text-muted.small.mb-0 ĐANG SỬA / GỬI HÃNG
+                  h4.mb-0.fw-bold.text-warning-emphasis #{stats ? stats.inProgressCount : 0}
+
+        .col-xl-2.col-md-6.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-info-subtle.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 42px; height: 42px;")
+                  i.las.la-bell.fs-3.text-info
+                div
+                  h6.text-muted.small.mb-0 ĐÃ XONG (CHỜ TRẢ)
+                  h4.mb-0.fw-bold.text-info #{stats ? stats.completedCount : 0}
+
+        .col-xl-3.col-md-6.col-sm-6
+          .card.border.shadow-sm.mb-0
+            .card-body.p-3
+              .d-flex.align-items-center
+                .avatar-sm.bg-success-subtle.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 42px; height: 42px;")
+                  i.las.la-handshake.fs-3.text-success
+                div
+                  h6.text-muted.small.mb-0 ĐÃ BÀN GIAO TRẢ
+                  h4.mb-0.fw-bold.text-success #{stats ? stats.deliveredCount : 0}
+
+      // Bộ lọc và Bảng danh sách phiếu bảo hành
+      .card.border.shadow-sm
+        .card-header.bg-light.py-3
+          form.row.g-2(method="get", action=`/${pathAdmin}/warranty`)
+            .col-xl-4.col-md-6
+              .input-group
+                span.input-group-text
+                  i.las.la-search
+                input.form-control(
+                  type="text",
+                  name="keyword",
+                  value=filters.keyword,
+                  placeholder="Mã phiếu BH, mã IMEI, tên/SĐT khách, mã đơn mua..."
+                )
+            .col-xl-3.col-md-3
+              select.form-select(name="ticketStatus")
+                option(value="") -- Tất cả tiến độ xử lý --
+                option(value="received", selected=filters.ticketStatus === "received") Mới tiếp nhận
+                option(value="in_progress", selected=filters.ticketStatus === "in_progress") Đang xử lý / Sửa chữa
+                option(value="completed", selected=filters.ticketStatus === "completed") Đã sửa xong (Chờ khách lấy)
+                option(value="delivered", selected=filters.ticketStatus === "delivered") Đã bàn giao trả khách
+                option(value="cancelled", selected=filters.ticketStatus === "cancelled") Đã hủy phiếu
+            .col-xl-2.col-md-3
+              input.form-control(
+                type="date",
+                name="from",
+                value=filters.from,
+                title="Từ ngày nhận"
+              )
+            .col-xl-2.col-md-6
+              input.form-control(
+                type="date",
+                name="to",
+                value=filters.to,
+                title="Đến ngày nhận"
+              )
+            .col-xl-1.col-md-6.d-grid
+              button.btn.btn-primary(type="submit")
+                i.las.la-filter.me-1
+                | Lọc
+
+        // Thanh thao tác hàng loạt: Cập nhật trạng thái phiếu đã chọn
+        if canWrite
+          #bulkActionToolbar.p-2.px-3.bg-warning-subtle.border-top.border-bottom(style="display: none;")
+            .d-flex.align-items-center.justify-content-between.flex-wrap.gap-2
+              .d-flex.align-items-center.gap-2
+                i.las.la-check-square.fs-4.text-warning-emphasis
+                span.small.fw-bold.text-dark
+                  | Đã chọn: 
+                  span#selectedCountBadge.badge.bg-warning.text-dark.px-2.py-1 0
+                  |  phiếu bảo hành
+              
+              .d-flex.align-items-center.gap-2
+                label.small.fw-semibold.text-dark.mb-0.text-nowrap Đổi trạng thái sang:
+                select#bulkTargetStatus.form-select.form-select-sm(style="min-width: 190px;")
+                  option(value="") -- Chọn trạng thái mới --
+                  option(value="received") 1. Mới tiếp nhận
+                  option(value="in_progress") 2. Đang sửa / Gửi hãng
+                  option(value="completed") 3. Đã sửa xong (Chờ trả)
+                  option(value="delivered") 4. Bàn giao trả khách (Hoàn kho)
+                  option(value="cancelled") 5. Hủy phiếu
+                
+                button#btnApplyBulkStatus.btn.btn-warning.btn-sm.fw-bold(type="button")
+                  i.las.la-sync-alt.me-1
+                  | Cập nhật trạng thái
+                
+                button#btnDeselectAll.btn.btn-outline-secondary.btn-sm(type="button")
+                  | Bỏ chọn
+
+        .card-body.p-0
+          .table-container-responsive
+            table.table.table-hover.align-middle.mb-0.warranty-table
+              thead.table-light
+                tr
+                  th.text-center(style="width: 85px;")
+                    .form-check.d-flex.align-items-center.justify-content-center.gap-1.mb-0
+                      input#selectAllTickets.form-check-input(type="checkbox")
+                      label.form-check-label.small.fw-bold.cursor-pointer(for="selectAllTickets") Select All
+                  th.text-center(style="width: 35px;") #
+                  th(style="width: 140px;") Mã phiếu &amp; Ngày nhận
+                  th(style="width: 170px;") Thiết bị &amp; IMEI
+                  th(style="width: 140px;") Khách hàng
+                  th Lỗi máy khi nhận
+                  th.text-center(style="width: 95px;") Hẹn trả
+                  th.text-end(style="width: 95px;") Chi phí
+                  th.text-center(style="width: 115px;") Trạng thái
+                  th.text-center(style="width: 75px;") Hành động
+              tbody
+                if tickets && tickets.length
+                  each tk, index in tickets
+                    tr
+                      td.text-center
+                        input.form-check-input.ticket-select-item(type="checkbox", value=tk._id, data-code=tk.ticketCode)
+                      td.text-center.text-muted #{index + 1}
+                      td
+                        a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/warranty/${tk._id}`)
+                          | #{tk.ticketCode}
+                        div.small.text-muted #{tk.receivedDate ? new Date(tk.receivedDate).toLocaleDateString("vi-VN") : "--"}
+                        if tk.createdBy
+                          div.small.text-muted
+                            i.las.la-user.me-1
+                            | #{tk.createdBy.fullName || tk.createdBy.email}
+                      td
+                        strong.text-dark #{tk.productName}
+                        if tk.variantName
+                          small.text-muted.d-block #{tk.variantName}
+                        div.mt-1.d-flex.align-items-center.gap-1.flex-wrap
+                          a.badge.bg-primary-subtle.text-primary.border.border-primary.font-monospace.text-decoration-none(
+                            href=`/${pathAdmin}/inventory/tracker?keyword=${tk.identifier}`,
+                            title="Bấm để tra cứu vòng đời thiết bị này"
+                          )
+                            | #{tk.identifier}
+                          if !tk.inventoryItemId
+                            span.badge.bg-secondary-subtle.text-secondary.border(title="Máy khách sửa ngoài, không mua tại shop") Sửa ngoài
+                      td
+                        strong.text-dark #{tk.customerInfo ? tk.customerInfo.fullName : "Khách lẻ"}
+                        if tk.customerInfo && tk.customerInfo.phone
+                          div.small.text-muted
+                            i.las.la-phone.me-1
+                            | #{tk.customerInfo.phone}
+                      td
+                        div.small.text-danger.fw-semibold.text-truncate(style="max-width: 260px;", title=tk.issueDescription)
+                          | #{tk.issueDescription}
+                        if tk.physicalCondition
+                          div.small.text-muted.text-truncate(style="max-width: 260px;") Ngoại quan: #{tk.physicalCondition}
+                      td.text-center
+                        if tk.expectedReturnDate
+                          span.fw-semibold.small #{new Date(tk.expectedReturnDate).toLocaleDateString("vi-VN")}
+                        else
+                          span.text-muted.small Liên hệ sau
+                      td.text-end
+                        if tk.repairCost > 0
+                          strong.text-primary #{Number(tk.repairCost).toLocaleString("vi-VN")} đ
+                        else
+                          span.badge.bg-success-subtle.text-success 0 đ
+                      td.text-center
+                        case tk.ticketStatus
+                          when "received"
+                            span.badge.bg-primary-subtle.text-primary Mới nhận
+                          when "in_progress"
+                            span.badge.bg-warning-subtle.text-warning-emphasis Đang sửa
+                          when "completed"
+                            span.badge.bg-info-subtle.text-info Đã xong (Chờ trả)
+                          when "delivered"
+                            span.badge.bg-success-subtle.text-success Đã bàn giao
+                          when "cancelled"
+                            span.badge.bg-danger-subtle.text-danger Đã hủy
+                          default
+                            span.badge.bg-secondary #{tk.ticketStatus}
+                      td.text-center
+                        .btn-group.btn-group-sm
+                          a.btn.btn-outline-primary(href=`/${pathAdmin}/warranty/${tk._id}`, title="Xem & In phiếu hẹn")
+                            i.las.la-eye
+                else
+                  tr
+                    td.text-center.text-muted.py-5(colspan="10")
+                      i.las.la-tools.fs-1.d-block.mb-2.text-muted.opacity-50
+                      span.fw-semibold Chưa có phiếu bảo hành nào!
+                      p.small.text-muted.mb-0 Hãy bấm "+ Tiếp nhận bảo hành" để lập phiếu tiếp nhận thiết bị mới.
+
+block script
+  script(src="/admin/assets/js/warranty-list.js")

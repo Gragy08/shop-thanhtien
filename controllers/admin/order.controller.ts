@@ -4,6 +4,7 @@ import Order from "../../models/order.model";
 import Product from "../../models/product.model";
 import ProductVariant from "../../models/product-variant.model";
 import InventoryItem from "../../models/inventory-item.model";
+import Customer from "../../models/customer.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { readVietnameseNumber } from "../../helpers/number-to-words.helper";
 
@@ -328,11 +329,50 @@ export const createPost = async (req: RequestAccount, res: Response) => {
 
     const orderCode = createOrderCode();
 
+    // Tự động lưu / cập nhật hồ sơ khách hàng (Phương thức 1: Auto-upsert từ POS)
+    let linkedCustomerId: mongoose.Types.ObjectId | undefined;
+    const rawPhone = typeof customerInfo.phone === "string" ? customerInfo.phone.trim() : "";
+    const cleanPhone = rawPhone.replace(/\D/g, "");
+
+    if (cleanPhone.length >= 9) {
+      let customer = await Customer.findOne({ phone: cleanPhone, deleted: { $ne: true } });
+      const rawFullName = typeof customerInfo.fullName === "string" ? customerInfo.fullName.trim() : "";
+      const validName = rawFullName && rawFullName !== "Khách lẻ vãng lai" ? rawFullName : "";
+      const validAddress = typeof customerInfo.address === "string" ? customerInfo.address.trim() : "";
+
+      if (customer) {
+        customer.totalSpent = (customer.totalSpent || 0) + totalAmount;
+        customer.orderCount = (customer.orderCount || 0) + 1;
+        customer.lastOrderAt = new Date();
+        if (validName && (!customer.fullName || customer.fullName === "Khách lẻ vãng lai" || customer.fullName === "Khách lẻ")) {
+          customer.fullName = validName;
+        }
+        if (validAddress && !customer.address) {
+          customer.address = validAddress;
+        }
+        await customer.save();
+        linkedCustomerId = customer._id as mongoose.Types.ObjectId;
+      } else {
+        customer = await Customer.create({
+          fullName: validName || "Khách lẻ",
+          phone: cleanPhone,
+          address: validAddress,
+          totalSpent: totalAmount,
+          orderCount: 1,
+          lastOrderAt: new Date(),
+          source: "pos",
+          createdBy: req.adminId ? new mongoose.Types.ObjectId(req.adminId) : undefined
+        });
+        linkedCustomerId = customer._id as mongoose.Types.ObjectId;
+      }
+    }
+
     const order = await Order.create({
       orderCode,
+      customerId: linkedCustomerId,
       customerInfo: {
         fullName: typeof customerInfo.fullName === "string" && customerInfo.fullName.trim() ? customerInfo.fullName.trim() : "Khách lẻ vãng lai",
-        phone: typeof customerInfo.phone === "string" ? customerInfo.phone.trim() : "",
+        phone: cleanPhone || rawPhone,
         address: typeof customerInfo.address === "string" ? customerInfo.address.trim() : ""
       },
       items: orderItems,
@@ -414,6 +454,16 @@ export const cancel = async (req: RequestAccount, res: Response) => {
     }
 
     await order.save();
+
+    // Giảm trừ tích lũy chi tiêu của khách hàng nếu đơn bị hủy
+    if (order.customerId) {
+      const customer = await Customer.findById(order.customerId);
+      if (customer) {
+        customer.totalSpent = Math.max(0, (customer.totalSpent || 0) - order.totalAmount);
+        customer.orderCount = Math.max(0, (customer.orderCount || 0) - 1);
+        await customer.save();
+      }
+    }
 
     // Thu thập toàn bộ IMEI trong đơn để hoàn về kho
     const soldIdentifiers: string[] = [];

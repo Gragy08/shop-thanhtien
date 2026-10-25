@@ -7,6 +7,7 @@ import path from "path";
 import { connectDB } from "./configs/database.config";
 import { pathAdmin } from "./configs/variable.config";
 import adminRoutes from "./routes/admin/index.route";
+import { publicLookupPage } from "./controllers/admin/warranty.controller";
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -23,6 +24,8 @@ app.locals.pathAdmin = pathAdmin;
 app.get("/", (_req, res) => {
   res.redirect(`/${pathAdmin}/account/login`);
 });
+
+app.get("/tra-cuu-bao-hanh", publicLookupPage);
 
 app.use(`/${pathAdmin}`, adminRoutes);
 

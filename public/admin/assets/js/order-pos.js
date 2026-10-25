@@ -695,3 +695,58 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
   }
 });
 
+// ==========================================
+// 6. TRA CỨU TỰ ĐỘNG KHÁCH HÀNG THEO SỐ ĐIỆN THOẠI
+// ==========================================
+const phoneInput = document.querySelector("#customerPhone");
+const nameInput = document.querySelector("#customerName");
+const addressInput = document.querySelector("#customerAddress");
+const lookupBadge = document.querySelector("#customerLookupBadge");
+let phoneLookupTimer = null;
+
+phoneInput?.addEventListener("input", (e) => {
+  const phone = e.target.value.trim().replace(/\D/g, "");
+  clearTimeout(phoneLookupTimer);
+
+  if (phone.length < 9) {
+    if (lookupBadge) {
+      lookupBadge.style.display = "none";
+      lookupBadge.innerHTML = "";
+    }
+    return;
+  }
+
+  phoneLookupTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/admin/customer/api/lookup?phone=${encodeURIComponent(phone)}`, {
+        credentials: "same-origin"
+      });
+      const data = await res.json();
+
+      if (data.code === "success" && data.found && data.customer) {
+        if (nameInput && (!nameInput.value || nameInput.value === "Khách lẻ vãng lai" || nameInput.value === "Khách lẻ")) {
+          nameInput.value = data.customer.fullName;
+        }
+        if (addressInput && !addressInput.value && data.customer.address) {
+          addressInput.value = data.customer.address;
+        }
+        if (lookupBadge) {
+          const groupBadge = data.customer.customerGroup === "vip" ? '<span class="badge bg-warning text-dark ms-1">VIP</span>' : '';
+          lookupBadge.innerHTML = `
+            <div class="alert alert-success py-1 px-2 mb-0 small d-flex justify-content-between align-items-center">
+              <span><i class="las la-user-check me-1"></i> Khách quen: <strong>${data.customer.fullName}</strong> ${groupBadge}</span>
+              <span class="text-muted small">${data.customer.orderCount || 0} đơn (${Number(data.customer.totalSpent || 0).toLocaleString("vi-VN")} đ)</span>
+            </div>
+          `;
+          lookupBadge.style.display = "block";
+        }
+      } else {
+        if (lookupBadge) lookupBadge.style.display = "none";
+      }
+    } catch (_err) {
+      // Ignore lookup network errors
+    }
+  }, 250);
+});
+
+

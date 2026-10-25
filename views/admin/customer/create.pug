@@ -1,0 +1,179 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      .d-flex.justify-content-between.align-items-center.mb-3
+        div
+          h4.fw-bold.text-primary.mb-0
+            i.las.la-user-plus.me-2
+            | Thêm Mới Khách Hàng Thủ Công
+          p.text-muted.small.mb-0 Nhập thông tin khách hàng mới vào hệ thống (Phương thức 2).
+        div
+          a.btn.btn-outline-secondary.btn-sm(href=`/${pathAdmin}/customer`)
+            i.las.la-arrow-left.me-1
+            | Quay lại danh sách
+
+  .row
+    .col-12
+      .card.border.shadow-sm
+        .card-header.bg-light.py-3
+          h6.mb-0.fw-bold.text-dark
+            i.las.la-id-card.me-1.text-primary
+            | Thông tin định danh &amp; Liên hệ khách hàng
+        .card-body.p-4
+          #alertDuplicatePhone.alert.alert-danger(style="display: none;")
+            .d-flex.align-items-center
+              i.las.la-exclamation-triangle.fs-3.me-2
+              div
+                strong#duplicatePhoneMsg Số điện thoại đã tồn tại trong hệ thống!
+                div.mt-1
+                  a#btnViewExistingCustomer.btn.btn-sm.btn-danger.py-0(href="#")
+                    i.las.la-external-link-alt.me-1
+                    | Mở hồ sơ khách hàng đã có
+
+          form#createCustomerForm
+            .row.g-3
+              .col-md-6
+                label.form-label.fw-bold
+                  | Họ và tên khách hàng 
+                  span.text-danger *
+                .input-group
+                  span.input-group-text
+                    i.las.la-user
+                  input#inputFullName.form-control(type="text", name="fullName", placeholder="Ví dụ: Nguyễn Văn A", required)
+              
+              .col-md-6
+                label.form-label.fw-bold
+                  | Số điện thoại (Định danh duy nhất) 
+                  span.text-danger *
+                .input-group
+                  span.input-group-text
+                    i.las.la-phone
+                  input#inputPhone.form-control(type="text", name="phone", placeholder="Ví dụ: 0912345678", required)
+                small.text-muted Hệ thống sẽ tự động kiểm tra chống trùng số điện thoại.
+
+              .col-md-6
+                label.form-label Email (tùy chọn)
+                .input-group
+                  span.input-group-text
+                    i.las.la-envelope
+                  input#inputEmail.form-control(type="email", name="email", placeholder="email@example.com")
+
+              .col-md-6
+                label.form-label Nhóm khách hàng
+                select#inputCustomerGroup.form-select(name="customerGroup")
+                  option(value="retail", selected) Khách lẻ thông thường
+                  option(value="vip") Khách hàng VIP
+                  option(value="wholesale") Đại lý / Khách sỉ
+
+              .col-md-6
+                label.form-label Giới tính
+                select#inputGender.form-select(name="gender")
+                  option(value="other") Chưa xác định
+                  option(value="male") Nam
+                  option(value="female") Nữ
+
+              .col-md-6
+                label.form-label Ngày sinh
+                input#inputBirthday.form-control(type="date", name="birthday")
+
+              .col-12
+                label.form-label Địa chỉ nhận hàng / cư trú
+                .input-group
+                  span.input-group-text
+                    i.las.la-map-pin
+                  input#inputAddress.form-control(type="text", name="address", placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố...")
+
+              .col-12
+                label.form-label Ghi chú thêm về khách hàng
+                textarea#inputNotes.form-control(name="notes", rows="3", placeholder="Sở thích, yêu cầu xuất hóa đơn công ty, lưu ý phục vụ...")
+
+            .d-flex.justify-content-end.gap-2.mt-4.pt-3.border-top
+              a.btn.btn-secondary(href=`/${pathAdmin}/customer`) Hủy bỏ
+              button#btnSubmitCustomer.btn.btn-primary.px-4(type="submit")
+                i.las.la-save.me-1
+                | Lưu khách hàng
+
+block script
+  script.
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.querySelector("#createCustomerForm");
+      const submitBtn = document.querySelector("#btnSubmitCustomer");
+      const alertDuplicate = document.querySelector("#alertDuplicatePhone");
+      const duplicateMsg = document.querySelector("#duplicatePhoneMsg");
+      const viewExistingBtn = document.querySelector("#btnViewExistingCustomer");
+
+      form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        alertDuplicate.style.display = "none";
+
+        const fullName = document.querySelector("#inputFullName").value.trim();
+        const phone = document.querySelector("#inputPhone").value.trim();
+        const email = document.querySelector("#inputEmail").value.trim();
+        const address = document.querySelector("#inputAddress").value.trim();
+        const customerGroup = document.querySelector("#inputCustomerGroup").value;
+        const gender = document.querySelector("#inputGender").value;
+        const birthday = document.querySelector("#inputBirthday").value;
+        const notes = document.querySelector("#inputNotes").value.trim();
+
+        if (!fullName || !phone) {
+          window.alert("Vui lòng điền họ tên và số điện thoại!");
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang kiểm tra & lưu...';
+
+        try {
+          const res = await fetch(`/${pathAdmin}/customer/create`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              fullName,
+              phone,
+              email,
+              address,
+              customerGroup,
+              gender,
+              birthday: birthday || undefined,
+              notes
+            })
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || data.code !== "success") {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="las la-save me-1"></i> Lưu khách hàng';
+
+            // Nếu trùng số điện thoại (Conflict detected)
+            if (data.code === "duplicate_phone") {
+              duplicateMsg.textContent = data.message;
+              if (data.existingCustomerId) {
+                viewExistingBtn.href = `/${pathAdmin}/customer/${data.existingCustomerId}`;
+                viewExistingBtn.style.display = "inline-block";
+              } else {
+                viewExistingBtn.style.display = "none";
+              }
+              alertDuplicate.style.display = "block";
+              alertDuplicate.scrollIntoView({ behavior: "smooth" });
+              return;
+            }
+
+            window.alert(data.message || "Lỗi khi lưu khách hàng!");
+            return;
+          }
+
+          window.alert(data.message);
+          window.location.href = `/${pathAdmin}/customer/${data.customerId}`;
+        } catch (err) {
+          console.error(err);
+          window.alert("Lỗi kết nối khi gửi yêu cầu!");
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="las la-save me-1"></i> Lưu khách hàng';
+        }
+      });
+    });
+

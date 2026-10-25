@@ -1,0 +1,814 @@
+extends ../../layouts/admin.pug
+
+block main
+  // CSS chuyên dụng cho chế độ In Phiếu Tiếp Nhận & Biên Bản Bàn Giao
+  style.
+    .ticket-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .k80-receipt {
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      background: #fff;
+      font-family: 'Courier New', Courier, monospace, 'Segoe UI', Tahoma, sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+      border: 1px dashed #ced4da;
+      padding: 16px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .border-dashed {
+      border-style: dashed !important;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+
+      /* In Phiếu Hẹn K80 Tiếp Nhận */
+      body.print-k80 {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body.print-k80 @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+      body.print-k80 #printableTicketK80,
+      body.print-k80 #printableTicketK80 * {
+        visibility: visible !important;
+      }
+      body.print-k80 #printableTicketK80 {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 76mm;
+        margin: 0 auto;
+        padding: 2mm 3mm;
+        color: #000 !important;
+        background: #fff !important;
+        font-family: 'Courier New', Courier, monospace, Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.35;
+        border: none !important;
+        box-shadow: none !important;
+      }
+
+      /* In Phiếu Tiếp Nhận Khổ A5 (Gọn 1 trang) */
+      body.print-a5 {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body.print-a5 @page {
+        size: A5 landscape;
+        margin: 6mm 8mm;
+      }
+      body.print-a5 #printableTicketA5,
+      body.print-a5 #printableTicketA5 * {
+        visibility: visible !important;
+      }
+      body.print-a5 #printableTicketA5 {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: #fff !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+
+      /* In Biên Bản Bàn Giao Khổ A5 */
+      body.print-handover-a5 {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body.print-handover-a5 @page {
+        size: A5 landscape;
+        margin: 6mm 8mm;
+      }
+      body.print-handover-a5 #printableHandoverA5,
+      body.print-handover-a5 #printableHandoverA5 * {
+        visibility: visible !important;
+      }
+      body.print-handover-a5 #printableHandoverA5 {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: #fff !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+
+      /* In Biên Bản Bàn Giao Khổ K80 */
+      body.print-handover-k80 {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body.print-handover-k80 @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+      body.print-handover-k80 #printableHandoverK80,
+      body.print-handover-k80 #printableHandoverK80 * {
+        visibility: visible !important;
+      }
+      body.print-handover-k80 #printableHandoverK80 {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 76mm;
+        margin: 0 auto;
+        padding: 2mm 3mm;
+        color: #000 !important;
+        background: #fff !important;
+        font-family: 'Courier New', Courier, monospace, Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.35;
+        border: none !important;
+        box-shadow: none !important;
+      }
+
+      .signature-block {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+
+  .row
+    .col-12
+      // Thanh công cụ điều hướng & Thao tác trạng thái
+      .d-flex.justify-content-between.align-items-center.flex-wrap.gap-2.mb-3.no-print
+        div.d-flex.align-items-center.gap-2.flex-wrap
+          a.btn.btn-outline-secondary.btn-sm(href=`/${pathAdmin}/warranty`)
+            i.las.la-arrow-left.me-1
+            | Danh sách
+          h5.fw-bold.text-primary.mb-0
+            | Phiếu Bảo Hành: 
+            span.text-dark #{ticket.ticketCode}
+          case ticket.ticketStatus
+            when "received"
+              span.badge.bg-primary-subtle.text-primary.fs-7 Mới tiếp nhận
+            when "in_progress"
+              span.badge.bg-warning-subtle.text-warning-emphasis.fs-7 Đang xử lý / Sửa chữa
+            when "completed"
+              span.badge.bg-info-subtle.text-info.fs-7 Đã sửa xong (Chờ giao)
+            when "delivered"
+              span.badge.bg-success-subtle.text-success.fs-7 Đã bàn giao trả khách
+            when "cancelled"
+              span.badge.bg-danger-subtle.text-danger.fs-7 Đã hủy phiếu
+          
+          if ticket.isExchange1to1
+            span.badge.bg-success.text-white.fs-7
+              i.las.la-sync-alt.me-1
+              | Đã đổi mới 1-đổi-1
+        
+        div.d-flex.gap-2.flex-wrap
+          // Các nút in phiếu
+          .btn-group.btn-group-sm
+            button#btnPrintA5.btn.btn-outline-primary(type="button", title="In phiếu tiếp nhận khổ A5")
+              i.las.la-print.me-1
+              | In phiếu hẹn A5
+            button#btnPrintK80.btn.btn-primary(type="button", title="In bill hẹn 80mm máy Xprinter")
+              i.las.la-receipt.me-1
+              | In bill hẹn K80
+          
+          if ticket.ticketStatus === "delivered" || ticket.ticketStatus === "completed"
+            .btn-group.btn-group-sm
+              button#btnPrintHandoverA5.btn.btn-outline-success(type="button", title="In biên bản bàn giao trả máy khổ A5")
+                i.las.la-file-signature.me-1
+                | In biên bản trả máy A5
+              button#btnPrintHandoverK80.btn.btn-success(type="button", title="In bill trả máy 80mm máy Xprinter")
+                i.las.la-receipt.me-1
+                | In bill trả K80
+
+          // Các thao tác nghiệp vụ nâng cao (Đổi 1-đổi-1 / Bàn giao / Tiến độ)
+          if canWrite && ticket.ticketStatus !== "delivered" && ticket.ticketStatus !== "cancelled"
+            // Nút Đổi mới 1-đổi-1 cho thiết bị lỗi phần cứng
+            button.btn.btn-outline-success.btn-sm(
+              type="button",
+              data-bs-toggle="modal",
+              data-bs-target="#modalExchange1to1",
+              title="Đổi thiết bị mới 1-đổi-1 cho khách trong thời gian bao test lỗi phần cứng"
+            )
+              i.las.la-sync-alt.me-1
+              | Đổi mới 1-đổi-1
+
+            if ticket.ticketStatus === "received"
+              button.btn.btn-outline-warning.btn-sm.btn-change-status(data-status="in_progress")
+                i.las.la-cog.me-1
+                | Đang sửa chữa
+            
+            if ticket.ticketStatus === "in_progress"
+              button.btn.btn-outline-info.btn-sm.btn-change-status(data-status="completed")
+                i.las.la-check.me-1
+                | Đã sửa xong
+
+            // Nút Bàn giao trả máy mở modal chốt biên bản & chi phí
+            button.btn.btn-success.btn-sm(
+              type="button",
+              data-bs-toggle="modal",
+              data-bs-target="#modalDeliverTicket"
+            )
+              i.las.la-handshake.me-1
+              | Bàn giao trả khách
+
+            button.btn.btn-outline-danger.btn-sm.btn-change-status(data-status="cancelled")
+              i.las.la-times.me-1
+              | Hủy phiếu
+
+      // Thông báo trạng thái bàn giao / đổi máy
+      if ticket.ticketStatus === "delivered"
+        .alert.alert-success.mb-3.no-print
+          i.las.la-check-circle.fs-4.me-2
+          strong Đã bàn giao hoàn tất cho khách hàng vào #{ticket.deliveredDate ? new Date(ticket.deliveredDate).toLocaleString("vi-VN") : "--"}. 
+          if ticket.isExchange1to1
+            span Đã xuất đổi máy mới IMEI: 
+            strong.font-monospace #{ticket.replacementIdentifier} 
+            span (#{ticket.replacementProductName}). Máy lỗi cũ đã được thu hồi về kho lỗi.
+          else
+            span Thiết bị đã được hoàn trả về trạng thái "Đã bán" (sold).
+          if ticket.handoverNotes
+            div.small.mt-1.text-dark Ghi chú bàn giao: #{ticket.handoverNotes}
+
+      else if ticket.ticketStatus === "cancelled"
+        .alert.alert-danger.mb-3.no-print
+          i.las.la-times-circle.fs-4.me-2
+          strong Phiếu bảo hành này đã bị hủy vào #{ticket.cancelledDate ? new Date(ticket.cancelledDate).toLocaleString("vi-VN") : "--"}. 
+          span Lý do: #{ticket.cancelReason || "Không nêu rõ"}.
+
+      // Tabs xem trước trên màn hình
+      ul.nav.nav-tabs.mb-3.no-print#ticketPreviewTabs(role="tablist")
+        li.nav-item(role="presentation")
+          button.nav-link.active#tab-a5-btn(
+            data-bs-toggle="tab",
+            data-bs-target="#tab-a5-pane",
+            type="button",
+            role="tab"
+          )
+            i.las.la-file-invoice.me-1
+            | 1. Phiếu Tiếp Nhận A5
+        li.nav-item(role="presentation")
+          button.nav-link#tab-k80-btn(
+            data-bs-toggle="tab",
+            data-bs-target="#tab-k80-pane",
+            type="button",
+            role="tab"
+          )
+            i.las.la-receipt.me-1
+            | 2. Bill Tiếp Nhận K80
+        if ticket.ticketStatus === "delivered" || ticket.ticketStatus === "completed"
+          li.nav-item(role="presentation")
+            button.nav-link#tab-handover-a5-btn(
+              data-bs-toggle="tab",
+              data-bs-target="#tab-handover-a5-pane",
+              type="button",
+              role="tab"
+            )
+              i.las.la-file-signature.me-1.text-success
+              | 3. Biên Bản Bàn Giao Trả Máy (A5)
+          li.nav-item(role="presentation")
+            button.nav-link#tab-handover-k80-btn(
+              data-bs-toggle="tab",
+              data-bs-target="#tab-handover-k80-pane",
+              type="button",
+              role="tab"
+            )
+              i.las.la-receipt.me-1.text-success
+              | 4. Bill Trả Máy (K80)
+
+      .tab-content
+        // ==========================================
+        // TAB 1: PHIẾU TIẾP NHẬN KHỔ A5 (GỌN 1 TRANG)
+        // ==========================================
+        .tab-pane.fade.show.active#tab-a5-pane(role="tabpanel")
+          .card.border.shadow-sm#printableTicketA5
+            .card-body.p-4
+              // Đầu phiếu: Thông tin shop
+              .row.align-items-center.border-bottom.pb-2.mb-3
+                .col-sm-7
+                  h4.fw-bold.text-primary.mb-1 SHOP THANH TIỀN
+                  p.text-muted.small.mb-0
+                    i.las.la-tools.me-1
+                    | Trung tâm dịch vụ bảo hành &amp; sửa chữa thiết bị di động chính hãng
+                  p.text-muted.small.mb-0
+                    i.las.la-phone.me-1
+                    | Hotline kỹ thuật: 0988.xxx.xxx | Tra cứu online: website shopthanhtien.vn
+                .col-sm-5.text-sm-end.mt-2.mt-sm-0
+                  .ticket-title.text-dark PHIẾU TIẾP NHẬN BẢO HÀNH
+                  div.small.text-muted Mã phiếu: 
+                    strong.text-primary #{ticket.ticketCode}
+                  div.small.text-muted Ngày nhận: 
+                    strong #{ticket.receivedDate ? new Date(ticket.receivedDate).toLocaleString("vi-VN") : "--"}
+                  div.small.text-danger.fw-bold Hẹn trả dự kiến: 
+                    strong #{ticket.expectedReturnDate ? new Date(ticket.expectedReturnDate).toLocaleDateString("vi-VN") : "Liên hệ sau"}
+
+              // Khách hàng & Thiết bị
+              .row.mb-3
+                .col-sm-6
+                  h6.text-muted.text-uppercase.small.fw-bold.mb-1 Khách hàng gửi máy
+                  strong.fs-6.text-dark #{ticket.customerInfo ? ticket.customerInfo.fullName : "Khách lẻ"}
+                  div.small
+                    i.las.la-phone.me-1
+                    | SĐT: 
+                    strong.font-monospace #{ticket.customerInfo ? ticket.customerInfo.phone : "--"}
+                  if ticket.customerInfo && ticket.customerInfo.address
+                    div.small.text-muted Địa chỉ: #{ticket.customerInfo.address}
+                
+                .col-sm-6.text-sm-end.mt-2.mt-sm-0
+                  h6.text-muted.text-uppercase.small.fw-bold.mb-1 Thiết bị tiếp nhận
+                  strong.fs-6.text-dark #{ticket.productName} 
+                  if ticket.variantName
+                    span.text-muted (#{ticket.variantName})
+                  div.small
+                    | IMEI/Serial: 
+                    strong.font-monospace.text-primary #{ticket.identifier}
+                  div.small
+                    | Chế độ: 
+                    if ticket.isUnderWarranty
+                      span.badge.bg-success-subtle.text-success Bảo hành chính hãng
+                    else
+                      span.badge.bg-warning-subtle.text-warning-emphasis Sửa chữa dịch vụ tính phí
+
+              // Bảng hiện trạng & Chi phí
+              .table-responsive.mb-3
+                table.table.table-sm.table-bordered.align-middle.mb-0
+                  thead.table-light
+                    tr
+                      th Hiện trạng máy khi nhận
+                      th(style="width: 260px") Ngoại quan &amp; Phụ kiện
+                      th.text-end(style="width: 150px") Chi phí dự kiến
+                  tbody
+                    tr
+                      td
+                        strong.text-danger Lỗi khách báo: 
+                        span.text-dark #{ticket.issueDescription}
+                        if ticket.passcode
+                          div.small.text-muted.mt-1
+                            | Mật khẩu máy/PIN: 
+                            code.fw-bold #{ticket.passcode}
+                        if ticket.orderCode
+                          div.small.text-muted Mua theo HĐ: #{ticket.orderCode}
+                      td
+                        div.small
+                          span.text-muted Ngoại quan: 
+                          strong #{ticket.physicalCondition || "Bình thường"}
+                        div.small.mt-1
+                          span.text-muted Phụ kiện kèm: 
+                          span #{ticket.accessoriesAttached || "Thân máy"}
+                        if ticket.technicianNotes
+                          div.small.mt-1.text-primary
+                            span.text-muted Ghi chú KT: 
+                            span #{ticket.technicianNotes}
+                      td.text-end.align-top
+                        strong.fs-6.text-primary #{ticket.repairCost ? Number(ticket.repairCost).toLocaleString("vi-VN") + " đ" : "0 đ (Bảo hành)"}
+                        if ticket.isUnderWarranty
+                          div.small.text-success Miễn phí theo bảo hành
+
+              // Quy định bảo hành
+              .p-2.border.rounded.bg-light-subtle.small.text-muted.mb-3
+                strong.d-block.mb-1.text-dark LƯU Ý KHI GỬI BẢO HÀNH &amp; SỬA CHỮA:
+                ul.mb-0.ps-3
+                  li Quý khách vui lòng giữ phiếu này và mang theo khi đến nhận lại thiết bị.
+                  li Cửa hàng không chịu trách nhiệm về dữ liệu cá nhân. Quý khách vui lòng tự sao lưu trước khi bàn giao.
+                  li Sau 30 ngày kể từ ngày hẹn trả máy, nếu quý khách không đến nhận hoặc không liên hệ, thiết bị sẽ được xử lý theo quy định lưu kho.
+
+              // Chữ ký xác nhận (Chống nhảy trang)
+              .row.text-center.mt-3.pt-2.signature-block
+                .col-6
+                  p.small.text-muted.mb-1 KHÁCH HÀNG GỬI MÁY
+                  div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, ghi rõ họ tên)
+                  div.fw-semibold.text-dark.mt-1 #{ticket.customerInfo ? ticket.customerInfo.fullName : "Khách hàng"}
+                .col-6
+                  p.small.text-muted.mb-1 ĐẠI DIỆN TIẾP NHẬN
+                  div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, đóng dấu)
+                  div.fw-semibold.text-dark.mt-1 #{ticket.createdBy ? (ticket.createdBy.fullName || ticket.createdBy.email) : "Administrator"}
+
+        // ==========================================
+        // TAB 2: PHIẾU HẸN XPRINTER K80 (80MM CUỘN NHIỆT)
+        // ==========================================
+        .tab-pane.fade#tab-k80-pane(role="tabpanel")
+          .d-flex.justify-content-center.py-2
+            .k80-receipt#printableTicketK80
+              .text-center.mb-2
+                .fw-bold.fs-6.text-uppercase SHOP THANH TIỀN
+                .small.text-muted Dịch vụ bảo hành &amp; Sửa chữa
+                .small.text-muted Hotline: 0988.xxx.xxx
+                .border-bottom.border-dark.border-dashed.my-2
+                .fw-bold.fs-6.text-uppercase PHIẾU HẸN BẢO HÀNH
+                .small Mã phiếu: #{ticket.ticketCode}
+              
+              .small.mb-2
+                .d-flex.justify-content-between
+                  span Ngày nhận:
+                  strong #{ticket.receivedDate ? new Date(ticket.receivedDate).toLocaleDateString("vi-VN") : "--"}
+                .d-flex.justify-content-between
+                  span Tiếp nhận:
+                  strong #{ticket.createdBy ? (ticket.createdBy.fullName || ticket.createdBy.email) : "Administrator"}
+                .d-flex.justify-content-between
+                  span Khách hàng:
+                  strong #{ticket.customerInfo ? ticket.customerInfo.fullName : "Khách lẻ"}
+                .d-flex.justify-content-between
+                  span SĐT:
+                  strong #{ticket.customerInfo ? ticket.customerInfo.phone : "--"}
+              
+              .border-bottom.border-dark.border-dashed.my-2
+
+              .small
+                div
+                  span Máy: 
+                  strong #{ticket.productName} #{ticket.variantName ? `(${ticket.variantName})` : ''}
+                div.mt-1
+                  span IMEI: 
+                  strong.font-monospace #{ticket.identifier}
+                div.mt-1
+                  span Chế độ: 
+                  strong #{ticket.isUnderWarranty ? "Bảo hành chính hãng" : "Sửa dịch vụ"}
+                div.mt-1.border.p-1.rounded.bg-light
+                  span.text-danger.fw-bold Lỗi: 
+                  span #{ticket.issueDescription}
+                div.mt-1
+                  span Ngoại quan: #{ticket.physicalCondition || "Bình thường"}
+                div.mt-1
+                  span Phụ kiện: #{ticket.accessoriesAttached || "Thân máy"}
+                if ticket.passcode
+                  div.mt-1
+                    span Mật khẩu máy: 
+                    strong #{ticket.passcode}
+              
+              .border-bottom.border-dark.border-dashed.my-2
+
+              .small
+                .d-flex.justify-content-between.align-items-center
+                  span.fw-bold.text-danger HẸN TRẢ:
+                  strong.fs-6.text-danger #{ticket.expectedReturnDate ? new Date(ticket.expectedReturnDate).toLocaleDateString("vi-VN") : "Liên hệ sau"}
+                .d-flex.justify-content-between.mt-1
+                  span Chi phí dự kiến:
+                  strong #{ticket.repairCost ? Number(ticket.repairCost).toLocaleString("vi-VN") + " đ" : "0 đ (Bảo hành)"}
+
+              .border-bottom.border-dark.border-dashed.my-2
+
+              .text-center.small.mt-2
+                .fw-bold Vui lòng giữ phiếu khi đến nhận máy!
+                div(style="font-size: 11px;") Tra cứu tiến độ sửa chữa tại:
+                div.fw-semibold(style="font-size: 11px;") website shopthanhtien.vn
+
+        // ==========================================
+        // TAB 3: BIÊN BẢN BÀN GIAO TRẢ MÁY KHỔ A5
+        // ==========================================
+        if ticket.ticketStatus === "delivered" || ticket.ticketStatus === "completed"
+          .tab-pane.fade#tab-handover-a5-pane(role="tabpanel")
+            .card.border.shadow-sm#printableHandoverA5
+              .card-body.p-4
+                // Đầu phiếu bàn giao
+                .row.align-items-center.border-bottom.pb-2.mb-3
+                  .col-sm-7
+                    h4.fw-bold.text-success.mb-1 SHOP THANH TIỀN
+                    p.text-muted.small.mb-0 Trung tâm dịch vụ bảo hành &amp; Sửa chữa thiết bị di động
+                    p.text-muted.small.mb-0 Hotline hỗ trợ: 0988.xxx.xxx | Website: shopthanhtien.vn
+                  .col-sm-5.text-sm-end.mt-2.mt-sm-0
+                    if ticket.isExchange1to1
+                      .ticket-title.text-success BIÊN BẢN ĐỔI MÁY 1-ĐỔI-1
+                    else
+                      .ticket-title.text-primary BIÊN BẢN BÀN GIAO TRẢ MÁY
+                    div.small.text-muted Thuộc phiếu: 
+                      strong.text-dark #{ticket.ticketCode}
+                    div.small.text-muted Ngày bàn giao: 
+                      strong #{ticket.deliveredDate ? new Date(ticket.deliveredDate).toLocaleString("vi-VN") : new Date().toLocaleString("vi-VN")}
+
+                // Thông tin khách & thiết bị
+                .row.mb-3
+                  .col-sm-6
+                    h6.text-muted.text-uppercase.small.fw-bold.mb-1 Khách hàng nhận máy
+                    strong.fs-6.text-dark #{ticket.customerInfo ? ticket.customerInfo.fullName : "Khách lẻ"}
+                    div.small Số điện thoại: 
+                      strong.font-monospace #{ticket.customerInfo ? ticket.customerInfo.phone : "--"}
+                    if ticket.customerInfo && ticket.customerInfo.address
+                      div.small.text-muted Địa chỉ: #{ticket.customerInfo.address}
+                  
+                  .col-sm-6.text-sm-end.mt-2.mt-sm-0
+                    h6.text-muted.text-uppercase.small.fw-bold.mb-1 Thiết bị bàn giao
+                    if ticket.isExchange1to1
+                      strong.fs-6.text-success #{ticket.replacementProductName || ticket.productName} 
+                      div.small
+                        | IMEI Mới bàn giao: 
+                        strong.font-monospace.text-success #{ticket.replacementIdentifier}
+                      div.small.text-muted
+                        | IMEI Cũ thu hồi: 
+                        span.text-decoration-line-through #{ticket.identifier}
+                    else
+                      strong.fs-6.text-dark #{ticket.productName} #{ticket.variantName ? `(${ticket.variantName})` : ''}
+                      div.small
+                        | Mã IMEI/Serial: 
+                        strong.font-monospace.text-primary #{ticket.identifier}
+
+                // Chi tiết hạng mục xử lý & Chi phí
+                .table-responsive.mb-3
+                  table.table.table-sm.table-bordered.align-middle.mb-0
+                    thead.table-light
+                      tr
+                        th Nội dung xử lý &amp; Kết quả khắc phục
+                        th(style="width: 250px") Linh kiện &amp; Bảo hành linh kiện
+                        th.text-end(style="width: 150px") Thanh toán
+                    tbody
+                      tr
+                        td
+                          strong Hiện tượng lỗi ban đầu: 
+                          span.text-muted #{ticket.issueDescription}
+                          div.mt-2
+                            strong Kết quả xử lý: 
+                            if ticket.isExchange1to1
+                              span.badge.bg-success-subtle.text-success Đổi thiết bị mới 1-đổi-1 (Lỗi phần cứng)
+                            else
+                              span.badge.bg-primary-subtle.text-primary #{ticket.resolution || "Đã sửa chữa hoàn chỉnh"}
+                          if ticket.handoverNotes
+                            div.small.text-dark.mt-1 Ghi chú: #{ticket.handoverNotes}
+                        td
+                          if ticket.isExchange1to1
+                            strong.text-success Máy mới 100% nguyên bản
+                            div.small.text-muted Kế thừa thời hạn bảo hành chính hãng từ ngày kích hoạt ban đầu.
+                          else
+                            div.small
+                              span.text-muted Linh kiện thay: 
+                              strong #{ticket.replacedParts || "Không thay linh kiện"}
+                            if ticket.partsWarrantyMonths
+                              div.small.mt-1
+                                span.text-muted Thời hạn BH linh kiện: 
+                                strong.text-primary #{ticket.partsWarrantyMonths} tháng
+                        td.text-end.align-top
+                          strong.fs-6.text-success #{ticket.repairCost ? Number(ticket.repairCost).toLocaleString("vi-VN") + " đ" : "0 đ (Bảo hành)"}
+                          div.small.text-muted Hình thức: #{ticket.paymentMethod === "transfer" ? "Chuyển khoản" : (ticket.paymentMethod === "cash" ? "Tiền mặt" : "Miễn phí")}
+
+                // Cam kết bàn giao
+                .p-2.border.rounded.bg-light-subtle.small.text-muted.mb-3
+                  strong.d-block.mb-1.text-dark XÁC NHẬN TÌNH TRẠNG KHI BÀN GIAO:
+                  ul.mb-0.ps-3
+                    li Khách hàng đã kiểm tra, đồng ý nhận lại thiết bị hoạt động bình thường và nhận đủ phụ kiện đi kèm.
+                    li Đối với linh kiện thay thế (nếu có), cửa hàng áp dụng bảo hành theo tem niêm phong và phiếu bàn giao này.
+
+                // Chữ ký xác nhận bàn giao
+                .row.text-center.mt-3.pt-2.signature-block
+                  .col-6
+                    p.small.text-muted.mb-1 KHÁCH HÀNG NHẬN MÁY
+                    div.fst-italic.small.text-muted(style="min-height: 40px;") (Đã kiểm tra máy và ký nhận)
+                    div.fw-semibold.text-dark.mt-1 #{ticket.customerInfo ? ticket.customerInfo.fullName : "Khách hàng"}
+                  .col-6
+                    p.small.text-muted.mb-1 ĐẠI DIỆN BÀN GIAO
+                    div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, đóng dấu)
+                    div.fw-semibold.text-dark.mt-1 #{ticket.updatedBy ? (ticket.updatedBy.fullName || ticket.updatedBy.email) : "Administrator"}
+
+        // ==========================================
+        // TAB 4: BIÊN BẢN BÀN GIAO KHỔ K80 (XPRINTER)
+        // ==========================================
+        if ticket.ticketStatus === "delivered" || ticket.ticketStatus === "completed"
+          .tab-pane.fade#tab-handover-k80-pane(role="tabpanel")
+            .d-flex.justify-content-center.py-2
+              .k80-receipt#printableHandoverK80
+                .text-center.mb-2
+                  .fw-bold.fs-6.text-uppercase SHOP THANH TIỀN
+                  .small.text-muted Dịch vụ bảo hành &amp; Sửa chữa
+                  .border-bottom.border-dark.border-dashed.my-2
+                  if ticket.isExchange1to1
+                    .fw-bold.fs-6.text-uppercase PHIẾU ĐỔI MÁY 1-ĐỔI-1
+                  else
+                    .fw-bold.fs-6.text-uppercase BIÊN BẢN TRẢ MÁY
+                  .small Mã phiếu: #{ticket.ticketCode}
+                
+                .small.mb-2
+                  .d-flex.justify-content-between
+                    span Ngày giao:
+                    strong #{ticket.deliveredDate ? new Date(ticket.deliveredDate).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN")}
+                  .d-flex.justify-content-between
+                    span Khách nhận:
+                    strong #{ticket.customerInfo ? ticket.customerInfo.fullName : "Khách lẻ"}
+                  .d-flex.justify-content-between
+                    span SĐT:
+                    strong #{ticket.customerInfo ? ticket.customerInfo.phone : "--"}
+                
+                .border-bottom.border-dark.border-dashed.my-2
+
+                .small
+                  if ticket.isExchange1to1
+                    div
+                      span Máy mới: 
+                      strong.text-success #{ticket.replacementProductName || ticket.productName}
+                    div.mt-1
+                      span IMEI Mới: 
+                      strong.font-monospace.text-success #{ticket.replacementIdentifier}
+                    div.mt-1.text-muted
+                      span Thu hồi IMEI cũ: 
+                      span.text-decoration-line-through #{ticket.identifier}
+                  else
+                    div
+                      span Máy: 
+                      strong #{ticket.productName} #{ticket.variantName ? `(${ticket.variantName})` : ''}
+                    div.mt-1
+                      span IMEI: 
+                      strong.font-monospace #{ticket.identifier}
+                    if ticket.replacedParts
+                      div.mt-1
+                        span Linh kiện thay: 
+                        strong #{ticket.replacedParts}
+                    if ticket.partsWarrantyMonths
+                      div.mt-1
+                        span BH linh kiện: 
+                        strong #{ticket.partsWarrantyMonths} tháng
+
+                .border-bottom.border-dark.border-dashed.my-2
+
+                .small
+                  .d-flex.justify-content-between
+                    span Tổng thanh toán:
+                    strong.fs-6.text-dark #{ticket.repairCost ? Number(ticket.repairCost).toLocaleString("vi-VN") + " đ" : "0 đ (Miễn phí)"}
+                  .d-flex.justify-content-between.mt-1
+                    span Hình thức:
+                    span #{ticket.paymentMethod === "transfer" ? "Chuyển khoản" : (ticket.paymentMethod === "cash" ? "Tiền mặt" : "Miễn phí")}
+
+                .border-bottom.border-dark.border-dashed.my-2
+
+                .text-center.small.mt-2
+                  .fw-bold Cảm ơn quý khách đã tin tưởng!
+                  div(style="font-size: 11px;") Hotline kỹ thuật: 0988.xxx.xxx
+
+  // ========================================================
+  // MODAL 1: BÀN GIAO TRẢ MÁY CHO KHÁCH & HOÀN KHO
+  // ========================================================
+  .modal.fade#modalDeliverTicket(tabindex="-1", aria-hidden="true")
+    .modal-dialog.modal-dialog-centered
+      .modal-content.border-0.shadow
+        .modal-header.bg-success.text-white
+          h6.modal-title.fw-bold
+            i.las.la-handshake.me-1
+            | Bàn Giao Trả Máy Cho Khách Hàng
+          button.btn-close.btn-close-white(type="button", data-bs-dismiss="modal", aria-label="Close")
+        
+        form#formDeliverTicket
+          .modal-body.p-4
+            .alert.alert-info.py-2.px-3.small.mb-3
+              | Xác nhận bàn giao thiết bị 
+              strong #{ticket.productName} 
+              | (IMEI: 
+              code.fw-bold #{ticket.identifier}
+              | ). Thiết bị trong kho sẽ tự động chuyển từ trạng thái 
+              strong "warranty"
+              |  về 
+              strong "sold"
+              | .
+
+            .mb-3
+              label.form-label.fw-bold Phương án xử lý / Kết quả khắc phục
+              select#deliverResolution.form-select(required)
+                option(value="repair", selected=ticket.resolution === "repair") Đã sửa chữa phần cứng hoàn chỉnh
+                option(value="replace_parts", selected=ticket.resolution === "replace_parts") Đã thay thế linh kiện mới
+                option(value="software", selected=ticket.resolution === "software") Đã chạy lại phần mềm / Cài đặt
+                option(value="unfixable", selected=ticket.resolution === "unfixable") Không khắc phục được (Trả nguyên trạng)
+                option(value="refused", selected=ticket.resolution === "refused") Từ chối bảo hành (Rơi vỡ / Vào nước)
+            
+            .mb-3
+              label.form-label.fw-bold Linh kiện đã thay thế (nếu có)
+              input#deliverReplacedParts.form-control(
+                type="text",
+                placeholder="Ví dụ: Màn hình OLED zin bóc máy, cáp sạc, pin chính hãng...",
+                value=ticket.replacedParts
+              )
+            
+            .row.g-2.mb-3
+              .col-6
+                label.form-label.fw-bold Bảo hành linh kiện (tháng)
+                input#deliverPartsWarrantyMonths.form-control(
+                  type="number",
+                  min="0",
+                  max="36",
+                  value=(ticket.partsWarrantyMonths || 3)
+                )
+              .col-6
+                label.form-label.fw-bold Chi phí thanh toán (VNĐ)
+                input#deliverRepairCost.form-control.text-end.fw-bold(
+                  type="number",
+                  min="0",
+                  value=(ticket.repairCost || 0)
+                )
+
+            .mb-3
+              label.form-label.fw-bold Hình thức thanh toán
+              select#deliverPaymentMethod.form-select
+                option(value="free", selected=ticket.paymentMethod === "free") Miễn phí theo chính sách bảo hành
+                option(value="cash", selected=ticket.paymentMethod === "cash") Tiền mặt tại quầy
+                option(value="transfer", selected=ticket.paymentMethod === "transfer") Chuyển khoản ngân hàng
+
+            .mb-2
+              label.form-label.fw-bold Ghi chú bàn giao
+              textarea#deliverHandoverNotes.form-control(
+                rows="2",
+                placeholder="Ví dụ: Đã cho khách test full chức năng (màn, cảm ứng, loa, sạc) tại quầy, khách hài lòng..."
+              ) #{ticket.handoverNotes}
+
+          .modal-footer.bg-light
+            button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Đóng
+            button#btnSubmitDeliver.btn.btn-success.fw-bold.px-3(type="submit")
+              i.las.la-check-circle.me-1
+              | BÀN GIAO TRẢ MÁY &amp; HOÀN KHO
+
+  // ========================================================
+  // MODAL 2: ĐỔI MỚI 1-ĐỔI-1 (LỖI PHẦN CỨNG)
+  // ========================================================
+  .modal.fade#modalExchange1to1(tabindex="-1", aria-hidden="true")
+    .modal-dialog.modal-dialog-centered.modal-lg
+      .modal-content.border-0.shadow
+        .modal-header.bg-primary.text-white
+          h6.modal-title.fw-bold
+            i.las.la-sync-alt.me-1
+            | Nghiệp Vụ Đổi Mới 1-Đổi-1 (Lỗi Phần Cứng)
+          button.btn-close.btn-close-white(type="button", data-bs-dismiss="modal", aria-label="Close")
+        
+        form#formExchange1to1
+          .modal-body.p-4
+            .alert.alert-warning.py-2.px-3.small.mb-3
+              i.las.la-exclamation-triangle.me-1.fs-5
+              | Máy lỗi hiện tại: 
+              strong #{ticket.productName} 
+              | - IMEI: 
+              code.fw-bold #{ticket.identifier}
+              br
+              | Hệ thống sẽ: 
+              strong (1) Xuất máy mới từ kho (available -> sold)
+              |  và 
+              strong (2) Thu hồi máy lỗi về kho (sold -> damaged)
+              |  đồng thời cập nhật mã IMEI trên hóa đơn mua của khách.
+
+            // Bước chọn IMEI mới từ kho
+            .mb-3
+              label.form-label.fw-bold
+                | Quét hoặc tìm mã IMEI mới từ kho xuất đổi 
+                span.text-danger *
+              .input-group
+                span.input-group-text
+                  i.las.la-barcode
+                input#inputSearchNewImei.form-control.font-monospace(
+                  type="text",
+                  placeholder="Quét mã IMEI trên hộp máy mới..."
+                )
+                button#btnSearchNewImei.btn.btn-primary(type="button")
+                  i.las.la-search.me-1
+                  | Tìm trong kho
+              input#inputSelectedReplacementImei(type="hidden")
+
+            // Danh sách gợi ý các IMEI sẵn có trong kho
+            .mb-3
+              label.form-label.small.text-muted.mb-1 Danh sách thiết bị sẵn có trong kho:
+              #availableImeiList.border.rounded.p-2.bg-light(style="max-height: 180px; overflow-y: auto;")
+                .text-center.py-2.text-muted.small Đang tải dữ liệu kho...
+
+            .row.g-2.mb-3
+              .col-md-6
+                label.form-label.fw-bold Chênh lệch chi phí bù trừ (VNĐ)
+                input#exchangePriceDifference.form-control.text-end(
+                  type="number",
+                  value="0",
+                  placeholder="0 nếu cùng dòng máy, nhập số tiền nếu đổi lên đời..."
+                )
+                small.text-muted Nhập 0 nếu đổi ngang, số dương nếu khách trả thêm.
+              .col-md-6
+                label.form-label.fw-bold Lý do đổi máy
+                input#exchangeReason.form-control(
+                  type="text",
+                  value="Lỗi phần cứng trong thời gian bao test 1-đổi-1",
+                  required
+                )
+
+            .mb-2
+              label.form-label.fw-bold Ghi chú bàn giao máy mới
+              textarea#exchangeHandoverNotes.form-control(
+                rows="2",
+                placeholder="Tình trạng máy mới nguyên seal, phụ kiện kèm theo..."
+              ) Đã kiểm tra máy mới nguyên bản 100%, bàn giao đủ hộp và phụ kiện cho khách hàng.
+
+          .modal-footer.bg-light
+            button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Hủy
+            button#btnSubmitExchange.btn.btn-primary.fw-bold.px-4(type="submit")
+              i.las.la-sync-alt.me-1
+              | XÁC NHẬN ĐỔI 1-ĐỔI-1 &amp; ĐIỀU CHUYỂN KHO
+
+block script
+  script.
+    window.WARRANTY_TICKET_ID = "#{ticket._id}";
+  script(src="/admin/assets/js/warranty-detail.js")

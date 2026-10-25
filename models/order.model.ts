@@ -86,6 +86,10 @@ const schema = new mongoose.Schema(
         trim: true
       }
     },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer"
+    },
     items: {
       type: [orderItemSchema],
       required: true,

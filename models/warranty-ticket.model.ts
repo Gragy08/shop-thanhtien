@@ -264,7 +264,6 @@ const warrantyTicketSchema = new mongoose.Schema(
   }
 );
 
-warrantyTicketSchema.index({ ticketCode: 1 });
 warrantyTicketSchema.index({ identifier: 1 });
 warrantyTicketSchema.index({ "customerInfo.phone": 1 });
 warrantyTicketSchema.index({ ticketStatus: 1 });

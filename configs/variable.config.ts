@@ -1,5 +1,9 @@
 export const pathAdmin = process.env.PATH_ADMIN || "admin";
 
+export const domainCDN = process.env.DOMAIN_CDN || "http://localhost:4000";
+export const fileManagerSecret = process.env.FILE_MANAGER_SECRET || "ECOPROJECTFILEMANAGERSECRET";
+export const mediaNamespace = process.env.MEDIA_NAMESPACE || "shop-thanhtien";
+
 export const adminRoles = ["admin", "manager"] as const;
 export type AdminRole = (typeof adminRoles)[number];
 

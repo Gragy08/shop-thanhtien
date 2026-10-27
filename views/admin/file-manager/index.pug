@@ -1,0 +1,274 @@
+extends ../../layouts/admin.pug
+
+block main
+  .row
+    .col-12
+      //- Breadcrumb Navigation
+      .card.mb-3
+        .card-body.py-2.px-3
+          nav(aria-label="breadcrumb")
+            ol.breadcrumb.mb-0.align-items-center
+              li.breadcrumb-item
+                i.las.la-folder-open.text-warning.fs-5.me-1
+                a.text-decoration-none.fw-semibold(href=`/${pathAdmin}/file-manager`) Thư mục gốc (shop-thanhtien)
+              if breadcrumbs && breadcrumbs.length > 1
+                each crumb, idx in breadcrumbs.slice(1)
+                  if idx === breadcrumbs.length - 2
+                    li.breadcrumb-item.active.fw-bold(aria-current="page") #{crumb.name}
+                  else
+                    li.breadcrumb-item
+                      a.text-decoration-none(href=`/${pathAdmin}/file-manager?folderPath=${encodeURIComponent(crumb.path)}`) #{crumb.name}
+
+      //- Folder Management Card
+      .card.mb-3
+        .card-header.bg-light.py-2
+          .row.align-items-center.g-2
+            .col-lg-7
+              h5.card-title.mb-0
+                i.las.la-folder.text-warning.me-1
+                | Danh sách thư mục con
+            .col-lg-5
+              form#formCreateFolder(form-create-folder)
+                input(type="hidden" name="folderPath" value=currentFolder)
+                .input-group
+                  input.form-control.form-control-sm(
+                    placeholder="Nhập tên thư mục mới..."
+                    type="text"
+                    name="folderName"
+                    required
+                  )
+                  button.btn.btn-sm.btn-primary(type="submit")
+                    i.las.la-folder-plus.me-1
+                    | Tạo thư mục
+        .card-body.pt-2.pb-0
+          if folderList && folderList.length > 0
+            .table-responsive
+              table.table.table-hover.align-middle.mb-0
+                thead.table-light
+                  tr
+                    th Tên thư mục
+                    th Ngày tạo
+                    th.text-end Thao tác
+                tbody
+                  each item in folderList
+                    tr
+                      td
+                        a.text-decoration-none.fw-semibold.text-dark.d-flex.align-items-center(
+                          href=`/${pathAdmin}/file-manager?folderPath=${encodeURIComponent(item.path)}`
+                        )
+                          .d-inline-flex.justify-content-center.align-items-center.thumb-md.bg-warning-subtle.rounded.me-2(style="width: 32px; height: 32px;")
+                            i.las.la-folder.fs-18.text-warning
+                          span #{item.name}
+                      td #{item.createdAtFormat}
+                      td.text-end
+                        button.btn.btn-sm.btn-outline-danger.p-1(
+                          type="button"
+                          button-delete-folder
+                          data-folder-path=item.path
+                          data-folder-name=item.name
+                          title="Xóa thư mục"
+                        )
+                          i.las.la-trash-alt.fs-5
+          else
+            p.text-muted.py-3.mb-0 Không có thư mục con nào trong thư mục hiện tại.
+
+      //- Upload Zone Card
+      .card.mb-3
+        .card-header.bg-light.py-2
+          h5.card-title.mb-0
+            i.las.la-cloud-upload-alt.text-primary.me-1
+            | Tải tệp tin lên thư mục này
+        .card-body
+          #dropzoneUpload.p-4.border.border-2.border-dashed.rounded.text-center.bg-light-subtle(
+            style="cursor: pointer; transition: all 0.2s;"
+          )
+            input#fileUploadInput(type="file" name="files" multiple style="display: none;")
+            .mb-2
+              i.las.la-cloud-upload-alt.text-primary(style="font-size: 48px;")
+            h6.fw-bold.mb-1 Kéo & thả tệp tin hoặc hình ảnh vào đây
+            p.text-muted.small.mb-2 Hoặc nhấp chuột để chọn tệp từ máy tính (hỗ trợ JPG, PNG, WEBP, GIF, PDF, MP4...)
+            button#btnChooseFiles.btn.btn-sm.btn-outline-primary(type="button")
+              i.las.la-file-upload.me-1
+              | Chọn tệp từ máy tính
+
+          #uploadProgressWrapper.mt-3(style="display: none;")
+            .d-flex.justify-content-between.align-items-center.mb-1
+              span.small.text-muted#uploadStatusText Đang tải lên...
+              span.small.fw-bold#uploadPercentText 0%
+            .progress(style="height: 10px;")
+              .progress-bar.progress-bar-striped.progress-bar-animated#uploadProgressBar(role="progressbar" style="width: 0%;")
+
+      //- Files List Card
+      .card.mb-3
+        .card-header.bg-light.py-2
+          .row.align-items-center.g-2
+            .col-lg-6
+              h5.card-title.mb-0
+                i.las.la-images.text-info.me-1
+                | Danh sách tệp tin (#{pagination.totalRecord} tệp)
+            .col-lg-6.text-lg-end
+              button.btn.btn-sm.btn-outline-info(
+                type="button"
+                button-copy-multi
+                title="Sao chép các đường dẫn tệp đã chọn vào clipboard"
+              )
+                i.las.la-copy.me-1
+                | Copy link các file đã chọn
+        .card-body.pt-0
+          if listFile && listFile.length > 0
+            .table-responsive
+              table.table.table-hover.align-middle.mb-0
+                thead.table-light
+                  tr
+                    th(style="width: 40px;")
+                      input.form-check-input.checkbox-all(type="checkbox")
+                    th(style="width: 70px;") Xem trước
+                    th Tên tệp
+                    th Kích thước
+                    th Ngày tải lên
+                    th.text-end Thao tác
+                tbody
+                  each item in listFile
+                    tr
+                      td
+                        input.form-check-input.checkbox-input(
+                          type="checkbox"
+                          value=`${item.folder}/${item.filename}`
+                          data-full-url=item.url
+                        )
+                      td
+                        if item.isImage
+                          a(
+                            href="javascript:;"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalPreviewFile"
+                            button-preview-file
+                            data-file=item.url
+                            data-mimetype=item.mimetype
+                            data-filename=item.filename
+                          )
+                            img.rounded.border(
+                              src=item.url
+                              alt=item.filename
+                              style="width: 48px; height: 48px; object-fit: cover;"
+                              loading="lazy"
+                            )
+                        else if item.mimetype && item.mimetype.includes("audio")
+                          .d-inline-flex.justify-content-center.align-items-center.rounded.bg-info-subtle(style="width: 48px; height: 48px;")
+                            i.las.la-volume-up.fs-4.text-info
+                        else if item.mimetype && item.mimetype.includes("video")
+                          .d-inline-flex.justify-content-center.align-items-center.rounded.bg-danger-subtle(style="width: 48px; height: 48px;")
+                            i.las.la-video.fs-4.text-danger
+                        else if item.mimetype && item.mimetype.includes("pdf")
+                          .d-inline-flex.justify-content-center.align-items-center.rounded.bg-warning-subtle(style="width: 48px; height: 48px;")
+                            i.las.la-file-pdf.fs-4.text-warning
+                        else
+                          .d-inline-flex.justify-content-center.align-items-center.rounded.bg-secondary-subtle(style="width: 48px; height: 48px;")
+                            i.las.la-file.fs-4.text-secondary
+                      td
+                        .fw-semibold.text-dark.text-break #{item.filename}
+                        small.text-muted #{item.folder}
+                      td #{item.sizeFormat}
+                      td.text-muted.small #{item.createdAtFormat}
+                      td.text-end.text-nowrap
+                        button.btn.btn-sm.btn-outline-primary.me-1(
+                          type="button"
+                          button-copy
+                          data-content=item.cdnUrl
+                          data-relative=`${item.folder}/${item.filename}`
+                          title="Sao chép link CDN"
+                        )
+                          i.las.la-copy
+                        button.btn.btn-sm.btn-outline-purple.me-1(
+                          type="button"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalPreviewFile"
+                          button-preview-file
+                          data-file=item.url
+                          data-mimetype=item.mimetype
+                          data-filename=item.filename
+                          title="Xem thử file"
+                        )
+                          i.las.la-eye
+                        a.btn.btn-sm.btn-outline-warning.me-1(
+                          href=`${item.url}?type=download`
+                          title="Tải xuống tệp tin"
+                        )
+                          i.las.la-download
+                        button.btn.btn-sm.btn-outline-info.me-1(
+                          type="button"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalChangeFileName"
+                          button-change-file-name
+                          data-file-id=item._id
+                          data-file-name=item.filename
+                          title="Đổi tên tệp tin"
+                        )
+                          i.las.la-pen
+                        button.btn.btn-sm.btn-outline-danger(
+                          type="button"
+                          button-delete-file
+                          data-file-id=item._id
+                          data-file-name=item.filename
+                          title="Xóa tệp tin"
+                        )
+                          i.las.la-trash-alt
+
+            //- Pagination
+            if pagination.totalPage > 1
+              nav.d-flex.justify-content-center.mt-3
+                ul.pagination.pagination-sm.mb-0
+                  li.page-item(class=pagination.page <= 1 ? "disabled" : "")
+                    a.page-link(href=`/${pathAdmin}/file-manager?folderPath=${encodeURIComponent(currentFolder)}&page=${pagination.page - 1}`) &laquo;
+                  - for (let p = 1; p <= pagination.totalPage; p++)
+                    li.page-item(class=pagination.page === p ? "active" : "")
+                      a.page-link(href=`/${pathAdmin}/file-manager?folderPath=${encodeURIComponent(currentFolder)}&page=${p}`) #{p}
+                  li.page-item(class=pagination.page >= pagination.totalPage ? "disabled" : "")
+                    a.page-link(href=`/${pathAdmin}/file-manager?folderPath=${encodeURIComponent(currentFolder)}&page=${pagination.page + 1}`) &raquo;
+          else
+            .text-center.py-5
+              i.las.la-folder-open.text-muted(style="font-size: 48px;")
+              p.text-muted.mt-2 Chưa có tệp tin nào trong thư mục này. Hãy tải lên ảnh hoặc tệp đầu tiên!
+
+  //- Modal Preview File
+  #modalPreviewFile.modal.fade(tabindex="-1" aria-hidden="true")
+    .modal-dialog.modal-lg.modal-dialog-centered
+      .modal-content
+        .modal-header
+          h5.modal-title#modalPreviewTitle Xem thử tệp tin
+          button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+        .modal-body.text-center.p-3
+          .inner-preview.d-flex.justify-content-center.align-items-center(style="min-height: 250px;")
+        .modal-footer.py-1
+          a#modalPreviewDownload.btn.btn-sm.btn-primary(href="#" target="_blank")
+            i.las.la-external-link-alt.me-1
+            | Mở trong tab mới
+          button.btn.btn-sm.btn-secondary(type="button" data-bs-dismiss="modal") Đóng
+
+  //- Modal Change File Name
+  #modalChangeFileName.modal.fade(tabindex="-1" aria-hidden="true")
+    .modal-dialog.modal-dialog-centered
+      .modal-content
+        .modal-header
+          h5.modal-title Đổi tên tệp tin
+          button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+        form#formChangeFileName
+          .modal-body
+            input#editFileId(type="hidden" name="fileId")
+            .mb-3
+              label.form-label.fw-semibold(for="editFileName") Tên tệp tin mới *
+              input#editFileName.form-control(type="text" name="fileName" required)
+              .form-text Nên giữ nguyên phần mở rộng định dạng tệp (ví dụ: .png, .jpg, .webp).
+          .modal-footer
+            button.btn.btn-sm.btn-light(type="button" data-bs-dismiss="modal") Hủy
+            button.btn.btn-sm.btn-primary(type="submit")
+              i.las.la-save.me-1
+              | Lưu thay đổi
+
+block script
+  script.
+    window.domainCDN = "#{domainCDN}";
+    window.currentFolder = "#{currentFolder}";
+    window.pathAdmin = "#{pathAdmin}";
+  script(src="/admin/assets/js/file-manager.js")
+

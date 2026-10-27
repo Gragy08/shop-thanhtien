@@ -1,11 +1,10 @@
-
-
 import "dotenv/config";
+import axios from "axios";
 import cookieParser from "cookie-parser";
 import express from "express";
 import path from "path";
 import { connectDB } from "./configs/database.config";
-import { pathAdmin } from "./configs/variable.config";
+import { pathAdmin, domainCDN } from "./configs/variable.config";
 import adminRoutes from "./routes/admin/index.route";
 import { publicLookupPage } from "./controllers/admin/warranty.controller";
 
@@ -20,12 +19,41 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 app.use(express.static(path.join(__dirname, "public")));
 app.locals.pathAdmin = pathAdmin;
+app.locals.domainCDN = domainCDN;
 
 app.get("/", (_req, res) => {
   res.redirect(`/${pathAdmin}/account/login`);
 });
 
 app.get("/tra-cuu-bao-hanh", publicLookupPage);
+
+// Proxy phục vụ hình ảnh và tệp tin từ CDN (vượt rào cản kiểm tra Referer khi chạy local)
+app.use("/media", async (req, res) => {
+  try {
+    const targetUrl = `${domainCDN}${req.originalUrl}`;
+    const response = await axios.get(targetUrl, {
+      headers: {
+        Referer: "https://typhuquy-shop.duckdns.org"
+      },
+      responseType: "stream",
+      timeout: 15000
+    });
+
+    if (response.headers["content-type"]) {
+      res.setHeader("Content-Type", response.headers["content-type"]);
+    }
+    if (response.headers["content-disposition"]) {
+      res.setHeader("Content-Disposition", response.headers["content-disposition"]);
+    }
+    if (response.headers["content-length"]) {
+      res.setHeader("Content-Length", response.headers["content-length"]);
+    }
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    response.data.pipe(res);
+  } catch (error: any) {
+    res.status(404).send("Tệp tin không tìm thấy hoặc lỗi kết nối CDN!");
+  }
+});
 
 app.use(`/${pathAdmin}`, adminRoutes);
 

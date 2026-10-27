@@ -92,6 +92,20 @@ block main
                         td.text-muted.text-center.py-4(colspan="5") Chọn thuộc tính rồi bấm “Tạo biến thể”.
               .col-12
                 .mb-3
+                  label.form-label Hình ảnh sản phẩm
+                  .card.border.p-3.bg-light-subtle
+                    .d-flex.flex-wrap.align-items-center.gap-2.mb-2
+                      button#btnOpenMediaPicker.btn.btn-sm.btn-outline-primary(type="button" data-bs-toggle="modal" data-bs-target="#modalFileManager")
+                        i.las.la-photo-video.me-1
+                        | Chọn ảnh từ thư viện
+                      button#btnPasteMedia.btn.btn-sm.btn-outline-info(type="button")
+                        i.las.la-paste.me-1
+                        | Dán link ảnh (Clipboard)
+                      small.text-muted Chọn từ thư viện hoặc dán link các file đã copy từ Quản lý file.
+                    #productImagesContainer.d-flex.flex-wrap.gap-2.p-2.border.rounded.bg-white(style="min-height: 90px;")
+                      p#noImagesText.text-muted.small.m-auto.py-3 Chưa có ảnh nào được chọn.
+              .col-12
+                .mb-3
                   label.form-label(for="description") Mô tả
                   textarea#description.form-control(name="description", rows="4")
             .d-flex.gap-2
@@ -100,6 +114,8 @@ block main
             p#productMessage.form-message.mt-3.mb-0(role="alert")
             script.
               window.attributeList = !{JSON.stringify(attributeList)};
+
+  include ../../partials/modal-file-manager.pug
 
 block script
   script(src="/admin/assets/js/product.js")

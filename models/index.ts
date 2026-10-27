@@ -9,4 +9,5 @@ export { default as Supplier } from "./supplier.model";
 export { default as Order } from "./order.model";
 export { default as Customer } from "./customer.model";
 export { default as WarrantyTicket } from "./warranty-ticket.model";
+export { default as Media } from "./media.model";
 

@@ -113,6 +113,35 @@ block main
                           td.text-center.text-muted.py-4(colspan="5") Sản phẩm chưa có biến thể nào.
               .col-12
                 .mb-3
+                  label.form-label Hình ảnh sản phẩm
+                  .card.border.p-3.bg-light-subtle
+                    .d-flex.flex-wrap.align-items-center.gap-2.mb-2
+                      button#btnOpenMediaPicker.btn.btn-sm.btn-outline-primary(type="button" data-bs-toggle="modal" data-bs-target="#modalFileManager")
+                        i.las.la-photo-video.me-1
+                        | Chọn ảnh từ thư viện
+                      button#btnPasteMedia.btn.btn-sm.btn-outline-info(type="button")
+                        i.las.la-paste.me-1
+                        | Dán link ảnh (Clipboard)
+                      small.text-muted Chọn từ thư viện hoặc dán link các file đã copy từ Quản lý file.
+                    #productImagesContainer.d-flex.flex-wrap.gap-2.p-2.border.rounded.bg-white(style="min-height: 90px;")
+                      if product.images && product.images.length
+                        each imgUrl in product.images
+                          .product-image-box.position-relative.border.rounded.p-1(style="width: 80px; height: 80px;")
+                            img.w-100.h-100.rounded(
+                              src=imgUrl.startsWith("http") ? imgUrl : (imgUrl.startsWith('/') ? imgUrl : `/${imgUrl}`)
+                              alt=""
+                              style="object-fit: cover;"
+                              data-src-relative=imgUrl
+                            )
+                            button.btn.btn-danger.btn-xs.position-absolute.top-0.end-0.p-0.d-flex.align-items-center.justify-content-center.remove-image-btn(
+                              type="button"
+                              style="width: 20px; height: 20px; font-size: 12px; border-radius: 50%; transform: translate(30%, -30%);"
+                              title="Xóa ảnh này"
+                            ) &times;
+                      else
+                        p#noImagesText.text-muted.small.m-auto.py-3 Chưa có ảnh nào được chọn.
+              .col-12
+                .mb-3
                   label.form-label(for="description") Mô tả sản phẩm
                   textarea#description.form-control(name="description", rows="4") #{product.description || ""}
             .d-flex.gap-2.mt-2
@@ -121,6 +150,8 @@ block main
                 i.las.la-save.me-1
                 | Lưu thay đổi
             p#productEditMessage.form-message.mt-3.mb-0(role="alert")
+
+  include ../../partials/modal-file-manager.pug
 
 block script
   script(src="/admin/assets/js/product-edit.js")

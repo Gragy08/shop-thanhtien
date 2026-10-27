@@ -42,6 +42,23 @@ const parsePrice = (value: unknown): number | null => {
   return Number.isFinite(price) && price >= 0 ? price : null;
 };
 
+const parseImages = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === "string" && item.trim().length > 0);
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item) => typeof item === "string" && item.trim().length > 0);
+      }
+    } catch {
+      if (value.trim()) return [value.trim()];
+    }
+  }
+  return [];
+};
+
 export const list = async (req: Request, res: Response) => {
   const keyword = typeof req.query.keyword === "string" ? req.query.keyword.trim() : "";
   const categoryId = typeof req.query.categoryId === "string" ? req.query.categoryId : "";
@@ -250,6 +267,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
       inventoryType,
       purchasePrice,
       salePrice,
+      images: parseImages(req.body.images),
       description: typeof req.body.description === "string" ? req.body.description.trim() : "",
       status: req.body.status === "active" ? "active" : req.body.status === "inactive" ? "inactive" : "draft",
       createdBy: req.adminId && mongoose.isValidObjectId(req.adminId) ? new mongoose.Types.ObjectId(req.adminId) : undefined
@@ -432,6 +450,9 @@ export const editPatch = async (req: RequestAccount, res: Response) => {
     product.purchasePrice = purchasePrice;
     product.salePrice = salePrice;
     product.status = status;
+    if (req.body.images !== undefined) {
+      product.images = parseImages(req.body.images);
+    }
     product.description = typeof req.body.description === "string" ? req.body.description.trim() : "";
     if (req.adminId && mongoose.isValidObjectId(req.adminId)) {
       product.updatedBy = new mongoose.Types.ObjectId(req.adminId);

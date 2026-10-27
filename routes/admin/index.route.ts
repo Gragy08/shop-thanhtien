@@ -10,6 +10,7 @@ import orderRoutes from "./order.route";
 import customerRoutes from "./customer.route";
 import warrantyRoutes from "./warranty.route";
 import dashboardRoutes from "./dashboard.route";
+import fileManagerRoutes from "./file-manager.route";
 import { requireAuth } from "../../middlewares/admin/authenticate.middleware";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { pathAdmin } from "../../configs/variable.config";
@@ -35,6 +36,7 @@ router.use("/inventory/supplier", supplierRoutes);
 router.use("/order", orderRoutes);
 router.use("/customer", customerRoutes);
 router.use("/warranty", warrantyRoutes);
+router.use("/file-manager", fileManagerRoutes);
 
 router.get("/", requireAuth, (_req, res) => {
   res.redirect(`/${pathAdmin}/dashboard`);

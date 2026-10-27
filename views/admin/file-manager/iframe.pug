@@ -1,0 +1,178 @@
+doctype html
+html(lang="vi")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    title Chọn tệp từ thư viện
+    link(rel="stylesheet" href="/admin/assets/css/bootstrap.min.css")
+    link(rel="stylesheet" href="/admin/assets/css/icons.min.css")
+    link(rel="stylesheet" href="/admin/assets/css/app.min.css")
+    link(rel="stylesheet" href="/admin/assets/css/shop-thanhtien.css")
+    style.
+      body {
+        background-color: #f8f9fa;
+        padding: 12px;
+        font-family: inherit;
+      }
+      .file-item-card {
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+        border: 2px solid transparent;
+      }
+      .file-item-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: #0d6efd;
+      }
+      .thumb-box {
+        width: 100%;
+        height: 100px;
+        background-color: #f1f3f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .thumb-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+  body
+    //- Header & Breadcrumb
+    .d-flex.flex-wrap.justify-content-between.align-items-center.gap-2.mb-3.p-2.bg-white.rounded.border
+      nav(aria-label="breadcrumb")
+        ol.breadcrumb.mb-0.align-items-center.small
+          li.breadcrumb-item
+            a.text-decoration-none.fw-semibold(href=`/${pathAdmin}/file-manager/iframe`) Gốc
+          if breadcrumbs && breadcrumbs.length > 1
+            each crumb, idx in breadcrumbs.slice(1)
+              if idx === breadcrumbs.length - 2
+                li.breadcrumb-item.active.fw-bold #{crumb.name}
+              else
+                li.breadcrumb-item
+                  a.text-decoration-none(href=`/${pathAdmin}/file-manager/iframe?folderPath=${encodeURIComponent(crumb.path)}`) #{crumb.name}
+      .d-flex.align-items-center.gap-2
+        label.btn.btn-sm.btn-primary.mb-0(for="iframeUploadInput" style="cursor: pointer;")
+          i.las.la-upload.me-1
+          | Tải ảnh mới
+        input#iframeUploadInput(type="file" multiple style="display: none;")
+
+    #iframeUploadProgress(style="display: none;").mb-3
+      .progress(style="height: 6px;")
+        .progress-bar.progress-bar-striped.progress-bar-animated#iframeProgressBar(style="width: 0%;")
+
+    //- Subfolders
+    if folderList && folderList.length > 0
+      .d-flex.flex-wrap.gap-2.mb-3
+        each folder in folderList
+          a.btn.btn-sm.btn-outline-secondary.d-flex.align-items-center.gap-1(
+            href=`/${pathAdmin}/file-manager/iframe?folderPath=${encodeURIComponent(folder.path)}`
+          )
+            i.las.la-folder.text-warning.fs-5
+            span.small #{folder.name}
+
+    //- Files Grid
+    if listFile && listFile.length > 0
+      .row.g-2#filesGrid
+        each item in listFile
+          .col-6.col-sm-4.col-md-3.col-lg-2
+            .card.h-100.file-item-card.p-1.text-center(
+              data-select-file
+              data-file-url=item.url
+              data-relative-url=`${item.folder}/${item.filename}`
+              data-filename=item.filename
+              title=`Bấm để chọn: ${item.filename}`
+            )
+              .thumb-box.rounded
+                if item.isImage
+                  img(src=item.url alt=item.filename loading="lazy")
+                else if item.mimetype && item.mimetype.includes("audio")
+                  i.las.la-volume-up.fs-1.text-info
+                else if item.mimetype && item.mimetype.includes("video")
+                  i.las.la-video.fs-1.text-danger
+                else if item.mimetype && item.mimetype.includes("pdf")
+                  i.las.la-file-pdf.fs-1.text-warning
+                else
+                  i.las.la-file.fs-1.text-secondary
+              .card-body.p-1
+                .small.text-truncate.fw-semibold(style="font-size: 11px;") #{item.filename}
+                .text-muted(style="font-size: 10px;") #{item.sizeFormat}
+              button.btn.btn-xs.btn-primary.w-100.mt-1(style="font-size: 11px; padding: 2px 4px;")
+                i.las.la-check.me-1
+                | Chọn
+    else
+      .text-center.py-5
+        i.las.la-images.text-muted(style="font-size: 40px;")
+        p.text-muted.small.mt-2 Chưa có tệp tin nào trong thư mục này. Bấm "Tải ảnh mới" để thêm.
+
+    script.
+      const domainCDN = "#{domainCDN}";
+      const currentFolder = "#{currentFolder}";
+      const pathAdmin = "#{pathAdmin}";
+
+      // File Selection handling
+      document.querySelectorAll("[data-select-file]").forEach(card => {
+        card.addEventListener("click", () => {
+          const fileUrl = card.getAttribute("data-file-url");
+          const relativeUrl = card.getAttribute("data-relative-url");
+          const filename = card.getAttribute("data-filename");
+
+          // Post message to parent window
+          if (window.parent) {
+            window.parent.postMessage({
+              type: "SELECT_FILE",
+              url: fileUrl,
+              relativeUrl: relativeUrl,
+              filename: filename
+            }, "*");
+          }
+
+          // Copy URL to clipboard
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(relativeUrl || fileUrl).catch(() => {});
+          }
+        });
+      });
+
+      // Quick Upload in iframe
+      const uploadInput = document.getElementById("iframeUploadInput");
+      const progressBox = document.getElementById("iframeUploadProgress");
+      const progressBar = document.getElementById("iframeProgressBar");
+
+      if (uploadInput) {
+        uploadInput.addEventListener("change", async (e) => {
+          const files = e.target.files;
+          if (!files || !files.length) return;
+
+          const formData = new FormData();
+          for (let i = 0; i < files.length; i++) {
+            formData.append("files", files[i]);
+          }
+          if (currentFolder) {
+            formData.append("folderPath", currentFolder);
+          }
+
+          progressBox.style.display = "block";
+          progressBar.style.width = "40%";
+
+          try {
+            const res = await fetch(`/${pathAdmin}/file-manager/upload?folderPath=${encodeURIComponent(currentFolder)}`, {
+              method: "POST",
+              body: formData
+            });
+            const data = await res.json();
+            progressBar.style.width = "100%";
+            if (data.code === "success") {
+              window.location.reload();
+            } else {
+              alert(data.message || "Lỗi khi tải ảnh lên!");
+              progressBox.style.display = "none";
+            }
+          } catch (err) {
+            alert("Lỗi kết nối khi tải ảnh lên!");
+            progressBox.style.display = "none";
+          }
+        });
+      }
+

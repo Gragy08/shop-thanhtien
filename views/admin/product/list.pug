@@ -107,9 +107,22 @@ block main
                   each product in productList
                     tr
                       td
-                        a.fw-semibold.text-primary.text-decoration-none(href=`/${pathAdmin}/product/edit/${product._id}`) #{product.name}
-                        br
-                        small.text-muted /#{product.slug}
+                        .d-flex.align-items-center.gap-2
+                          if product.images && product.images.length
+                            - const thumb = product.images[0]
+                            img.rounded.border(
+                              src=thumb.startsWith("http") ? thumb : (thumb.startsWith('/') ? thumb : `/${thumb}`)
+                              alt=product.name
+                              style="width: 42px; height: 42px; object-fit: cover;"
+                              loading="lazy"
+                            )
+                          else
+                            .d-inline-flex.justify-content-center.align-items-center.rounded.bg-light.border(style="width: 42px; height: 42px;")
+                              i.las.la-image.text-muted.fs-4
+                          div
+                            a.fw-semibold.text-primary.text-decoration-none(href=`/${pathAdmin}/product/edit/${product._id}`) #{product.name}
+                            br
+                            small.text-muted /#{product.slug}
                       td
                         if product.categoryIds && product.categoryIds.length
                           each cat in product.categoryIds

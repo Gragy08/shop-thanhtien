@@ -18,13 +18,17 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
     "pug": "^3.0.3",
-    "slugify": "^1.6.9"
+    "slugify": "^1.6.9",
+    "axios": "^1.7.9",
+    "form-data": "^4.0.2",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.3.1",
+    "@types/multer": "^1.4.12",
     "@types/pug": "^2.0.10",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",

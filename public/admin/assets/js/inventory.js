@@ -176,10 +176,10 @@ const calcLineTotal = (line) => {
     quantityInput.value = qty > 0 ? qty : 0;
   }
 
-  const price = Number(priceInput.value) || 0;
+  const price = window.parseVND ? window.parseVND(priceInput.value) : (Number(priceInput.value) || 0);
   const lineTotal = qty * price;
   if (totalInput) {
-    totalInput.value = `${lineTotal.toLocaleString("vi-VN")} đ`;
+    totalInput.value = window.formatVND ? window.formatVND(lineTotal, "đ") : `${lineTotal.toLocaleString("vi-VN")} đ`;
   }
   return lineTotal;
 };
@@ -192,7 +192,7 @@ const recalcTotalCost = (force = false) => {
     total += calcLineTotal(line);
   }
   if (force || totalCostInput.dataset.manual !== "true") {
-    totalCostInput.value = total;
+    totalCostInput.value = window.formatVND ? window.formatVND(total) : total;
   }
 };
 
@@ -338,11 +338,12 @@ const createLine = () => {
     </td>
     <td><textarea class="form-control variant-identifiers" rows="2" placeholder="Chọn variant sản phẩm trước" disabled></textarea></td>
     <td><input class="form-control variant-quantity" type="number" min="1" value="1" disabled></td>
-    <td><input class="form-control variant-price" type="number" min="0" value="0" placeholder="0"></td>
+    <td><input class="form-control variant-price" type="text" format-money value="0" placeholder="0"></td>
     <td><input class="form-control variant-total" type="text" readonly value="0 đ"></td>
     <td class="text-center"><button class="btn btn-sm btn-outline-danger remove-line" type="button" aria-label="Xóa dòng">×</button></td>
   `;
   setupAutocomplete(row);
+  if (window.initFormatMoney) window.initFormatMoney();
   return row;
 };
 
@@ -407,7 +408,7 @@ receiptForm?.addEventListener("submit", async (event) => {
     const quantity = isQuantity
       ? Number(line.querySelector(".variant-quantity").value) || 1
       : (identifiers.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean).length || 1);
-    const purchasePrice = Number(line.querySelector(".variant-price").value) || 0;
+    const purchasePrice = window.parseVND ? window.parseVND(line.querySelector(".variant-price").value) : (Number(line.querySelector(".variant-price").value) || 0);
 
     return {
       variantId,
@@ -423,7 +424,7 @@ receiptForm?.addEventListener("submit", async (event) => {
     supplierContactName: formData.get("supplierContactName"),
     hasInvoice: hasInvoiceCheckbox?.checked ?? false,
     invoiceNumber: formData.get("invoiceNumber"),
-    totalCost: formData.get("totalCost"),
+    totalCost: window.parseVND ? window.parseVND(formData.get("totalCost")) : formData.get("totalCost"),
     note: formData.get("note"),
     lines: JSON.stringify(lines)
   };
@@ -436,9 +437,12 @@ receiptForm?.addEventListener("submit", async (event) => {
   });
 
   const result = await response.json();
-  message.textContent = result.message || "";
-  message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
+  if (message) {
+    message.textContent = result.message || "";
+    message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
+  }
   if (response.ok) {
+    if (typeof notyf !== "undefined") notyf.success(result.message || "Tạo phiếu nhập thành công!");
     receiptForm.reset();
     if (invoiceNumberGroup) invoiceNumberGroup.style.display = "none";
     if (totalCostInput) totalCostInput.dataset.manual = "false";
@@ -446,5 +450,7 @@ receiptForm?.addEventListener("submit", async (event) => {
       clearVariant(line);
       syncLineMode(line, true);
     });
+  } else {
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Lỗi tạo phiếu nhập kho!");
   }
 });

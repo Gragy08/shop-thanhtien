@@ -6,6 +6,8 @@ html(lang="vi")
     meta(charset="utf-8")
     meta(name="viewport", content="width=device-width, initial-scale=1")
     title #{pageTitle} | Shop Thanh Tien
+    link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css")
+    link(rel="stylesheet", href="/admin/assets/libs/vanillajs-datepicker/css/datepicker.min.css")
     link(rel="stylesheet", href="/admin/assets/css/bootstrap.min.css")
     link(rel="stylesheet", href="/admin/assets/css/icons.min.css")
     link(rel="stylesheet", href="/admin/assets/css/app.min.css")
@@ -19,7 +21,10 @@ html(lang="vi")
         .container-xxl
           block main
         include ../partials/footer.pug
+    script(src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js")
     script(src="/admin/assets/libs/bootstrap/js/bootstrap.bundle.min.js")
     script(src="/admin/assets/libs/simplebar/simplebar.min.js")
+    script(src="/admin/assets/libs/vanillajs-datepicker/js/datepicker-full.min.js")
+    script(src="/admin/assets/js/shop-thanhtien.js")
     script(src="/admin/assets/js/app.js")
     block script

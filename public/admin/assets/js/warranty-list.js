@@ -73,12 +73,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const targetStatus = bulkStatusSelect?.value;
 
     if (!ticketIds.length) {
-      window.alert("Vui lòng chọn ít nhất một phiếu bảo hành!");
+      if (typeof notyf !== "undefined") notyf.error("Vui lòng chọn ít nhất một phiếu bảo hành!");
+      else window.alert("Vui lòng chọn ít nhất một phiếu bảo hành!");
       return;
     }
 
     if (!targetStatus) {
-      window.alert("Vui lòng chọn trạng thái mới cần chuyển sang!");
+      if (typeof notyf !== "undefined") notyf.error("Vui lòng chọn trạng thái mới cần chuyển sang!");
+      else window.alert("Vui lòng chọn trạng thái mới cần chuyển sang!");
       bulkStatusSelect?.focus();
       return;
     }
@@ -117,17 +119,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await res.json();
       if (!res.ok || data.code !== "success") {
-        window.alert(data.message || "Lỗi khi cập nhật trạng thái hàng loạt!");
+        if (typeof notyf !== "undefined") notyf.error(data.message || "Lỗi khi cập nhật trạng thái hàng loạt!");
+        else window.alert(data.message || "Lỗi khi cập nhật trạng thái hàng loạt!");
         btnApplyBulk.disabled = false;
         btnApplyBulk.innerHTML = '<i class="las la-sync-alt me-1"></i> Áp dụng thay đổi';
         return;
       }
 
-      window.alert(data.message);
+      window.drawNotify("success", data.message || "Cập nhật trạng thái thành công!");
       window.location.reload();
     } catch (err) {
       console.error(err);
-      window.alert("Lỗi kết nối khi gửi dữ liệu!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi dữ liệu!");
+      else window.alert("Lỗi kết nối khi gửi dữ liệu!");
       btnApplyBulk.disabled = false;
       btnApplyBulk.innerHTML = '<i class="las la-sync-alt me-1"></i> Áp dụng thay đổi';
     }
@@ -156,14 +160,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const data = await res.json();
         if (data.code === "success") {
-          window.alert(data.message);
+          window.drawNotify("success", data.message || "Cập nhật thành công!");
           window.location.reload();
         } else {
-          window.alert(data.message || "Lỗi khi cập nhật!");
+          if (typeof notyf !== "undefined") notyf.error(data.message || "Lỗi khi cập nhật!");
+          else window.alert(data.message || "Lỗi khi cập nhật!");
         }
       } catch (e) {
         console.error(e);
-        window.alert("Lỗi kết nối!");
+        if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối!");
+        else window.alert("Lỗi kết nối!");
       }
     });
   });

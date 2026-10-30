@@ -6,6 +6,61 @@
 }
 
 body { background: var(--st-mist); color: var(--st-ink); }
+
+/* ==========================================================================
+   Triệt tiêu thanh cuộn ngang toàn trang (Fix horizontal page overflow)
+   ========================================================================== */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+.page-wrapper {
+  min-width: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.page-content {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.container-xxl {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.card {
+  min-width: 0;
+}
+
+/* ==========================================================================
+   Chuẩn hóa cuộn ngang cục bộ ngay tại bảng dữ liệu khi bị tràn
+   ========================================================================== */
+.table-responsive {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Thanh scrollbar thanh mảnh, đẹp mắt ngay tại bảng */
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
 .auth-page { background: radial-gradient(circle at 20% 10%, #dff5ef 0, transparent 34%), var(--st-mist); }
 .min-vh-75 { min-height: 75vh; }
 .auth-panel { background: #fff; border: 1px solid var(--st-line); border-radius: 10px; box-shadow: 0 18px 45px rgba(16, 42, 67, .1); padding: 2rem; }
@@ -55,4 +110,90 @@ body { background: var(--st-mist); color: var(--st-ink); }
 #globalVariantSuggestMenu .variant-suggest-item:hover,
 #globalVariantSuggestMenu .variant-suggest-item:focus {
   background-color: #edf7f5;
+}
+
+/* ==========================================================================
+   Standard Action Buttons (Chuẩn hóa nút thao tác theo thiết kế)
+   ========================================================================== */
+.btn-action {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  transition: all 0.2s ease !important;
+  background-color: #ffffff !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  border-width: 1.5px !important;
+  border-style: solid !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.btn-action:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 1. Copy - Màu Xanh lá (Green) */
+.btn-action-copy {
+  border-color: #28a745 !important;
+  color: #28a745 !important;
+}
+.btn-action-copy:hover {
+  background-color: #28a745 !important;
+  color: #ffffff !important;
+}
+
+/* 2. View / Preview - Màu Tím (Purple) */
+.btn-action-view {
+  border-color: #6f42c1 !important;
+  color: #6f42c1 !important;
+}
+.btn-action-view:hover {
+  background-color: #6f42c1 !important;
+  color: #ffffff !important;
+}
+
+/* 3. Download - Màu Cam (Orange) */
+.btn-action-download {
+  border-color: #fd7e14 !important;
+  color: #fd7e14 !important;
+}
+.btn-action-download:hover {
+  background-color: #fd7e14 !important;
+  color: #ffffff !important;
+}
+
+/* 4. Edit / Rename - Màu Xanh lơ (Cyan) */
+.btn-action-edit {
+  border-color: #0dcaf0 !important;
+  color: #0aa2c0 !important;
+}
+.btn-action-edit:hover {
+  background-color: #0dcaf0 !important;
+  color: #ffffff !important;
+}
+
+/* 5. Delete / Trash / Cancel - Màu Đỏ (Red) */
+.btn-action-delete {
+  border-color: #dc3545 !important;
+  color: #dc3545 !important;
+}
+.btn-action-delete:hover {
+  background-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+/* Wrapper tiện ích chứa nhóm nút thao tác trong bảng */
+.table-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
 }

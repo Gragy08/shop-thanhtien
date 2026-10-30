@@ -1,0 +1,20 @@
+extends ../layouts/blank.pug
+
+block main
+  .container.py-5
+    .row.justify-content-center.align-items-center.min-vh-75
+      .col-12.col-sm-9.col-md-6.col-lg-5
+        .auth-panel.text-center.p-4.p-md-5
+          .avatar-lg.bg-danger-subtle.text-danger.rounded-circle.d-inline-flex.align-items-center.justify-content-center.mb-3(style="width: 72px; height: 72px;")
+            i.las.la-shield-alt(style="font-size: 2.5rem;")
+          h3.fw-bold.text-dark.mb-2 Truy cập bị từ chối (403)
+          p.text-muted.mb-4 #{message || "Tài khoản của bạn không có quyền truy cập vào trang này hoặc thao tác này đã bị hạn chế theo phân quyền."}
+          
+          .d-grid.gap-2
+            a.btn.btn-primary.btn-lg.fw-semibold(href=`/${pathAdmin}/dashboard`)
+              i.las.la-home.me-2
+              | Về trang Tổng quan (Dashboard)
+            button.btn.btn-outline-secondary(type="button", onclick="window.history.back()")
+              i.las.la-arrow-left.me-2
+              | Quay lại trang trước
+

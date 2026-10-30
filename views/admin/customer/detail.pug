@@ -38,7 +38,7 @@ block main
               i.las.la-wallet.fs-2.text-success
             div
               h6.text-muted.small.mb-1 TỔNG CHI TIÊU
-              h4.mb-0.fw-bold.text-success #{Number(customer.totalSpent || 0).toLocaleString("vi-VN")} đ
+              h4.mb-0.fw-bold.text-success #{formatVND(customer.totalSpent || 0)}
     
     .col-xl-3.col-sm-6
       .card.border.shadow-sm.mb-0
@@ -96,7 +96,7 @@ block main
             if customer.source === "pos"
               span.badge.bg-success-subtle.text-success.fs-7
                 i.las.la-cash-register.me-1
-                | Tự động lưu từ quầy bán hàng (POS)
+                | Tự động lưu từ quầy bán hàng
             else
               span.badge.bg-secondary-subtle.text-secondary.fs-7
                 i.las.la-keyboard.me-1
@@ -195,7 +195,7 @@ block main
                       th Phương thức
                       th.text-end Tổng tiền
                       th.text-center Trạng thái
-                      th.text-center Hành động
+                      th.text-end(style="min-width: 90px") Hành động
                   tbody
                     if orders && orders.length
                       each ord in orders
@@ -219,7 +219,7 @@ block main
                               default
                                 span.badge.bg-secondary #{ord.paymentMethod}
                           td.text-end.fw-bold.text-dark
-                            | #{Number(ord.totalAmount).toLocaleString("vi-VN")} đ
+                            | #{formatVND(ord.totalAmount)}
                           td.text-center
                             if ord.orderStatus === "completed"
                               span.badge.bg-success-subtle.text-success Hoàn tất
@@ -227,9 +227,10 @@ block main
                               span.badge.bg-danger-subtle.text-danger Đã hủy
                             else
                               span.badge.bg-secondary #{ord.orderStatus}
-                          td.text-center
-                            a.btn.btn-sm.btn-outline-primary.py-0.px-2(href=`/${pathAdmin}/order/${ord._id}`, title="Xem hóa đơn")
-                              i.las.la-eye
+                          td.text-end
+                            .table-actions
+                              a.btn-action.btn-action-view(href=`/${pathAdmin}/order/${ord._id}`, title="Xem hóa đơn")
+                                i.las.la-eye
                     else
                       tr
                         td.text-center.text-muted.py-5(colspan="6")

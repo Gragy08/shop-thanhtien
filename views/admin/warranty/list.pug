@@ -27,22 +27,6 @@ block main
 
   .row
     .col-12
-      // Tiêu đề & thanh công cụ
-      .d-flex.justify-content-between.align-items-center.mb-3
-        div
-          h4.fw-bold.text-primary.mb-0
-            i.las.la-tools.me-2
-            | Quản Lý Bảo Hành &amp; Dịch Vụ Sửa Chữa
-          p.text-muted.small.mb-0 Theo dõi tiến độ xử lý bảo hành, quản lý thiết bị sửa chữa và bàn giao trả khách.
-        div.d-flex.gap-2
-          a.btn.btn-outline-primary(href=`/${pathAdmin}/inventory/tracker`, title="Tra cứu vòng đời thiết bị")
-            i.las.la-barcode.me-1
-            | Tra cứu IMEI
-          if canWrite
-            a.btn.btn-primary(href=`/${pathAdmin}/warranty/create`)
-              i.las.la-plus-circle.me-1
-              | Tiếp nhận bảo hành
-
       // Thẻ Thống Kê Nhanh (KPIs)
       .row.g-3.mb-3
         .col-xl-2.col-md-4.col-sm-6
@@ -96,9 +80,22 @@ block main
                   h4.mb-0.fw-bold.text-success #{stats ? stats.deliveredCount : 0}
 
       // Bộ lọc và Bảng danh sách phiếu bảo hành
-      .card.border.shadow-sm
-        .card-header.bg-light.py-3
-          form.row.g-2(method="get", action=`/${pathAdmin}/warranty`)
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Theo dõi tiến độ xử lý bảo hành, quản lý thiết bị sửa chữa và bàn giao trả khách.
+            .col-auto.d-flex.gap-2
+              a.btn.btn-outline-primary(href=`/${pathAdmin}/inventory/tracker`, title="Tra cứu vòng đời thiết bị")
+                i.las.la-barcode.me-1
+                | Tra cứu IMEI
+              if canWrite
+                a.btn.btn-primary(href=`/${pathAdmin}/warranty/create`)
+                  i.las.la-plus.me-1
+                  | Tiếp nhận bảo hành
+        .card-body.pt-0
+          form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/warranty`)
             .col-xl-4.col-md-6
               .input-group
                 span.input-group-text
@@ -119,20 +116,26 @@ block main
                 option(value="cancelled", selected=filters.ticketStatus === "cancelled") Đã hủy phiếu
             .col-xl-2.col-md-3
               input.form-control(
-                type="date",
+                type="text",
+                data-datepicker,
+                placeholder="dd/mm/yyyy",
+                autocomplete="off",
                 name="from",
                 value=filters.from,
                 title="Từ ngày nhận"
               )
             .col-xl-2.col-md-6
               input.form-control(
-                type="date",
+                type="text",
+                data-datepicker,
+                placeholder="dd/mm/yyyy",
+                autocomplete="off",
                 name="to",
                 value=filters.to,
                 title="Đến ngày nhận"
               )
             .col-xl-1.col-md-6.d-grid
-              button.btn.btn-primary(type="submit")
+              button.btn.btn-outline-primary(type="submit")
                 i.las.la-filter.me-1
                 | Lọc
 
@@ -164,7 +167,7 @@ block main
                 button#btnDeselectAll.btn.btn-outline-secondary.btn-sm(type="button")
                   | Bỏ chọn
 
-        .card-body.p-0
+        .table-responsive.border-top
           .table-container-responsive
             table.table.table-hover.align-middle.mb-0.warranty-table
               thead.table-light
@@ -172,7 +175,7 @@ block main
                   th.text-center(style="width: 85px;")
                     .form-check.d-flex.align-items-center.justify-content-center.gap-1.mb-0
                       input#selectAllTickets.form-check-input(type="checkbox")
-                      label.form-check-label.small.fw-bold.cursor-pointer(for="selectAllTickets") Select All
+                      label.form-check-label.small.fw-bold.cursor-pointer(for="selectAllTickets") Chọn tất cả
                   th.text-center(style="width: 35px;") #
                   th(style="width: 140px;") Mã phiếu &amp; Ngày nhận
                   th(style="width: 170px;") Thiết bị &amp; IMEI
@@ -181,7 +184,7 @@ block main
                   th.text-center(style="width: 95px;") Hẹn trả
                   th.text-end(style="width: 95px;") Chi phí
                   th.text-center(style="width: 115px;") Trạng thái
-                  th.text-center(style="width: 75px;") Hành động
+                  th.text-end(style="width: 90px;") Hành động
               tbody
                 if tickets && tickets.length
                   each tk, index in tickets
@@ -227,7 +230,7 @@ block main
                           span.text-muted.small Liên hệ sau
                       td.text-end
                         if tk.repairCost > 0
-                          strong.text-primary #{Number(tk.repairCost).toLocaleString("vi-VN")} đ
+                          strong.text-primary #{formatVND(tk.repairCost)}
                         else
                           span.badge.bg-success-subtle.text-success 0 đ
                       td.text-center
@@ -244,9 +247,9 @@ block main
                             span.badge.bg-danger-subtle.text-danger Đã hủy
                           default
                             span.badge.bg-secondary #{tk.ticketStatus}
-                      td.text-center
-                        .btn-group.btn-group-sm
-                          a.btn.btn-outline-primary(href=`/${pathAdmin}/warranty/${tk._id}`, title="Xem & In phiếu hẹn")
+                      td.text-end
+                        .table-actions
+                          a.btn-action.btn-action-view(href=`/${pathAdmin}/warranty/${tk._id}`, title="Xem & In phiếu hẹn")
                             i.las.la-eye
                 else
                   tr

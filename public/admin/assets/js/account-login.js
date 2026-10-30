@@ -21,7 +21,7 @@ loginForm?.addEventListener("submit", async (event) => {
   const result = await response.json();
 
   if (response.ok && result.code === "success") {
-    window.location.href = "/admin/account-admin/list";
+    window.location.href = "/admin/dashboard";
     return;
   }
 

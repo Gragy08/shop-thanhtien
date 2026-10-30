@@ -164,13 +164,24 @@ html(lang="vi")
             const data = await res.json();
             progressBar.style.width = "100%";
             if (data.code === "success") {
+              if (window.parent && window.parent.drawNotify) {
+                window.parent.drawNotify("success", data.message || "Tải ảnh lên thành công!");
+              }
               window.location.reload();
             } else {
-              alert(data.message || "Lỗi khi tải ảnh lên!");
+              if (window.parent && window.parent.notyf) {
+                window.parent.notyf.error(data.message || "Lỗi khi tải ảnh lên!");
+              } else {
+                alert(data.message || "Lỗi khi tải ảnh lên!");
+              }
               progressBox.style.display = "none";
             }
           } catch (err) {
-            alert("Lỗi kết nối khi tải ảnh lên!");
+            if (window.parent && window.parent.notyf) {
+              window.parent.notyf.error("Lỗi kết nối khi tải ảnh lên!");
+            } else {
+              alert("Lỗi kết nối khi tải ảnh lên!");
+            }
             progressBox.style.display = "none";
           }
         });

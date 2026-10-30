@@ -40,7 +40,7 @@ block main
             .col-md-3
               small.text-muted Tổng chi phí trả NCC
               p.fw-bold.fs-5.text-primary.mb-0
-                | #{receipt.totalCost ? receipt.totalCost.toLocaleString("vi-VN") + " đ" : "0 đ"}
+                | #{formatVND(receipt.totalCost || 0)}
             .col-md-6
               small.text-muted Người tạo
               p.fw-semibold.mb-0 #{receipt.createdBy ? receipt.createdBy.fullName : "Không xác định"} (#{new Date(receipt.createdAt).toLocaleString("vi-VN")})
@@ -85,8 +85,8 @@ block main
                         else
                           span.badge.bg-secondary Số lượng
                       td.text-center.fw-bold #{line.quantity}
-                      td.text-end #{line.purchasePrice ? line.purchasePrice.toLocaleString("vi-VN") + " đ" : "0 đ"}
-                      td.text-end.fw-semibold.text-primary #{line.totalPrice ? line.totalPrice.toLocaleString("vi-VN") + " đ" : "0 đ"}
+                      td.text-end #{formatVND(line.purchasePrice || 0)}
+                      td.text-end.fw-semibold.text-primary #{formatVND(line.totalPrice || 0)}
                       td
                         if line.identifiers && line.identifiers.length
                           .d-flex.flex-wrap.gap-1(style="max-height: 80px; overflow-y: auto;")
@@ -122,11 +122,19 @@ block main
                     td #{item.trackingType}
                     td.font-monospace #{item.identifier || "Không có"}
                     td #{item.quantity}
-                    td #{item.purchasePrice ? item.purchasePrice.toLocaleString("vi-VN") + " đ" : "--"}
+                    td #{item.purchasePrice != null ? formatVND(item.purchasePrice) : "--"}
                     td
                       if item.status === "available"
-                        span.badge.bg-success Có sẵn
+                        span.badge.bg-success-subtle.text-success.border.border-success Có sẵn
                       else if item.status === "sold"
-                        span.badge.bg-dark Đã bán
+                        span.badge.bg-dark-subtle.text-dark.border.border-dark Đã bán
+                      else if item.status === "warranty"
+                        span.badge.bg-warning-subtle.text-warning-emphasis.border.border-warning Đi bảo hành NCC
+                      else if item.status === "damaged"
+                        span.badge.bg-danger-subtle.text-danger.border.border-danger Hàng lỗi / hỏng
+                      else if item.status === "returned"
+                        span.badge.bg-info-subtle.text-info.border.border-info Đã trả NCC
+                      else if item.status === "liquidated"
+                        span.badge.bg-secondary-subtle.text-secondary.border.border-secondary Đã thanh lý
                       else
-                        span.badge.bg-secondary #{item.status}
+                        span.badge.bg-light.text-dark.border #{item.status || "Chưa rõ"}

@@ -1,53 +1,59 @@
 extends ../../layouts/admin.pug
 
 block main
-  .d-flex.flex-wrap.justify-content-between.align-items-center.gap-3.mb-4
-    div
-      p.eyebrow.mb-1 ADMINISTRATION
-      h1.h3.mb-1 Tài khoản quản trị
-      p.text-muted.mb-0 Quản lý quyền truy cập của Admin và Manager.
-    a.btn.btn-primary(href="/admin/account-admin/create")
-      span.me-2 +
-      | Tạo tài khoản
-  .card.border-0.shadow-sm
-    .card-body.p-0
-      .table-responsive
-        table.table.align-middle.mb-0
-          thead.table-light
-            tr
-              th.ps-4 Họ tên
-              th Email
-              th Vai trò
-              th Trạng thái
-              th Đăng nhập gần nhất
-              th.text-end.pe-4 Hành động
-          tbody
-            if accountList.length
-              each account in accountList
+  .row
+    .col-12
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title Tài khoản quản trị
+              p.text-muted.mb-0 Quản lý danh sách tài khoản quản trị.
+            .col-auto
+              a.btn.btn-primary(href="/admin/account-admin/create")
+                i.las.la-plus.me-1
+                | Tạo tài khoản
+        .card-body.pt-0
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
                 tr
-                  td.ps-4.fw-semibold #{account.fullName}
-                  td #{account.email}
-                  td
-                    if account.role === "admin"
-                      span.badge.text-bg-dark Admin
-                    else
-                      span.badge.text-bg-info Manager
-                  td
-                    if account.status === "active"
-                      span.status-dot.text-success Hoạt động
-                    else
-                      span.status-dot.text-secondary Tạm dừng
-                  td.text-muted.small
-                    if account.lastLoginAt
-                      | #{new Date(account.lastLoginAt).toLocaleString("vi-VN")}
-                    else
-                      | Chưa đăng nhập
-                  td.text-end.pe-4
-                    a.btn.btn-sm.btn-outline-secondary.me-2(href=`/admin/account-admin/edit/${account._id}`) Sửa
-                    button.btn.btn-sm.btn-outline-danger.account-delete(type="button", data-id=account._id) Vô hiệu hóa
-            else
-              tr
-                td.py-5.text-center.text-muted(colspan="6") Chưa có tài khoản quản trị.
+                  th Họ tên
+                  th Email
+                  th Vai trò
+                  th Trạng thái
+                  th Đăng nhập gần nhất
+                  th.text-end(style="min-width: 120px") Hành động
+              tbody
+                if accountList.length
+                  each account in accountList
+                    tr
+                      td.fw-semibold #{account.fullName}
+                      td #{account.email}
+                      td
+                        if account.role === "admin"
+                          span.badge.text-bg-dark Admin
+                        else
+                          span.badge.text-bg-info Manager
+                      td
+                        if account.status === "active"
+                          span.status-dot.text-success Hoạt động
+                        else
+                          span.status-dot.text-secondary Tạm dừng
+                      td.text-muted.small
+                        if account.lastLoginAt
+                          | #{new Date(account.lastLoginAt).toLocaleString("vi-VN")}
+                        else
+                          | Chưa đăng nhập
+                      td.text-end
+                        .table-actions
+                          a.btn-action.btn-action-edit(href=`/admin/account-admin/edit/${account._id}`, title="Chỉnh sửa tài khoản")
+                            i.las.la-pen
+                          button.btn-action.btn-action-delete.account-delete(type="button", data-id=account._id, title="Vô hiệu hóa tài khoản")
+                            i.las.la-trash-alt
+                else
+                  tr
+                    td.py-5.text-center.text-muted(colspan="6") Chưa có tài khoản quản trị.
 
 block script
   script(src="/admin/assets/js/account-admin.js")

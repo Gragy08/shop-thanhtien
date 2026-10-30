@@ -87,7 +87,8 @@ document.querySelector("#btnPasteMedia")?.addEventListener("click", async () => 
     }
     addImageItem(text.trim());
   } catch (_err) {
-    window.alert("Không thể đọc bộ nhớ tạm!");
+    if (typeof notyf !== "undefined") notyf.error("Không thể đọc bộ nhớ tạm!");
+    else window.alert("Không thể đọc bộ nhớ tạm!");
   }
 });
 
@@ -103,17 +104,22 @@ productEditForm?.addEventListener("submit", async (event) => {
       message.textContent = "Vui lòng chọn ít nhất một danh mục cho sản phẩm!";
       message.className = "form-message mt-3 mb-0 text-danger";
     }
+    if (typeof notyf !== "undefined") notyf.error("Vui lòng chọn ít nhất một danh mục cho sản phẩm!");
     return;
   }
 
   const rows = [...document.querySelectorAll("#variantEditTable tbody tr[data-variant-id]")];
-  const variants = rows.map((row) => ({
-    id: row.dataset.variantId,
-    sku: row.querySelector(".variant-sku")?.value?.trim() || "",
-    purchasePriceOverride: row.querySelector(".variant-purchase")?.value !== "" ? row.querySelector(".variant-purchase")?.value : null,
-    salePriceOverride: row.querySelector(".variant-sale")?.value !== "" ? row.querySelector(".variant-sale")?.value : null,
-    status: row.querySelector(".variant-status")?.checked ? "active" : "inactive"
-  }));
+  const variants = rows.map((row) => {
+    const pVal = row.querySelector(".variant-purchase")?.value;
+    const sVal = row.querySelector(".variant-sale")?.value;
+    return {
+      id: row.dataset.variantId,
+      sku: row.querySelector(".variant-sku")?.value?.trim() || "",
+      purchasePriceOverride: (pVal !== "" && pVal != null) ? (window.parseVND ? window.parseVND(pVal) : pVal) : null,
+      salePriceOverride: (sVal !== "" && sVal != null) ? (window.parseVND ? window.parseVND(sVal) : sVal) : null,
+      status: row.querySelector(".variant-status")?.checked ? "active" : "inactive"
+    };
+  });
 
   const getProductImages = () => {
     const imagesContainer = document.querySelector("#productImagesContainer");
@@ -127,8 +133,8 @@ productEditForm?.addEventListener("submit", async (event) => {
     name: formData.get("name"),
     slug: formData.get("slug"),
     status: formData.get("status"),
-    purchasePrice: formData.get("purchasePrice"),
-    salePrice: formData.get("salePrice"),
+    purchasePrice: window.parseVND ? window.parseVND(formData.get("purchasePrice")) : formData.get("purchasePrice"),
+    salePrice: window.parseVND ? window.parseVND(formData.get("salePrice")) : formData.get("salePrice"),
     description: formData.get("description"),
     images: getProductImages(),
     categoryIds,
@@ -151,15 +157,17 @@ productEditForm?.addEventListener("submit", async (event) => {
     }
 
     if (response.ok) {
-      setTimeout(() => {
-        window.location.href = "/admin/product";
-      }, 600);
+      window.drawNotify("success", result.message || "Cập nhật sản phẩm thành công!");
+      window.location.href = "/admin/product";
+    } else {
+      if (typeof notyf !== "undefined") notyf.error(result.message || "Lỗi khi cập nhật sản phẩm!");
     }
   } catch (_error) {
     if (message) {
       message.textContent = "Lỗi kết nối khi gửi yêu cầu cập nhật!";
       message.className = "form-message mt-3 mb-0 text-danger";
     }
+    if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi yêu cầu cập nhật!");
   }
 });
 

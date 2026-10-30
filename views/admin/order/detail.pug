@@ -124,7 +124,7 @@ block main
           
           a.btn.btn-outline-success.btn-sm(href=`/${pathAdmin}/order/pos`)
             i.las.la-cash-register.me-1
-            | Bán hàng POS
+            | Bán hàng
           
           if order.orderStatus !== "cancelled"
             button#btnCancelThisOrder.btn.btn-outline-danger.btn-sm(
@@ -156,7 +156,7 @@ block main
             role="tab"
           )
             i.las.la-file-alt.me-1
-            | Xem trước Hóa đơn A4/A5 (Gọn 1 trang)
+            | Xem trước Hóa đơn A4/A5
         li.nav-item(role="presentation")
           button.nav-link#tab-k80-btn(
             data-bs-toggle="tab",
@@ -177,13 +177,13 @@ block main
               // Tiêu đề & Thông tin cửa hàng (Thu gọn padding & margin)
               .row.align-items-center.border-bottom.pb-2.mb-3
                 .col-sm-7
-                  h4.fw-bold.text-primary.mb-1 SHOP THANH TIỀN
+                  h4.fw-bold.text-primary.mb-1 CỬA HÀNG THANH TIỀN
                   p.text-muted.small.mb-0
                     i.las.la-map-marker.me-1
-                    | Hệ thống bán lẻ điện thoại, máy tính bảng &amp; phụ kiện chính hãng
+                    | Cửa hàng Điện thoại - Đồng hồ - Mắt kính
                   p.text-muted.small.mb-0
                     i.las.la-phone.me-1
-                    | Hotline: 0988.xxx.xxx | Website: shopthanhtien.vn
+                    | Hotline: 077.656.9999 | 077.657.8888 | 0949.679.777
                 .col-sm-5.text-sm-end.mt-2.mt-sm-0
                   .invoice-title.text-dark HÓA ĐƠN BÁN HÀNG
                   div.text-muted.small Mã hóa đơn: 
@@ -260,9 +260,9 @@ block main
                                   each id in item.identifiers
                                     span.badge.bg-primary-subtle.text-primary.border.border-primary.font-monospace #{id}
                           td.text-center.fw-bold #{item.quantity}
-                          td.text-end #{Number(item.unitPrice).toLocaleString("vi-VN")} đ
-                          td.text-end #{item.discount ? Number(item.discount).toLocaleString("vi-VN") : 0} đ
-                          td.text-end.fw-bold.text-dark #{Number(item.totalPrice).toLocaleString("vi-VN")} đ
+                          td.text-end #{formatVND(item.unitPrice)}
+                          td.text-end #{formatVND(item.discount || 0)}
+                          td.text-end.fw-bold.text-dark #{formatVND(item.totalPrice)}
                     else
                       tr
                         td.text-center.py-2.text-muted(colspan="6") Không có thông tin sản phẩm.
@@ -289,29 +289,30 @@ block main
                     table.table.table-sm.table-borderless.mb-0
                       tr
                         td.text-muted.py-1 Tổng tiền hàng:
-                        td.text-end.fw-semibold.py-1 #{Number(order.subTotal).toLocaleString("vi-VN")} đ
+                        td.text-end.fw-semibold.py-1 #{formatVND(order.subTotal)}
                       if order.discount > 0
                         tr
                           td.text-muted.py-1 Giảm giá / Chiết khấu:
-                          td.text-end.text-danger.py-1 -#{Number(order.discount).toLocaleString("vi-VN")} đ
+                          td.text-end.text-danger.py-1 -#{formatVND(order.discount)}
                       tr.border-top
                         td.fw-bold.fs-6.py-1 TỔNG THANH TOÁN:
-                        td.text-end.fw-bold.fs-5.text-primary.py-1 #{Number(order.totalAmount).toLocaleString("vi-VN")} đ
+                        td.text-end.fw-bold.fs-5.text-primary.py-1 #{formatVND(order.totalAmount)}
                       if totalInWords
                         tr
                           td.text-muted.fst-italic.small.py-0(colspan="2") (#{totalInWords})
                       tr
                         td.text-muted.py-1 Tiền khách đưa:
-                        td.text-end.py-1 #{Number(order.paidAmount).toLocaleString("vi-VN")} đ
+                        td.text-end.py-1 #{formatVND(order.paidAmount)}
                       tr
                         td.text-muted.py-1 Tiền thừa trả lại:
-                        td.text-end.text-success.fw-bold.py-1 #{Number(order.changeAmount).toLocaleString("vi-VN")} đ
+                        td.text-end.text-success.fw-bold.py-1 #{formatVND(order.changeAmount)}
 
               // Chữ ký xác nhận cuối hóa đơn (Thu gọn khoảng cách để vừa in trong 1 trang)
               .row.text-center.mt-3.pt-2.signature-block(style="break-inside: avoid; page-break-inside: avoid;")
                 .col-6
                   p.small.text-muted.mb-1 NGƯỜI MUA HÀNG
                   div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, ghi rõ họ tên)
+                  div.fw-semibold.text-dark.mt-1 #{order.customerInfo.fullName || "Khách lẻ vãng lai"}
                 .col-6
                   p.small.text-muted.mb-1 THU NGÂN / ĐẠI DIỆN BÁN HÀNG
                   div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, đóng dấu)
@@ -326,9 +327,9 @@ block main
             .k80-receipt#printableInvoiceK80
               // Đầu phiếu in
               .text-center.mb-2
-                .fw-bold.fs-6.text-uppercase SHOP THANH TIỀN
-                .small.text-muted Hệ thống bán lẻ điện thoại &amp; phụ kiện
-                .small.text-muted Hotline: 0988.xxx.xxx
+                .fw-bold.fs-6.text-uppercase CỬA HÀNG THANH TIỀN
+                .small.text-muted Cửa hàng điện thoại - đồng hồ - mắt kính
+                .small.text-muted Hotline: 077.656.9999 | 077.657.8888 | 0949.679.777
                 .border-bottom.border-dark.border-dashed.my-2
                 .fw-bold.fs-6.text-uppercase HÓA ĐƠN BÁN HÀNG
                 .small Ngày #{order.createdAt ? new Date(order.createdAt).toLocaleDateString("vi-VN") : "--"}
@@ -373,7 +374,7 @@ block main
                             each id in item.identifiers
                               div.font-monospace.small(style="font-size: 11px;") &bull; #{id}
                         td.pt-1.text-center.align-top.fw-bold #{item.quantity}
-                        td.pt-1.text-end.align-top #{Number(item.totalPrice).toLocaleString("vi-VN")}
+                        td.pt-1.text-end.align-top #{formatVND(item.totalPrice, "")}
                   else
                     tr
                       td.text-center.py-2(colspan="3") Không có sản phẩm
@@ -389,10 +390,10 @@ block main
                 if order.discount > 0
                   .d-flex.justify-content-between
                     span Chiết khấu:
-                    span -#{Number(order.discount).toLocaleString("vi-VN")} đ
+                    span -#{formatVND(order.discount)}
                 .d-flex.justify-content-between.align-items-center.my-1
                   strong.fs-6 Tổng:
-                  strong.fs-6 #{Number(order.totalAmount).toLocaleString("vi-VN")}
+                  strong.fs-6 #{formatVND(order.totalAmount)}
                 if totalInWords
                   .text-center.fst-italic.small.mb-2(style="font-size: 11px;") #{totalInWords}
               
@@ -404,10 +405,10 @@ block main
                   span #{order.paymentMethod === 'cash' ? 'Tiền mặt' : (order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : order.paymentMethod)}
                 .d-flex.justify-content-between
                   span Tiền khách đưa:
-                  span #{Number(order.paidAmount).toLocaleString("vi-VN")} đ
+                  span #{formatVND(order.paidAmount)}
                 .d-flex.justify-content-between
                   span Tiền thừa:
-                  strong #{Number(order.changeAmount).toLocaleString("vi-VN")} đ
+                  strong #{formatVND(order.changeAmount)}
                 if order.note
                   .fst-italic.mt-1(style="font-size: 11px;") * Ghi chú: #{order.note}
 
@@ -416,8 +417,6 @@ block main
               // Lời cảm ơn & Chân trang
               .text-center.small.mt-2
                 .fw-bold Cảm ơn Quý Khách &amp; Hẹn Gặp Lại!
-                div(style="font-size: 11px;") Tra cứu bảo hành theo IMEI tại:
-                div.fw-semibold(style="font-size: 11px;") website shopthanhtien.vn
 
   // Modal Xác nhận Hủy đơn hàng
   if order.orderStatus !== "cancelled"
@@ -492,16 +491,18 @@ block script
           });
           const result = await response.json();
           if (!response.ok || result.code !== "success") {
-            window.alert(result.message || "Lỗi khi hủy đơn hàng!");
+            if (typeof notyf !== "undefined") notyf.error(result.message || "Lỗi khi hủy đơn hàng!");
+            else window.alert(result.message || "Lỗi khi hủy đơn hàng!");
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = '<i class="las la-ban me-1"></i> Xác nhận hủy &amp; Hoàn kho';
             return;
           }
-          window.alert(result.message);
+          window.drawNotify("success", result.message || "Hủy đơn hàng thành công!");
           window.location.reload();
         } catch (e) {
           console.error(e);
-          window.alert("Lỗi kết nối khi gửi yêu cầu hủy đơn!");
+          if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi yêu cầu hủy đơn!");
+          else window.alert("Lỗi kết nối khi gửi yêu cầu hủy đơn!");
           confirmBtn.disabled = false;
           confirmBtn.innerHTML = '<i class="las la-ban me-1"></i> Xác nhận hủy &amp; Hoàn kho';
         }

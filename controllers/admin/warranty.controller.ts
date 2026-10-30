@@ -8,6 +8,7 @@ import Order from "../../models/order.model";
 import Customer from "../../models/customer.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { syncCustomerOrdersByPhone } from "./customer.controller";
+import { parseVNDate } from "../../helpers/date.helper";
 
 const createTicketCode = (): string => {
   const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
@@ -187,7 +188,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     const passcode = typeof req.body.passcode === "string" ? req.body.passcode.trim() : "";
     const isUnderWarranty = req.body.isUnderWarranty === true || req.body.isUnderWarranty === "true";
     const repairCost = Math.max(0, parseFloat(String(req.body.repairCost)) || 0);
-    const expectedReturnDate = req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : undefined;
+    const expectedReturnDate = req.body.expectedReturnDate ? parseVNDate(req.body.expectedReturnDate, false) : undefined;
     const technicianNotes = typeof req.body.technicianNotes === "string" ? req.body.technicianNotes.trim() : "";
 
     if (!identifier) {
@@ -542,9 +543,13 @@ export const list = async (req: Request, res: Response) => {
 
     if (from || to) {
       const dateQuery: Record<string, Date> = {};
-      if (from) dateQuery.$gte = new Date(`${from}T00:00:00.000Z`);
-      if (to) dateQuery.$lte = new Date(`${to}T23:59:59.999Z`);
-      find.receivedDate = dateQuery;
+      const fromDate = parseVNDate(from, false);
+      const toDate = parseVNDate(to, true);
+      if (fromDate) dateQuery.$gte = fromDate;
+      if (toDate) dateQuery.$lte = toDate;
+      if (fromDate || toDate) {
+        find.receivedDate = dateQuery;
+      }
     }
 
     if (keyword) {

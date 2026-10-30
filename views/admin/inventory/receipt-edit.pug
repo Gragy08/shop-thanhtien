@@ -35,7 +35,7 @@ block main
               .col-md-6
                 .mb-3
                   label.form-label(for="totalCost") Tổng chi phí hóa đơn (Tiền trả NCC - VNĐ)
-                  input#totalCost.form-control(name="totalCost", type="number", min="0", value=receipt.totalCost || 0)
+                  input#totalCost.form-control(name="totalCost", type="text", format-money, value=formatVND(receipt.totalCost || 0, ""))
               
               .col-md-6
                 .mb-3

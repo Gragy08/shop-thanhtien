@@ -21,7 +21,7 @@ block main
                   th Tên danh mục
                   th Slug
                   th Trạng thái
-                  th.text-end Hành động
+                  th.text-end(style="min-width: 120px") Hành động
               tbody
                 if recordList.length
                   each item in recordList
@@ -38,12 +38,11 @@ block main
                         else
                           span.badge.bg-secondary Tạm dừng
                       td.text-end
-                        a.btn.btn-sm.btn-outline-secondary.me-2(href=`/${pathAdmin}/product/category/edit/${item.id}`)
-                          i.las.la-pen
-                          |  Sửa
-                        button.btn.btn-sm.btn-outline-danger.category-delete(type="button" data-id=item.id)
-                          i.las.la-trash-alt
-                          |  Xóa
+                        .table-actions
+                          a.btn-action.btn-action-edit(href=`/${pathAdmin}/product/category/edit/${item.id}`, title="Chỉnh sửa danh mục")
+                            i.las.la-pen
+                          button.btn-action.btn-action-delete.category-delete(type="button", data-id=item.id, title="Xóa danh mục")
+                            i.las.la-trash-alt
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="4") Chưa có danh mục nào.

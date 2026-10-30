@@ -61,11 +61,11 @@ block main
               .col-md-6
                 .mb-3
                   label.form-label Giá nhập mặc định (VNĐ) *
-                  input.form-control(name="purchasePrice", type="number", min="0", value=product.purchasePrice, required)
+                  input.form-control(name="purchasePrice", type="text", format-money, value=formatVND(product.purchasePrice, ""), required)
               .col-md-6
                 .mb-3
                   label.form-label Giá bán mặc định (VNĐ) *
-                  input.form-control(name="salePrice", type="number", min="0", value=product.salePrice, required)
+                  input.form-control(name="salePrice", type="text", format-money, value=formatVND(product.salePrice, ""), required)
               .col-md-12
                 .mb-3
                   label.form-label Danh mục sản phẩm *
@@ -105,9 +105,9 @@ block main
                             td
                               input.form-control.variant-sku(type="text", value=variant.sku || "", placeholder="Mã SKU...")
                             td
-                              input.form-control.variant-purchase(type="number", min="0", value=variant.purchasePriceOverride != null ? variant.purchasePriceOverride : "", placeholder="Theo giá mặc định")
+                              input.form-control.variant-purchase(type="text", format-money, value=variant.purchasePriceOverride != null ? formatVND(variant.purchasePriceOverride, "") : "", placeholder="Theo giá mặc định")
                             td
-                              input.form-control.variant-sale(type="number", min="0", value=variant.salePriceOverride != null ? variant.salePriceOverride : "", placeholder="Theo giá mặc định")
+                              input.form-control.variant-sale(type="text", format-money, value=variant.salePriceOverride != null ? formatVND(variant.salePriceOverride, "") : "", placeholder="Theo giá mặc định")
                       else
                         tr
                           td.text-center.text-muted.py-4(colspan="5") Sản phẩm chưa có biến thể nào.

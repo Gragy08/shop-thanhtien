@@ -18,10 +18,10 @@ block main
           form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/inventory/receipt`)
             .col-md-4
               label.form-label.small Từ ngày
-              input.form-control(type="date", name="from", value=filters.from)
+              input.form-control(type="text", data-datepicker, placeholder="dd/mm/yyyy", autocomplete="off", name="from", value=filters.from)
             .col-md-4
               label.form-label.small Đến ngày
-              input.form-control(type="date", name="to", value=filters.to)
+              input.form-control(type="text", data-datepicker, placeholder="dd/mm/yyyy", autocomplete="off", name="to", value=filters.to)
             .col-md-4.d-flex.align-items-end.gap-2
               button.btn.btn-outline-primary.flex-grow-1(type="submit")
                 i.las.la-search.me-1
@@ -44,7 +44,7 @@ block main
                   th.text-center Số dòng
                   th Người tạo
                   th Thời gian
-                  th.text-end Hành động
+                  th.text-end(style="min-width: 140px") Hành động
               tbody
                 if receiptList.length
                   each receipt in receiptList
@@ -64,17 +64,21 @@ block main
                         else
                           span.badge.bg-light.text-muted Không có HĐ
                       td.text-end.fw-bold.text-primary
-                        | #{receipt.totalCost ? receipt.totalCost.toLocaleString("vi-VN") + " đ" : "0 đ"}
+                        | #{formatVND(receipt.totalCost || 0)}
                       td #{receipt.supplierContactName}
                       td.text-center
                         span.badge.bg-light.text-dark #{receipt.lineCount}
                       td #{receipt.createdBy ? receipt.createdBy.fullName : "Không xác định"}
                       td.text-muted.small #{new Date(receipt.createdAt).toLocaleString("vi-VN")}
                       td.text-end
-                        a.btn.btn-sm.btn-outline-secondary.me-1(href=`/${pathAdmin}/inventory/receipt/${receipt._id}`) Chi tiết
-                        if canWrite
-                          a.btn.btn-sm.btn-outline-primary.me-1(href=`/${pathAdmin}/inventory/receipt/edit/${receipt._id}`) Sửa
-                          button.btn.btn-sm.btn-outline-danger.receipt-soft-delete(type="button", data-id=receipt._id, title="Xóa mềm vào thùng rác") Xóa
+                        .table-actions
+                          a.btn-action.btn-action-view(href=`/${pathAdmin}/inventory/receipt/${receipt._id}`, title="Chi tiết phiếu nhập")
+                            i.las.la-eye
+                          if canWrite
+                            a.btn-action.btn-action-edit(href=`/${pathAdmin}/inventory/receipt/edit/${receipt._id}`, title="Sửa phiếu nhập")
+                              i.las.la-pen
+                            button.btn-action.btn-action-delete.receipt-soft-delete(type="button", data-id=receipt._id, title="Xóa mềm vào thùng rác")
+                              i.las.la-trash-alt
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="9") Chưa có phiếu nhập kho.

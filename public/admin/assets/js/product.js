@@ -76,10 +76,11 @@ const renderVariants = () => {
     const values = JSON.stringify(combination).replaceAll('"', "&quot;");
     const cells = combination.map((item, index) => `<td><input class="form-control variant-value" data-index="${index}" value="${item.label.replaceAll('"', '&quot;')}" ${item.type === "color" ? "" : "readonly"}></td>`).join("");
     const sku = createVariantSku(combination);
-    return `<tr data-values="${values}"><td><div class="form-check form-switch form-switch-success"><input class="form-check-input variant-status" type="checkbox" checked></div></td>${cells}<td><input class="form-control variant-sku" value="${sku}" data-auto="true"></td><td><input class="form-control variant-purchase" type="number" min="0" value="${purchasePrice}" data-inherited="true"></td><td><input class="form-control variant-sale" type="number" min="0" value="${salePrice}" data-inherited="true"></td></tr>`;
+    return `<tr data-values="${values}"><td><div class="form-check form-switch form-switch-success"><input class="form-check-input variant-status" type="checkbox" checked></div></td>${cells}<td><input class="form-control variant-sku" value="${sku}" data-auto="true"></td><td><input class="form-control variant-purchase" type="text" format-money value="${purchasePrice}" data-inherited="true"></td><td><input class="form-control variant-sale" type="text" format-money value="${salePrice}" data-inherited="true"></td></tr>`;
   }).join("");
   variantTable.querySelector("thead tr").innerHTML = head;
   variantTable.querySelector("tbody").innerHTML = body;
+  if (window.initFormatMoney) window.initFormatMoney();
   message.textContent = `${combinations.length} variant đã được sinh.`;
   message.className = "form-message mt-3 mb-0 text-success";
 };
@@ -170,7 +171,8 @@ document.querySelector("#btnPasteMedia")?.addEventListener("click", async () => 
     }
     addImageItem(text.trim());
   } catch (_err) {
-    window.alert("Không thể đọc bộ nhớ tạm!");
+    if (typeof notyf !== "undefined") notyf.error("Không thể đọc bộ nhớ tạm!");
+    else window.alert("Không thể đọc bộ nhớ tạm!");
   }
 });
 
@@ -187,11 +189,13 @@ productForm?.addEventListener("submit", async (event) => {
   const variants = rows.map((row) => {
     const values = JSON.parse(row.dataset.values.replaceAll("&quot;", '"'));
     row.querySelectorAll(".variant-value").forEach((input, index) => { values[index].label = input.value.trim(); });
+    const purchaseVal = row.querySelector(".variant-purchase").value;
+    const saleVal = row.querySelector(".variant-sale").value;
     return {
       sku: row.querySelector(".variant-sku").value.trim(),
       attributeValues: values.map(({ attributeId, attributeName, value, label }) => ({ attributeId, attributeName, value, label })),
-      purchasePriceOverride: row.querySelector(".variant-purchase").dataset.inherited === "true" ? "" : row.querySelector(".variant-purchase").value,
-      salePriceOverride: row.querySelector(".variant-sale").dataset.inherited === "true" ? "" : row.querySelector(".variant-sale").value,
+      purchasePriceOverride: row.querySelector(".variant-purchase").dataset.inherited === "true" ? "" : (window.parseVND ? window.parseVND(purchaseVal) : purchaseVal),
+      salePriceOverride: row.querySelector(".variant-sale").dataset.inherited === "true" ? "" : (window.parseVND ? window.parseVND(saleVal) : saleVal),
       status: row.querySelector(".variant-status").checked ? "active" : "inactive"
     };
   });
@@ -200,8 +204,8 @@ productForm?.addEventListener("submit", async (event) => {
     slug: formData.get("slug"),
     inventoryType: formData.get("inventoryType"),
     status: formData.get("status"),
-    purchasePrice: formData.get("purchasePrice"),
-    salePrice: formData.get("salePrice"),
+    purchasePrice: window.parseVND ? window.parseVND(formData.get("purchasePrice")) : formData.get("purchasePrice"),
+    salePrice: window.parseVND ? window.parseVND(formData.get("salePrice")) : formData.get("salePrice"),
     description: formData.get("description"),
     images: JSON.stringify(getProductImages()),
     categoryIds: JSON.stringify([...document.querySelectorAll("input[name=categoryId]:checked")].map((input) => input.value)),
@@ -211,7 +215,14 @@ productForm?.addEventListener("submit", async (event) => {
   const response = await fetch("/admin/product/create", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) });
   const result = await response.json();
   const message = document.querySelector("#productMessage");
-  message.textContent = result.message || "";
-  message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
-  if (response.ok) window.location.href = "/admin/product";
+  if (message) {
+    message.textContent = result.message || "";
+    message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
+  }
+  if (response.ok) {
+    window.drawNotify("success", result.message || "Tạo sản phẩm thành công!");
+    window.location.href = "/admin/product";
+  } else {
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Lỗi khi tạo sản phẩm!");
+  }
 });

@@ -22,6 +22,9 @@ receiptEditForm?.addEventListener("submit", async (event) => {
   const formData = new FormData(receiptEditForm);
   const body = Object.fromEntries(formData.entries());
   body.hasInvoice = editHasInvoiceCheckbox?.checked ?? false;
+  if (body.totalCost && window.parseVND) {
+    body.totalCost = window.parseVND(body.totalCost);
+  }
 
   const response = await fetch(`/admin/inventory/receipt/edit/${id}`, {
     method: "PATCH",
@@ -31,10 +34,15 @@ receiptEditForm?.addEventListener("submit", async (event) => {
   });
   const result = await response.json();
   const message = document.querySelector("#receiptEditMessage");
-  message.textContent = result.message || "";
-  message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
+  if (message) {
+    message.textContent = result.message || "";
+    message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
+  }
   if (response.ok) {
+    window.drawNotify("success", result.message || "Cập nhật phiếu nhập thành công!");
     window.location.href = `/admin/inventory/receipt/${id}`;
+  } else {
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Lỗi cập nhật phiếu nhập!");
   }
 });
 
@@ -49,10 +57,12 @@ const deleteReceipt = async (button, hard) => {
   });
   const result = await response.json();
   if (response.ok) {
+    window.drawNotify("success", result.message || "Thao tác thành công!");
     window.location.reload();
     return;
   }
-  window.alert(result.message || "Không thể thực hiện thao tác xóa.");
+  if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể thực hiện thao tác xóa.");
+  else window.alert(result.message || "Không thể thực hiện thao tác xóa.");
 };
 
 const restoreReceipt = async (button) => {
@@ -63,10 +73,12 @@ const restoreReceipt = async (button) => {
   });
   const result = await response.json();
   if (response.ok) {
+    window.drawNotify("success", result.message || "Khôi phục phiếu nhập thành công!");
     window.location.reload();
     return;
   }
-  window.alert(result.message || "Không thể khôi phục phiếu nhập.");
+  if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể khôi phục phiếu nhập.");
+  else window.alert(result.message || "Không thể khôi phục phiếu nhập.");
 };
 
 document.querySelectorAll(".receipt-soft-delete").forEach((button) =>

@@ -6,14 +6,14 @@ block main
       .card
         .card-header
           h4.card-title #{pageTitle}
-          p.text-muted.mb-0 Nhập tồn kho sau khi sản phẩm và variant đã được tạo.
+          p.text-muted.mb-0 Nhập tồn kho sau khi sản phẩm và biến thể của sản phẩm đó đã được tạo.
         .card-body.pt-0
           if !canCreate
             .alert.alert-warning
               strong Chưa thể nhập kho.
-              |  Cần có ít nhất một variant đang hoạt động và một nhà cung cấp đang hoạt động.
+              |  Cần có ít nhất một biến thể đang hoạt động và một nhà cung cấp đang hoạt động.
               .mt-2
-                a.btn.btn-sm.btn-outline-primary.me-2(href=`/${pathAdmin}/product/create`) Tạo sản phẩm/variant
+                a.btn.btn-sm.btn-outline-primary.me-2(href=`/${pathAdmin}/product/create`) Tạo sản phẩm/biến thể
                 a.btn.btn-sm.btn-outline-primary(href=`/${pathAdmin}/inventory/supplier/create`) Tạo nhà cung cấp
           form#receiptForm
             .row
@@ -44,7 +44,7 @@ block main
                 .mb-3
                   label.form-label(for="totalCost") Tổng chi phí hóa đơn (Tiền trả NCC - VNĐ) *
                   .input-group
-                    input#totalCost.form-control(name="totalCost", type="number", min="0", value="0", required)
+                    input#totalCost.form-control(name="totalCost", type="text", format-money, value="0", required)
                     button#btnCalcTotal.btn.btn-outline-secondary(type="button", title="Tính lại tổng từ các dòng") Tự động tính
                   small.text-muted Tự động cập nhật từ các dòng nhập hoặc điều chỉnh theo số tiền thực tế trên hóa đơn.
               .col-md-6
@@ -60,7 +60,7 @@ block main
                   table#receiptLines.table.table-bordered.align-middle
                     thead.table-light
                       tr
-                        th(style="min-width: 320px") Tìm & chọn Variant sản phẩm *
+                        th(style="min-width: 320px") Tìm & chọn Biến thể sản phẩm *
                         th(style="min-width: 250px") IMEI / Serial
                         th(style="width: 110px") Số lượng
                         th(style="width: 160px") Giá nhập (VNĐ)
@@ -81,7 +81,7 @@ block main
                         td
                           input.form-control.variant-quantity(type="number", min="1", value="1", disabled)
                         td
-                          input.form-control.variant-price(type="number", min="0", value="0", placeholder="0")
+                          input.form-control.variant-price(type="text", format-money, value="0", placeholder="0")
                         td
                           input.form-control.variant-total(type="text", readonly, value="0 đ")
                         td.text-center

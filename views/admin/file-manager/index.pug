@@ -48,7 +48,7 @@ block main
                   tr
                     th Tên thư mục
                     th Ngày tạo
-                    th.text-end Thao tác
+                    th.text-end(style="min-width: 80px") Thao tác
                 tbody
                   each item in folderList
                     tr
@@ -61,14 +61,15 @@ block main
                           span #{item.name}
                       td #{item.createdAtFormat}
                       td.text-end
-                        button.btn.btn-sm.btn-outline-danger.p-1(
-                          type="button"
-                          button-delete-folder
-                          data-folder-path=item.path
-                          data-folder-name=item.name
-                          title="Xóa thư mục"
-                        )
-                          i.las.la-trash-alt.fs-5
+                        .table-actions
+                          button.btn-action.btn-action-delete(
+                            type="button"
+                            button-delete-folder
+                            data-folder-path=item.path
+                            data-folder-name=item.name
+                            title="Xóa thư mục"
+                          )
+                            i.las.la-trash-alt
           else
             p.text-muted.py-3.mb-0 Không có thư mục con nào trong thư mục hiện tại.
 
@@ -126,7 +127,7 @@ block main
                     th Tên tệp
                     th Kích thước
                     th Ngày tải lên
-                    th.text-end Thao tác
+                    th.text-end(style="min-width: 220px;") Thao tác
                 tbody
                   each item in listFile
                     tr
@@ -170,49 +171,50 @@ block main
                         small.text-muted #{item.folder}
                       td #{item.sizeFormat}
                       td.text-muted.small #{item.createdAtFormat}
-                      td.text-end.text-nowrap
-                        button.btn.btn-sm.btn-outline-primary.me-1(
-                          type="button"
-                          button-copy
-                          data-content=item.cdnUrl
-                          data-relative=`${item.folder}/${item.filename}`
-                          title="Sao chép link CDN"
-                        )
-                          i.las.la-copy
-                        button.btn.btn-sm.btn-outline-purple.me-1(
-                          type="button"
-                          data-bs-toggle="modal"
-                          data-bs-target="#modalPreviewFile"
-                          button-preview-file
-                          data-file=item.url
-                          data-mimetype=item.mimetype
-                          data-filename=item.filename
-                          title="Xem thử file"
-                        )
-                          i.las.la-eye
-                        a.btn.btn-sm.btn-outline-warning.me-1(
-                          href=`${item.url}?type=download`
-                          title="Tải xuống tệp tin"
-                        )
-                          i.las.la-download
-                        button.btn.btn-sm.btn-outline-info.me-1(
-                          type="button"
-                          data-bs-toggle="modal"
-                          data-bs-target="#modalChangeFileName"
-                          button-change-file-name
-                          data-file-id=item._id
-                          data-file-name=item.filename
-                          title="Đổi tên tệp tin"
-                        )
-                          i.las.la-pen
-                        button.btn.btn-sm.btn-outline-danger(
-                          type="button"
-                          button-delete-file
-                          data-file-id=item._id
-                          data-file-name=item.filename
-                          title="Xóa tệp tin"
-                        )
-                          i.las.la-trash-alt
+                      td.text-end
+                        .table-actions
+                          button.btn-action.btn-action-copy(
+                            type="button"
+                            button-copy
+                            data-content=item.cdnUrl
+                            data-relative=`${item.folder}/${item.filename}`
+                            title="Sao chép link CDN"
+                          )
+                            i.las.la-copy
+                          button.btn-action.btn-action-view(
+                            type="button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalPreviewFile"
+                            button-preview-file
+                            data-file=item.url
+                            data-mimetype=item.mimetype
+                            data-filename=item.filename
+                            title="Xem thử file"
+                          )
+                            i.las.la-eye
+                          a.btn-action.btn-action-download(
+                            href=`${item.url}?type=download`
+                            title="Tải xuống tệp tin"
+                          )
+                            i.las.la-download
+                          button.btn-action.btn-action-edit(
+                            type="button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalChangeFileName"
+                            button-change-file-name
+                            data-file-id=item._id
+                            data-file-name=item.filename
+                            title="Đổi tên tệp tin"
+                          )
+                            i.las.la-pen
+                          button.btn-action.btn-action-delete(
+                            type="button"
+                            button-delete-file
+                            data-file-id=item._id
+                            data-file-name=item.filename
+                            title="Xóa tệp tin"
+                          )
+                            i.las.la-trash-alt
 
             //- Pagination
             if pagination.totalPage > 1

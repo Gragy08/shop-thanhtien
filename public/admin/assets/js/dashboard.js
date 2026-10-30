@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     new Chart(ctxInventory, {
       type: "doughnut",
       data: {
-        labels: ["Sẵn sàng bán (Available)", "Đã xuất bán (Sold)", "Đang bảo hành (Warranty)", "Hàng lỗi (Damaged)", "Trả hàng (Returned)"],
+        labels: ["Có sẵn", "Đã bán", "Đang bảo hành", "Hàng lỗi", "Trả hàng"],
         datasets: [
           {
             data: [

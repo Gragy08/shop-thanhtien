@@ -3,22 +3,6 @@ extends ../../layouts/admin.pug
 block main
   .row
     .col-12
-      // Tiêu đề & thanh công cụ
-      .d-flex.justify-content-between.align-items-center.mb-3
-        div
-          h4.fw-bold.text-primary.mb-0
-            i.las.la-users.me-2
-            | Quản Lý Khách Hàng (CRM)
-          p.text-muted.small.mb-0 Theo dõi danh bạ khách hàng, lịch sử mua sắm và quản lý các thiết bị khách đang sở hữu.
-        div.d-flex.gap-2
-          a.btn.btn-outline-primary(href=`/${pathAdmin}/order/pos`)
-            i.las.la-cash-register.me-1
-            | Bán hàng POS
-          if canWrite
-            a.btn.btn-primary(href=`/${pathAdmin}/customer/create`)
-              i.las.la-user-plus.me-1
-              | Thêm khách hàng
-
       // Thẻ Thống Kê Nhanh (KPIs)
       .row.g-3.mb-3
         .col-xl-4.col-sm-6
@@ -47,12 +31,25 @@ block main
                   i.las.la-wallet.fs-2.text-success
                 div
                   h6.text-muted.small.mb-1 TỔNG DOANH SỐ TÍCH LŨY
-                  h4.mb-0.fw-bold.text-success #{stats ? Number(stats.totalSpent).toLocaleString("vi-VN") : 0} đ
+                  h4.mb-0.fw-bold.text-success #{stats ? formatVND(stats.totalSpent) : "0 đ"}
 
       // Bộ lọc và Danh sách khách hàng
-      .card.border.shadow-sm
-        .card-header.bg-light.py-3
-          form.row.g-2(method="get", action=`/${pathAdmin}/customer`)
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Theo dõi danh bạ khách hàng, lịch sử mua sắm và quản lý các thiết bị khách đã mua.
+            .col-auto.d-flex.gap-2
+              a.btn.btn-outline-primary(href=`/${pathAdmin}/order/pos`)
+                i.las.la-cash-register.me-1
+                | Bán hàng
+              if canWrite
+                a.btn.btn-primary(href=`/${pathAdmin}/customer/create`)
+                  i.las.la-plus.me-1
+                  | Thêm khách hàng
+        .card-body.pt-0
+          form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/customer`)
             .col-xl-5.col-md-6
               .input-group
                 span.input-group-text
@@ -72,14 +69,13 @@ block main
             .col-xl-3.col-md-3
               select.form-select(name="source")
                 option(value="") -- Tất cả nguồn tạo --
-                option(value="pos", selected=filters.source === "pos") Mua tại quầy (POS)
+                option(value="pos", selected=filters.source === "pos") Mua tại quầy
                 option(value="manual", selected=filters.source === "manual") Nhập tay thủ công
             .col-xl-1.col-md-12.d-grid
-              button.btn.btn-primary(type="submit")
+              button.btn.btn-outline-primary(type="submit")
                 i.las.la-filter.me-1
                 | Lọc
 
-        .card-body.p-0
           .table-responsive
             table.table.table-hover.align-middle.mb-0
               thead.table-light
@@ -92,7 +88,7 @@ block main
                   th.text-center(style="min-width: 90px") Số đơn
                   th.text-end(style="min-width: 130px") Tổng chi tiêu
                   th(style="min-width: 130px") Mua gần nhất
-                  th.text-center(style="min-width: 120px") Hành động
+                  th.text-end(style="min-width: 140px") Hành động
               tbody
                 if customers && customers.length
                   each c, index in customers
@@ -126,7 +122,7 @@ block main
                           if c.source === "pos"
                             span.badge.bg-success-subtle.text-success
                               i.las.la-cash-register.me-1
-                              | Quầy POS
+                              | Tại quầy
                           else
                             span.badge.bg-secondary-subtle.text-secondary
                               i.las.la-keyboard.me-1
@@ -134,27 +130,27 @@ block main
                       td.text-center.fw-bold
                         span.badge.bg-light.text-dark.border #{c.orderCount || 0}
                       td.text-end.fw-bold.text-primary
-                        | #{Number(c.totalSpent || 0).toLocaleString("vi-VN")} đ
+                        | #{formatVND(c.totalSpent || 0)}
                       td
                         if c.lastOrderAt
                           span.d-block #{new Date(c.lastOrderAt).toLocaleDateString("vi-VN")}
                           small.text-muted #{new Date(c.lastOrderAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                         else
                           span.text-muted.small --
-                      td.text-center
-                        .btn-group.btn-group-sm
-                          a.btn.btn-outline-primary(href=`/${pathAdmin}/customer/${c._id}`, title="Xem hồ sơ 360°")
+                      td.text-end
+                        .table-actions
+                          a.btn-action.btn-action-view(href=`/${pathAdmin}/customer/${c._id}`, title="Xem hồ sơ 360°")
                             i.las.la-eye
                           if canWrite
-                            a.btn.btn-outline-warning(href=`/${pathAdmin}/customer/edit/${c._id}`, title="Chỉnh sửa thông tin")
-                              i.las.la-edit
-                            button.btn.btn-outline-danger.btn-delete-customer(
+                            a.btn-action.btn-action-edit(href=`/${pathAdmin}/customer/edit/${c._id}`, title="Chỉnh sửa thông tin")
+                              i.las.la-pen
+                            button.btn-action.btn-action-delete.btn-delete-customer(
                               type="button",
                               title="Xóa khách hàng",
                               data-id=c._id,
                               data-name=c.fullName
                             )
-                              i.las.la-trash
+                              i.las.la-trash-alt
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="9")
@@ -178,14 +174,16 @@ block script
             });
             const data = await res.json();
             if (data.code === "success") {
-              window.alert(data.message);
+              window.drawNotify("success", data.message || "Xóa khách hàng thành công!");
               window.location.reload();
             } else {
-              window.alert(data.message || "Lỗi khi xóa khách hàng!");
+              if (typeof notyf !== "undefined") notyf.error(data.message || "Lỗi khi xóa khách hàng!");
+              else window.alert(data.message || "Lỗi khi xóa khách hàng!");
             }
           } catch (e) {
             console.error(e);
-            window.alert("Lỗi kết nối khi gửi yêu cầu xóa!");
+            if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi yêu cầu xóa!");
+            else window.alert("Lỗi kết nối khi gửi yêu cầu xóa!");
           }
         });
       });

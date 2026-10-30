@@ -9,6 +9,7 @@ import WarrantyTicket from "../../models/warranty-ticket.model";
 import Category from "../../models/category.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { purchasePriceRoles } from "../../configs/variable.config";
+import { parseVNDate } from "../../helpers/date.helper";
 
 interface DateRange {
   startDate: Date;
@@ -20,7 +21,7 @@ const parseDateRange = (period: string, from?: string, to?: string): DateRange =
   const now = new Date();
   let startDate = new Date();
   let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  let periodLabel = "30 ngày gần nhất";
+  let periodLabel = "30 ngày";
 
   if (period === "today") {
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
@@ -33,8 +34,10 @@ const parseDateRange = (period: string, from?: string, to?: string): DateRange =
     startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     periodLabel = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
   } else if (period === "custom" && from && to) {
-    startDate = new Date(`${from}T00:00:00.000Z`);
-    endDate = new Date(`${to}T23:59:59.999Z`);
+    const fDate = parseVNDate(from, false);
+    const tDate = parseVNDate(to, true);
+    startDate = fDate || new Date(`${from}T00:00:00.000Z`);
+    endDate = tDate || new Date(`${to}T23:59:59.999Z`);
     periodLabel = `Từ ${from} đến ${to}`;
   } else {
     // Mặc định: 30 ngày qua

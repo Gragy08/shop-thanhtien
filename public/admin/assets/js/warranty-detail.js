@@ -61,14 +61,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const data = await res.json();
         if (data.code === "success") {
-          window.alert(data.message);
+          window.drawNotify("success", data.message || "Cập nhật thành công!");
           window.location.reload();
         } else {
-          window.alert(data.message || "Lỗi khi cập nhật trạng thái!");
+          if (typeof notyf !== "undefined") notyf.error(data.message || "Lỗi khi cập nhật trạng thái!");
+          else window.alert(data.message || "Lỗi khi cập nhật trạng thái!");
         }
       } catch (e) {
         console.error(e);
-        window.alert("Lỗi kết nối khi cập nhật!");
+        if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi cập nhật!");
+        else window.alert("Lỗi kết nối khi cập nhật!");
       }
     });
   });
@@ -113,7 +115,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await res.json();
       if (!res.ok || data.code !== "success") {
-        window.alert(data.message || "Lỗi khi bàn giao trả máy!");
+        if (typeof notyf !== "undefined") notyf.error(data.message || "Lỗi khi bàn giao trả máy!");
+        else window.alert(data.message || "Lỗi khi bàn giao trả máy!");
         if (btnSubmitDeliver) {
           btnSubmitDeliver.disabled = false;
           btnSubmitDeliver.innerHTML = '<i class="las la-check-circle me-1"></i> Bàn giao trả máy';
@@ -121,11 +124,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      window.alert(data.message);
+      window.drawNotify("success", data.message || "Bàn giao trả máy thành công!");
       window.location.reload();
     } catch (err) {
       console.error(err);
-      window.alert("Lỗi kết nối khi gửi dữ liệu!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi dữ liệu!");
+      else window.alert("Lỗi kết nối khi gửi dữ liệu!");
       if (btnSubmitDeliver) {
         btnSubmitDeliver.disabled = false;
         btnSubmitDeliver.innerHTML = '<i class="las la-check-circle me-1"></i> Bàn giao trả máy';
@@ -217,7 +221,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const handoverNotes = document.querySelector("#exchangeHandoverNotes")?.value.trim();
 
     if (!replacementImei) {
-      window.alert("Vui lòng chọn hoặc quét mã IMEI mới từ kho để đổi cho khách!");
+      if (typeof notyf !== "undefined") notyf.error("Vui lòng chọn hoặc quét mã IMEI mới từ kho để đổi cho khách!");
+      else window.alert("Vui lòng chọn hoặc quét mã IMEI mới từ kho để đổi cho khách!");
       inputSearchNewImei?.focus();
       return;
     }
@@ -246,7 +251,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await res.json();
       if (!res.ok || data.code !== "success") {
-        window.alert(data.message || "Lỗi khi đổi máy 1-đổi-1!");
+        if (typeof notyf !== "undefined") notyf.error(data.message || "Lỗi khi đổi máy 1-đổi-1!");
+        else window.alert(data.message || "Lỗi khi đổi máy 1-đổi-1!");
         if (btnSubmitExchange) {
           btnSubmitExchange.disabled = false;
           btnSubmitExchange.innerHTML = '<i class="las la-sync-alt me-1"></i> Xác nhận Đổi 1-Đổi-1';
@@ -254,11 +260,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      window.alert(data.message);
+      window.drawNotify("success", data.message || "Đổi mới 1-đổi-1 thành công!");
       window.location.reload();
     } catch (err) {
       console.error(err);
-      window.alert("Lỗi kết nối khi gửi yêu cầu đổi máy!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi yêu cầu đổi máy!");
+      else window.alert("Lỗi kết nối khi gửi yêu cầu đổi máy!");
       if (btnSubmitExchange) {
         btnSubmitExchange.disabled = false;
         btnSubmitExchange.innerHTML = '<i class="las la-sync-alt me-1"></i> Xác nhận Đổi 1-Đổi-1';

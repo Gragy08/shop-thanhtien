@@ -16,10 +16,10 @@ block main
           form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/inventory/receipt/trash`)
             .col-md-5
               label.form-label.small Từ ngày
-              input.form-control(type="date", name="from", value=filters.from)
+              input.form-control(type="text", data-datepicker, placeholder="dd/mm/yyyy", autocomplete="off", name="from", value=filters.from)
             .col-md-5
               label.form-label.small Đến ngày
-              input.form-control(type="date", name="to", value=filters.to)
+              input.form-control(type="text", data-datepicker, placeholder="dd/mm/yyyy", autocomplete="off", name="to", value=filters.to)
             .col-md-2.d-flex.align-items-end
               button.btn.btn-outline-primary.w-100(type="submit")
                 i.las.la-search.me-1
@@ -35,7 +35,7 @@ block main
                   th Nhân viên liên hệ
                   th Người tạo
                   th Thời gian xóa
-                  th.text-end(style="min-width: 180px") Hoạt động
+                  th.text-end(style="min-width: 120px") Hành động
               tbody
                 if trashList.length
                   each receipt in trashList
@@ -53,19 +53,18 @@ block main
                         else
                           span.text-muted Không
                       td.text-end.fw-semibold
-                        | #{receipt.totalCost ? receipt.totalCost.toLocaleString("vi-VN") + " đ" : "0 đ"}
+                        | #{formatVND(receipt.totalCost || 0)}
                       td #{receipt.supplierContactName}
                       td #{receipt.createdBy ? receipt.createdBy.fullName : "Không xác định"}
                       td.text-muted.small #{receipt.deletedAt ? new Date(receipt.deletedAt).toLocaleString("vi-VN") : "--"}
                       td.text-end
-                        if canWrite
-                          button.btn.btn-sm.btn-outline-success.receipt-restore.me-1(type="button", data-id=receipt._id, title="Khôi phục phiếu nhập và hàng hóa trong kho")
-                            i.las.la-undo.me-1
-                            | Khôi phục
-                        if permissions.includes("admin:all") || canWrite
-                          button.btn.btn-sm.btn-outline-danger.receipt-hard-delete(type="button", data-id=receipt._id, title="Xóa vĩnh viễn khỏi hệ thống")
-                            i.las.la-trash-alt.me-1
-                            | Xóa cứng
+                        .table-actions
+                          if canWrite
+                            button.btn-action.btn-action-copy.receipt-restore(type="button", data-id=receipt._id, title="Khôi phục phiếu nhập và hàng hóa trong kho")
+                              i.las.la-undo
+                          if permissions.includes("admin:all") || canWrite
+                            button.btn-action.btn-action-delete.receipt-hard-delete(type="button", data-id=receipt._id, title="Xóa vĩnh viễn khỏi hệ thống")
+                              i.las.la-trash-alt
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="8") Thùng rác trống, không có phiếu nhập nào bị xóa.

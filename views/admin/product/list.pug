@@ -54,7 +54,7 @@ block main
           .row.align-items-center
             .col
               h4.card-title #{pageTitle}
-              p.text-muted.mb-0 Quản lý thông tin sản phẩm, phân loại danh mục, giá niêm yết và trạng thái kinh doanh.
+              p.text-muted.mb-0 Quản lý thông tin sản phẩm, phân loại danh mục, giá bán và trạng thái kinh doanh.
             .col-auto
               if canWrite
                 a.btn.btn-primary(href=`/${pathAdmin}/product/create`)
@@ -137,10 +137,10 @@ block main
                         else
                           span.badge.bg-secondary Số lượng
                       td.text-end.fw-bold.text-dark
-                        | #{product.salePrice != null ? product.salePrice.toLocaleString("vi-VN") + " đ" : "--"}
+                        | #{product.salePrice != null ? formatVND(product.salePrice) : "--"}
                       if permissions.includes("admin:all") || permissions.includes("price:purchase:read")
                         td.text-end.text-muted
-                          | #{product.purchasePrice != null ? product.purchasePrice.toLocaleString("vi-VN") + " đ" : "--"}
+                          | #{product.purchasePrice != null ? formatVND(product.purchasePrice) : "--"}
                       td.text-center
                         span.badge.bg-light.text-dark.fs-6 #{product.variantCount}
                         if product.variantCount > 0
@@ -170,13 +170,14 @@ block main
                           else
                             span.badge.bg-danger Tạm dừng
                       td.text-end
-                        button.btn.btn-sm.btn-outline-info.btn-view-product.me-1(type="button", data-id=product._id, title="Xem chi tiết sản phẩm & các biến thể")
-                          i.las.la-eye
-                        if canWrite
-                          a.btn.btn-sm.btn-outline-primary.me-1(href=`/${pathAdmin}/product/edit/${product._id}`, title="Chỉnh sửa sản phẩm")
-                            i.las.la-pen
-                          button.btn.btn-sm.btn-outline-danger.product-soft-delete(type="button", data-id=product._id, title="Chuyển vào thùng rác")
-                            i.las.la-trash-alt
+                        .table-actions
+                          button.btn-action.btn-action-view.btn-view-product(type="button", data-id=product._id, title="Xem chi tiết sản phẩm & các biến thể")
+                            i.las.la-eye
+                          if canWrite
+                            a.btn-action.btn-action-edit(href=`/${pathAdmin}/product/edit/${product._id}`, title="Chỉnh sửa sản phẩm")
+                              i.las.la-pen
+                            button.btn-action.btn-action-delete.product-soft-delete(type="button", data-id=product._id, title="Chuyển vào thùng rác")
+                              i.las.la-trash-alt
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="9")

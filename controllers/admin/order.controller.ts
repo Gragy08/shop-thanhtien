@@ -7,6 +7,7 @@ import InventoryItem from "../../models/inventory-item.model";
 import Customer from "../../models/customer.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { readVietnameseNumber } from "../../helpers/number-to-words.helper";
+import { parseVNDate } from "../../helpers/date.helper";
 
 interface OrderItemInput {
   productId: string;
@@ -509,7 +510,7 @@ export const cancel = async (req: RequestAccount, res: Response) => {
  */
 export const pos = async (_req: Request, res: Response) => {
   res.render("admin/order/pos", {
-    pageTitle: "Bán hàng tại quầy (POS)"
+    pageTitle: "Bán hàng tại quầy"
   });
 };
 
@@ -534,9 +535,13 @@ export const list = async (req: Request, res: Response) => {
   }
   if (from || to) {
     const createdAtQuery: Record<string, Date> = {};
-    if (from) createdAtQuery.$gte = new Date(`${from}T00:00:00.000Z`);
-    if (to) createdAtQuery.$lte = new Date(`${to}T23:59:59.999Z`);
-    find.createdAt = createdAtQuery;
+    const fromDate = parseVNDate(from, false);
+    const toDate = parseVNDate(to, true);
+    if (fromDate) createdAtQuery.$gte = fromDate;
+    if (toDate) createdAtQuery.$lte = toDate;
+    if (fromDate || toDate) {
+      find.createdAt = createdAtQuery;
+    }
   }
 
   if (keyword) {

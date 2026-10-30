@@ -34,11 +34,10 @@ block main
   // 1. THANH TIÊU ĐỀ & BỘ LỌC THỜI GIAN
   .row.align-items-center.mb-3
     .col-lg-6
-      h4.fw-bold.text-primary.mb-1
-        i.las.la-chart-pie.me-2
+      h4.fw-bold.text-black.mb-1
         | Bảng Điều Khiển Tổng Quan
       p.text-muted.small.mb-0
-        | Trung tâm phân tích số liệu kinh doanh, hiệu quả bán hàng POS và quản lý thiết bị tồn kho.
+        | Trung tâm phân tích số liệu kinh doanh, hiệu quả bán hàng và quản lý thiết bị tồn kho.
 
     .col-lg-6.mt-2.mt-lg-0
       form.d-flex.justify-content-lg-end.align-items-center.gap-2.flex-wrap(method="get", action=`/${pathAdmin}/dashboard`)
@@ -48,9 +47,9 @@ block main
           a.btn(class=(period === "thisMonth" ? "btn-primary fw-bold" : "btn-outline-secondary"), href=`/${pathAdmin}/dashboard?period=thisMonth`) Tháng này
           a.btn(class=(period === "30days" || !period ? "btn-primary fw-bold" : "btn-outline-secondary"), href=`/${pathAdmin}/dashboard?period=30days`) 30 ngày
 
-        .d-flex.align-items-center.gap-1
-          input.form-control.form-control-sm(type="date", name="from", value=filters.from, title="Từ ngày", style="max-width: 130px;")
-          input.form-control.form-control-sm(type="date", name="to", value=filters.to, title="Đến ngày", style="max-width: 130px;")
+        .d-flex.align-items-center.gap-1(date-range)
+          input.form-control.form-control-sm(type="text", name="from", value=filters.from, placeholder="dd/mm/yyyy", autocomplete="off", title="Từ ngày", style="max-width: 125px;")
+          input.form-control.form-control-sm(type="text", name="to", value=filters.to, placeholder="dd/mm/yyyy", autocomplete="off", title="Đến ngày", style="max-width: 125px;")
           input(type="hidden", name="period", value="custom")
           button.btn.btn-sm.btn-primary(type="submit", title="Áp dụng khoảng ngày")
             i.las.la-filter
@@ -66,7 +65,7 @@ block main
             .avatar-kpi.bg-success-subtle.text-success
               i.las.la-wallet
           h3.fw-bold.text-dark.mb-1
-            | #{kpis.totalRevenue ? Number(kpis.totalRevenue).toLocaleString("vi-VN") : "0"} 
+            | #{formatVND(kpis.totalRevenue, "")} 
             small.fs-6.text-muted đ
           .d-flex.align-items-center.gap-2.small.text-muted
             span.text-success.fw-semibold
@@ -85,7 +84,7 @@ block main
               i.las.la-boxes
           if canViewCost
             h3.fw-bold.text-primary.mb-1
-              | #{kpis.totalStockValue ? Number(kpis.totalStockValue).toLocaleString("vi-VN") : "0"} 
+              | #{formatVND(kpis.totalStockValue, "")} 
               small.fs-6.text-muted đ
             .small.text-muted
               | Tổng vốn lưu động: 
@@ -128,11 +127,11 @@ block main
                 i.las.la-user-friends
           if canViewCost
             h3.fw-bold.text-info.mb-1
-              | #{kpis.grossProfit ? Number(kpis.grossProfit).toLocaleString("vi-VN") : "0"} 
+              | #{formatVND(kpis.grossProfit, "")} 
               small.fs-6.text-muted đ
             .small.text-muted
               | Giá trị trung bình/đơn: 
-              strong.text-dark #{Number(kpis.avgOrderValue || 0).toLocaleString("vi-VN")} đ
+              strong.text-dark #{formatVND(kpis.avgOrderValue || 0)}
           else
             h3.fw-bold.text-info.mb-1
               | #{kpis.totalCustomers || 0} 
@@ -151,7 +150,7 @@ block main
           h6.mb-0.fw-bold.text-dark
             i.las.la-chart-area.me-1.text-primary
             | Xu Hướng Doanh Thu &amp; Số Lượng Đơn Hàng (#{periodLabel})
-          span.badge.bg-primary-subtle.text-primary.fs-8 Bán Hàng POS
+          span.badge.bg-primary-subtle.text-primary.fs-8 Bán Hàng 
         .card-body.p-3
           div(style="height: 310px; position: relative;")
             canvas#chartDailyRevenue
@@ -167,7 +166,7 @@ block main
           div(style="height: 240px; position: relative;")
             canvas#chartInventoryStatus
           .text-center.mt-2.small.text-muted
-            | Quản lý vòng đời chặt chẽ qua mã IMEI / Serial
+            | Trạng thái tồn kho của các thiết bị trong kho
 
   // 4. HÀNG BẢNG: TOP SẢN PHẨM BÁN CHẠY & CẢNH BÁO TỒN KHO THẤP
   .row.g-3.mb-4
@@ -207,7 +206,7 @@ block main
                       td.text-center
                         span.badge.bg-success-subtle.text-success.fw-bold.fs-7 #{tp.quantity}
                       td.text-end.fw-bold.text-primary
-                        | #{Number(tp.revenue).toLocaleString("vi-VN")} đ
+                        | #{formatVND(tp.revenue)}
                 else
                   tr
                     td.text-center.text-muted.py-4(colspan="4")
@@ -261,7 +260,7 @@ block main
                       i.las.la-check-circle.fs-3.text-success.d-block.mb-1
                       span Toàn bộ sản phẩm đều có tồn kho ổn định!
 
-  // 5. HÀNG BẢNG: HOẠT ĐỘNG GẦN ĐÂY (ĐƠN HÀNG POS & PHIẾU BẢO HÀNH)
+  // 5. HÀNG BẢNG: HOẠT ĐỘNG GẦN ĐÂY (ĐƠN HÀNG & PHIẾU BẢO HÀNH)
   .row.g-3
     // 5 Đơn hàng POS mới nhất
     .col-xl-6
@@ -269,7 +268,7 @@ block main
         .card-header.bg-light.py-3.d-flex.justify-content-between.align-items-center
           h6.mb-0.fw-bold.text-dark
             i.las.la-shopping-bag.me-1.text-primary
-            | Đơn Hàng Mới Nhất Tại Quầy (POS)
+            | Đơn Hàng Mới Nhất Tại Quầy
           a.small.text-primary.text-decoration-none(href=`/${pathAdmin}/order`) Tất cả đơn &rarr;
         .card-body.p-0
           .table-responsive
@@ -290,7 +289,7 @@ block main
                         div.small.text-dark #{ord.customerInfo ? ord.customerInfo.fullName : "Khách lẻ"}
                         small.text-muted #{new Date(ord.createdAt).toLocaleString("vi-VN")}
                       td.text-end.fw-bold.text-dark
-                        | #{Number(ord.totalAmount).toLocaleString("vi-VN")} đ
+                        | #{formatVND(ord.totalAmount)}
                       td.text-center
                         if ord.paymentMethod === "transfer"
                           span.badge.bg-info-subtle.text-info Chuyển khoản

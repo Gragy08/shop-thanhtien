@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import AccountAdmin from "../../models/account-admin.model";
 import { RequestAccount } from "../../interfaces/request.interface";
+import { pathAdmin } from "../../configs/variable.config";
 
 const getJwtSecret = (): string => {
   if (!process.env.JWT_SECRET) {
@@ -11,7 +12,21 @@ const getJwtSecret = (): string => {
   return process.env.JWT_SECRET;
 };
 
-export const login = (_req: Request, res: Response) => {
+export const login = (req: Request, res: Response) => {
+  const token = req.cookies?.tokenAdmin;
+  if (token) {
+    try {
+      const secret = process.env.JWT_SECRET;
+      if (secret) {
+        jwt.verify(token, secret);
+        res.redirect(`/${pathAdmin}/dashboard`);
+        return;
+      }
+    } catch (_e) {
+      res.clearCookie("tokenAdmin");
+    }
+  }
+
   res.render("admin/account-login", {
     pageTitle: "Đăng nhập quản trị"
   });
@@ -66,7 +81,11 @@ export const me = (req: RequestAccount, res: Response) => {
   });
 };
 
-export const logout = (_req: Request, res: Response) => {
+export const logout = (req: Request, res: Response) => {
   res.clearCookie("tokenAdmin");
-  res.json({ code: "success", message: "Đã đăng xuất!" });
+  if (req.headers.accept?.includes("application/json") || req.xhr) {
+    res.json({ code: "success", message: "Đã đăng xuất!" });
+    return;
+  }
+  res.redirect(`/${pathAdmin}/account/login`);
 };

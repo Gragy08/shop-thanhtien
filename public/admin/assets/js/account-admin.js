@@ -28,9 +28,11 @@ accountForm?.addEventListener("submit", async (event) => {
   const { response, result } = await submitJson(url, isEdit ? "PATCH" : "POST", body);
 
   if (response.ok && result.code === "success") {
+    window.drawNotify("success", result.message || "Lưu tài khoản thành công!");
     window.location.href = "/admin/account-admin/list";
     return;
   }
+  if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể lưu tài khoản.");
   showMessage("#accountMessage", result.message || "Không thể lưu tài khoản.");
 });
 
@@ -45,7 +47,12 @@ document.querySelector("#changePasswordForm")?.addEventListener("submit", async 
   const password = new FormData(form).get("password");
   const { response, result } = await submitJson(`/admin/account-admin/change-password/${id}`, "PATCH", { password });
   showMessage("#passwordMessage", result.message || "Không thể đổi mật khẩu.", !response.ok);
-  if (response.ok) form.reset();
+  if (response.ok) {
+    form.reset();
+    if (typeof notyf !== "undefined") notyf.success(result.message || "Đổi mật khẩu thành công!");
+  } else {
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể đổi mật khẩu.");
+  }
 });
 
 document.querySelectorAll(".account-delete").forEach((button) => {
@@ -54,9 +61,11 @@ document.querySelectorAll(".account-delete").forEach((button) => {
     const id = button.dataset.id;
     const { response, result } = await submitJson(`/admin/account-admin/delete/${id}`, "PATCH", {});
     if (response.ok && result.code === "success") {
+      window.drawNotify("success", result.message || "Vô hiệu hóa tài khoản thành công!");
       window.location.reload();
       return;
     }
-    window.alert(result.message || "Không thể vô hiệu hóa tài khoản.");
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể vô hiệu hóa tài khoản.");
+    else window.alert(result.message || "Không thể vô hiệu hóa tài khoản.");
   });
 });

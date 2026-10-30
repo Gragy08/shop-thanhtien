@@ -3,28 +3,20 @@ extends ../../layouts/admin.pug
 block main
   .row
     .col-12
-      .d-flex.justify-content-between.align-items-center.mb-3
-        div
-          h4.fw-bold.text-primary.mb-0
-            i.las.la-user-edit.me-2
-            | Chỉnh Sửa Thông Tin Khách Hàng
-          p.text-muted.small.mb-0 Cập nhật thông tin định danh và hồ sơ khách hàng.
-        div.d-flex.gap-2
-          a.btn.btn-outline-secondary.btn-sm(href=`/${pathAdmin}/customer`)
-            i.las.la-arrow-left.me-1
-            | Quay lại danh sách
-          a.btn.btn-outline-primary.btn-sm(href=`/${pathAdmin}/customer/${customer._id}`)
-            i.las.la-eye.me-1
-            | Xem hồ sơ 360°
-
-  .row
-    .col-12
-      .card.border.shadow-sm
-        .card-header.bg-light.py-3
-          h6.mb-0.fw-bold.text-dark
-            i.las.la-id-card.me-1.text-primary
-            | Thông tin định danh &amp; Liên hệ khách hàng
-        .card-body.p-4
+      .card
+        .card-header
+          .row.align-items-center
+            .col
+              h4.card-title #{pageTitle}
+              p.text-muted.mb-0 Cập nhật thông tin định danh và hồ sơ khách hàng.
+            .col-auto.d-flex.gap-2
+              a.btn.btn-outline-secondary(href=`/${pathAdmin}/customer`)
+                i.las.la-arrow-left.me-1
+                | Quay lại danh sách
+              a.btn.btn-outline-primary(href=`/${pathAdmin}/customer/${customer._id}`)
+                i.las.la-eye.me-1
+                | Xem hồ sơ 360°
+        .card-body.pt-0
           #alertDuplicatePhone.alert.alert-danger(style="display: none;")
             .d-flex.align-items-center
               i.las.la-exclamation-triangle.fs-3.me-2
@@ -90,9 +82,12 @@ block main
               .col-md-6
                 label.form-label Ngày sinh
                 input#inputBirthday.form-control(
-                  type="date",
+                  type="text",
+                  data-datepicker,
+                  placeholder="dd/mm/yyyy",
+                  autocomplete="off",
                   name="birthday",
-                  value=customer.birthday ? new Date(customer.birthday).toISOString().slice(0, 10) : ""
+                  value=customer.birthday ? formatVNDate(customer.birthday) : ""
                 )
 
               .col-12
@@ -114,7 +109,7 @@ block main
                 ) #{customer.notes || ""}
 
             .d-flex.justify-content-end.gap-2.mt-4.pt-3.border-top
-              a.btn.btn-secondary(href=`/${pathAdmin}/customer`) Hủy bỏ
+              a.btn.btn-light(href=`/${pathAdmin}/customer`) Hủy bỏ
               button#btnSubmitEdit.btn.btn-primary.px-4(type="submit")
                 i.las.la-save.me-1
                 | Cập nhật thông tin
@@ -141,7 +136,8 @@ block script
         const notes = document.querySelector("#inputNotes").value.trim();
 
         if (!fullName || !phone) {
-          window.alert("Vui lòng điền họ tên và số điện thoại!");
+          if (typeof notyf !== "undefined") notyf.error("Vui lòng điền họ tên và số điện thoại!");
+          else window.alert("Vui lòng điền họ tên và số điện thoại!");
           return;
         }
 
@@ -175,18 +171,21 @@ block script
               duplicateMsg.textContent = data.message;
               alertDuplicate.style.display = "block";
               alertDuplicate.scrollIntoView({ behavior: "smooth" });
+              if (typeof notyf !== "undefined") notyf.error(data.message);
               return;
             }
 
-            window.alert(data.message || "Lỗi khi cập nhật khách hàng!");
+            if (typeof notyf !== "undefined") notyf.error(data.message || "Lỗi khi cập nhật khách hàng!");
+            else window.alert(data.message || "Lỗi khi cập nhật khách hàng!");
             return;
           }
 
-          window.alert(data.message);
+          window.drawNotify("success", data.message || "Cập nhật khách hàng thành công!");
           window.location.href = `/${pathAdmin}/customer/#{customer._id}`;
         } catch (err) {
           console.error(err);
-          window.alert("Lỗi kết nối khi gửi yêu cầu!");
+          if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi yêu cầu!");
+          else window.alert("Lỗi kết nối khi gửi yêu cầu!");
           submitBtn.disabled = false;
           submitBtn.innerHTML = '<i class="las la-save me-1"></i> Cập nhật thông tin';
         }

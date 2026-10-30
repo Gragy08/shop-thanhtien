@@ -5,7 +5,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Helper show quick feedback
   function showToast(message, isError = false) {
-    window.alert(message);
+    if (typeof notyf !== "undefined") {
+      if (isError) notyf.error(message);
+      else notyf.success(message);
+    } else {
+      window.alert(message);
+    }
   }
 
   // 1. Tạo thư mục mới
@@ -33,6 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const data = await res.json();
         if (data.code === "success") {
+          window.drawNotify("success", data.message || "Thao tác thành công!");
           window.location.reload();
         } else {
           showToast(data.message || "Lỗi tạo thư mục!", true);
@@ -61,6 +67,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const data = await res.json();
         if (data.code === "success") {
+          window.drawNotify("success", data.message || "Thao tác thành công!");
           window.location.reload();
         } else {
           showToast(data.message || "Lỗi xóa thư mục!", true);
@@ -156,9 +163,10 @@ document.addEventListener("DOMContentLoaded", function () {
           const data = JSON.parse(xhr.responseText);
           if (data.code === "success") {
             if (progressStatus) progressStatus.innerText = "Tải lên thành công! Đang tải lại trang...";
+            window.drawNotify("success", data.message || "Tải lên tệp thành công!");
             setTimeout(() => {
               window.location.reload();
-            }, 600);
+            }, 500);
           } else {
             showToast(data.message || "Lỗi khi lưu tệp trên CDN!", true);
             if (progressWrapper) progressWrapper.style.display = "none";
@@ -346,6 +354,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const data = await res.json();
         if (data.code === "success") {
+          window.drawNotify("success", data.message || "Thao tác thành công!");
           window.location.reload();
         } else {
           showToast(data.message || "Lỗi khi đổi tên file!", true);
@@ -374,6 +383,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const data = await res.json();
         if (data.code === "success") {
+          window.drawNotify("success", data.message || "Thao tác thành công!");
           window.location.reload();
         } else {
           showToast(data.message || "Lỗi khi xóa tệp tin!", true);

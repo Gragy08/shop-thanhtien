@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (expectedInput && !expectedInput.value) {
     const d = new Date();
     d.setDate(d.getDate() + 3);
-    expectedInput.value = d.toISOString().slice(0, 10);
+    expectedInput.value = window.formatDateVN ? window.formatDateVN(d) : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
   }
 
   // Tiện ích: Tự động sinh mã định danh sửa chữa tạm thời khi không rõ IMEI
@@ -51,7 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const executeLookup = async () => {
     const q = quickInput?.value.trim();
     if (!q) {
-      window.alert("Vui lòng nhập mã IMEI hoặc số điện thoại để tra cứu!");
+      if (typeof notyf !== "undefined") notyf.error("Vui lòng nhập mã IMEI hoặc số điện thoại để tra cứu!");
+      else window.alert("Vui lòng nhập mã IMEI hoặc số điện thoại để tra cứu!");
       quickInput?.focus();
       return;
     }
@@ -131,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data.order) {
             document.querySelector("#inputOrderCode").value = data.order.orderCode || "";
             if (data.order.purchaseDate) {
-              document.querySelector("#inputPurchaseDate").value = new Date(data.order.purchaseDate).toISOString().slice(0, 10);
+              document.querySelector("#inputPurchaseDate").value = window.formatDateVN ? window.formatDateVN(data.order.purchaseDate) : new Date(data.order.purchaseDate).toLocaleDateString("vi-VN");
             }
           }
 
@@ -201,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelector("#inputVariantName").value = dv.variantName || "";
             document.querySelector("#inputOrderCode").value = dv.orderCode || "";
             if (dv.purchaseDate) {
-              document.querySelector("#inputPurchaseDate").value = new Date(dv.purchaseDate).toISOString().slice(0, 10);
+              document.querySelector("#inputPurchaseDate").value = window.formatDateVN ? window.formatDateVN(dv.purchaseDate) : new Date(dv.purchaseDate).toLocaleDateString("vi-VN");
             }
             resultContainer.style.display = "none";
             document.querySelector("#inputIssueDescription")?.focus();
@@ -250,23 +251,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const accessoriesAttached = document.querySelector("#inputAccessories").value.trim();
     const passcode = document.querySelector("#inputPasscode").value.trim();
     const expectedReturnDate = document.querySelector("#inputExpectedReturnDate").value;
-    const repairCost = parseFloat(document.querySelector("#inputRepairCost").value) || 0;
+    const repairCost = window.parseVND ? window.parseVND(document.querySelector("#inputRepairCost").value) : (parseFloat(document.querySelector("#inputRepairCost").value) || 0);
     const technicianNotes = document.querySelector("#inputTechnicianNotes").value.trim();
 
     if (!identifier) {
-      window.alert("Vui lòng nhập hoặc quét mã IMEI thiết bị!");
+      if (typeof notyf !== "undefined") notyf.error("Vui lòng nhập hoặc quét mã IMEI thiết bị!");
+      else window.alert("Vui lòng nhập hoặc quét mã IMEI thiết bị!");
       document.querySelector("#inputIdentifier").focus();
       return;
     }
 
     if (!issueDescription) {
-      window.alert("Vui lòng nhập mô tả lỗi của máy khi tiếp nhận!");
+      if (typeof notyf !== "undefined") notyf.error("Vui lòng nhập mô tả lỗi của máy khi tiếp nhận!");
+      else window.alert("Vui lòng nhập mô tả lỗi của máy khi tiếp nhận!");
       document.querySelector("#inputIssueDescription").focus();
       return;
     }
 
     if (!phone || !fullName) {
-      window.alert("Vui lòng điền số điện thoại và họ tên khách hàng!");
+      if (typeof notyf !== "undefined") notyf.error("Vui lòng điền số điện thoại và họ tên khách hàng!");
+      else window.alert("Vui lòng điền số điện thoại và họ tên khách hàng!");
       return;
     }
 
@@ -299,18 +303,20 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
 
       if (!res.ok || data.code !== "success") {
-        window.alert(data.message || "Lỗi khi lập phiếu bảo hành!");
+        if (typeof notyf !== "undefined") notyf.error(data.message || "Lỗi khi lập phiếu bảo hành!");
+        else window.alert(data.message || "Lỗi khi lập phiếu bảo hành!");
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="las la-check-circle fs-4 me-1"></i> LẬP PHIẾU TIẾP NHẬN &amp; IN PHIẾU HẸN';
         return;
       }
 
-      window.alert(data.message);
+      window.drawNotify("success", data.message || "Lập phiếu tiếp nhận bảo hành thành công!");
       // Tự động chuyển hướng sang trang chi tiết & in phiếu hẹn
       window.location.href = `/admin/warranty/${data.ticketId}`;
     } catch (err) {
       console.error(err);
-      window.alert("Lỗi kết nối khi gửi dữ liệu!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi dữ liệu!");
+      else window.alert("Lỗi kết nối khi gửi dữ liệu!");
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="las la-check-circle fs-4 me-1"></i> LẬP PHIẾU TIẾP NHẬN &amp; IN PHIẾU HẸN';
     }

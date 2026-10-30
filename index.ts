@@ -5,6 +5,8 @@ import express from "express";
 import path from "path";
 import { connectDB } from "./configs/database.config";
 import { pathAdmin, domainCDN } from "./configs/variable.config";
+import { formatVND } from "./helpers/currency.helper";
+import { formatVNDate } from "./helpers/date.helper";
 import adminRoutes from "./routes/admin/index.route";
 import { publicLookupPage } from "./controllers/admin/warranty.controller";
 
@@ -20,6 +22,8 @@ app.set("view engine", "pug");
 app.use(express.static(path.join(__dirname, "public")));
 app.locals.pathAdmin = pathAdmin;
 app.locals.domainCDN = domainCDN;
+app.locals.formatVND = formatVND;
+app.locals.formatVNDate = formatVNDate;
 
 app.get("/", (_req, res) => {
   res.redirect(`/${pathAdmin}/account/login`);

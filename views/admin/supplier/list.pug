@@ -22,7 +22,7 @@ block main
                   th Địa chỉ
                   th Số điện thoại
                   th Trạng thái
-                  th.text-end Hành động
+                  th.text-end(style="min-width: 120px") Hành động
               tbody
                 if supplierList.length
                   each supplier in supplierList
@@ -36,8 +36,11 @@ block main
                         else
                           span.badge.bg-secondary Tạm dừng
                       td.text-end
-                        a.btn.btn-sm.btn-outline-secondary.me-2(href=`/${pathAdmin}/inventory/supplier/edit/${supplier._id}`) Sửa
-                        button.btn.btn-sm.btn-outline-danger.supplier-delete(type="button", data-id=supplier._id) Vô hiệu hóa
+                        .table-actions
+                          a.btn-action.btn-action-edit(href=`/${pathAdmin}/inventory/supplier/edit/${supplier._id}`, title="Chỉnh sửa nhà cung cấp")
+                            i.las.la-pen
+                          button.btn-action.btn-action-delete.supplier-delete(type="button", data-id=supplier._id, title="Vô hiệu hóa nhà cung cấp")
+                            i.las.la-trash-alt
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="5") Chưa có nhà cung cấp nào.

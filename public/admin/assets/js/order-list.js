@@ -34,18 +34,20 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (!response.ok || result.code !== "success") {
-        window.alert(result.message || "Lỗi khi hủy đơn hàng!");
+        if (typeof notyf !== "undefined") notyf.error(result.message || "Lỗi khi hủy đơn hàng!");
+        else window.alert(result.message || "Lỗi khi hủy đơn hàng!");
         confirmBtn.disabled = false;
         confirmBtn.innerHTML = '<i class="las la-ban me-1"></i> Xác nhận hủy &amp; Hoàn kho';
         return;
       }
 
-      window.alert(result.message);
+      window.drawNotify("success", result.message || "Hủy đơn hàng thành công!");
       if (cancelModal) cancelModal.hide();
       window.location.reload();
     } catch (err) {
       console.error(err);
-      window.alert("Lỗi kết nối khi gửi yêu cầu hủy đơn!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi yêu cầu hủy đơn!");
+      else window.alert("Lỗi kết nối khi gửi yêu cầu hủy đơn!");
       confirmBtn.disabled = false;
       confirmBtn.innerHTML = '<i class="las la-ban me-1"></i> Xác nhận hủy &amp; Hoàn kho';
     }

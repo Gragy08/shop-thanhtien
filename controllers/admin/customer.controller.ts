@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Customer from "../../models/customer.model";
 import Order from "../../models/order.model";
 import { RequestAccount } from "../../interfaces/request.interface";
+import { parseVNDate } from "../../helpers/date.helper";
 
 /**
  * API Tra cứu nhanh khách hàng theo số điện thoại (Dùng cho POS và Bảo hành)
@@ -195,7 +196,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     const notes = typeof req.body.notes === "string" ? req.body.notes.trim() : "";
     const customerGroup = req.body.customerGroup || "retail";
     const gender = req.body.gender || "other";
-    const birthday = req.body.birthday ? new Date(req.body.birthday) : undefined;
+    const birthday = req.body.birthday ? (parseVNDate(req.body.birthday, false) || undefined) : undefined;
 
     if (!fullName) {
       res.status(400).json({ code: "error", message: "Họ và tên khách hàng không được để trống!" });
@@ -303,7 +304,7 @@ export const editPatch = async (req: RequestAccount, res: Response) => {
     const notes = typeof req.body.notes === "string" ? req.body.notes.trim() : "";
     const customerGroup = req.body.customerGroup || "retail";
     const gender = req.body.gender || "other";
-    const birthday = req.body.birthday ? new Date(req.body.birthday) : undefined;
+    const birthday = req.body.birthday ? (parseVNDate(req.body.birthday, false) || undefined) : undefined;
 
     if (!fullName) {
       res.status(400).json({ code: "error", message: "Họ và tên khách hàng không được để trống!" });

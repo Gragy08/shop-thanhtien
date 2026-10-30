@@ -23,7 +23,7 @@ block main
                   th Kiểu
                   th Giá trị
                   th Trạng thái
-                  th.text-end Hành động
+                  th.text-end(style="min-width: 120px") Hành động
               tbody
                 if attributeList.length
                   each attribute in attributeList
@@ -42,12 +42,11 @@ block main
                         else
                           span.badge.bg-secondary Tạm dừng
                       td.text-end
-                        a.btn.btn-sm.btn-outline-secondary.me-2(href=`/${pathAdmin}/product/attribute/edit/${attribute._id}`)
-                          i.las.la-pen
-                          |  Sửa
-                        button.btn.btn-sm.btn-outline-danger.attribute-delete(type="button" data-id=attribute._id)
-                          i.las.la-trash-alt
-                          |  Xóa
+                        .table-actions
+                          a.btn-action.btn-action-edit(href=`/${pathAdmin}/product/attribute/edit/${attribute._id}`, title="Chỉnh sửa thuộc tính")
+                            i.las.la-pen
+                          button.btn-action.btn-action-delete.attribute-delete(type="button", data-id=attribute._id, title="Xóa thuộc tính")
+                            i.las.la-trash-alt
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="6") Chưa có thuộc tính nào.

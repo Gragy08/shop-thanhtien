@@ -13,9 +13,16 @@ supplierForm?.addEventListener("submit", async (event) => {
   });
   const result = await response.json();
   const message = document.querySelector("#supplierMessage");
-  message.textContent = result.message || "";
-  message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
-  if (response.ok) window.location.href = "/admin/inventory/supplier";
+  if (message) {
+    message.textContent = result.message || "";
+    message.className = `form-message mt-3 mb-0 ${response.ok ? "text-success" : "text-danger"}`;
+  }
+  if (response.ok) {
+    window.drawNotify("success", result.message || "Lưu nhà cung cấp thành công!");
+    window.location.href = "/admin/inventory/supplier";
+  } else {
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể lưu nhà cung cấp.");
+  }
 });
 
 document.querySelectorAll(".supplier-delete").forEach((button) => {
@@ -27,9 +34,11 @@ document.querySelectorAll(".supplier-delete").forEach((button) => {
     });
     const result = await response.json();
     if (response.ok) {
+      window.drawNotify("success", result.message || "Vô hiệu hóa nhà cung cấp thành công!");
       window.location.reload();
       return;
     }
-    window.alert(result.message || "Không thể vô hiệu hóa nhà cung cấp.");
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể vô hiệu hóa nhà cung cấp.");
+    else window.alert(result.message || "Không thể vô hiệu hóa nhà cung cấp.");
   });
 });

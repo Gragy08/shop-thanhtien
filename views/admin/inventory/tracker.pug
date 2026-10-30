@@ -1,5 +1,22 @@
 extends ../../layouts/admin.pug
 
+mixin statusBadge(st, extraClass)
+  case st
+    when "available"
+      span.badge.bg-success-subtle.text-success.border.border-success(class=extraClass) Có sẵn
+    when "sold"
+      span.badge.bg-dark-subtle.text-dark.border.border-dark(class=extraClass) Đã bán
+    when "warranty"
+      span.badge.bg-warning-subtle.text-warning-emphasis.border.border-warning(class=extraClass) Đi bảo hành NCC
+    when "damaged"
+      span.badge.bg-danger-subtle.text-danger.border.border-danger(class=extraClass) Hàng lỗi / hỏng
+    when "returned"
+      span.badge.bg-info-subtle.text-info.border.border-info(class=extraClass) Đã trả NCC
+    when "liquidated"
+      span.badge.bg-secondary-subtle.text-secondary.border.border-secondary(class=extraClass) Đã thanh lý
+    default
+      span.badge.bg-light.text-dark.border(class=extraClass) #{st || "Chưa rõ"}
+
 block main
   .row
     .col-12
@@ -7,7 +24,7 @@ block main
       .card.mb-3
         .card-body.p-4
           .text-center.mb-3
-            h4.card-title.fw-bold.text-primary
+            h4.card-title.fw-bold.text-black
               i.las.la-barcode.me-2
               | Tra Cứu Thiết Bị (IMEI / Serial Tracker)
             p.text-muted.mb-0 Tra cứu toàn bộ lý lịch máy: nguồn gốc phiếu nhập, nhà cung cấp, giá vốn và nhật ký biến động trạng thái.
@@ -34,18 +51,7 @@ block main
                   i.las.la-id-card.me-2.text-primary
                   | Căn Cước Thiết Bị
                 div
-                  if item.status === "available"
-                    span.badge.bg-success-subtle.text-success.fs-6 Có sẵn (Còn hàng)
-                  else if item.status === "sold"
-                    span.badge.bg-dark-subtle.text-dark.fs-6 Đã bán
-                  else if item.status === "warranty"
-                    span.badge.bg-warning-subtle.text-warning.fs-6 Đi bảo hành NCC
-                  else if item.status === "damaged"
-                    span.badge.bg-danger-subtle.text-danger.fs-6 Hàng lỗi / hỏng
-                  else if item.status === "returned"
-                    span.badge.bg-purple-subtle.text-purple.fs-6 Đã trả NCC
-                  else if item.status === "liquidated"
-                    span.badge.bg-secondary-subtle.text-secondary.fs-6 Đã thanh lý
+                  +statusBadge(item.status, "fs-6")
               .card-body
                 .text-center.py-3.border-bottom.mb-3.bg-light.rounded
                   small.text-muted.d-block.text-uppercase.fw-semibold #{item.trackingType === "imei" ? "Mã IMEI thiết bị" : "Mã Serial thiết bị"}
@@ -79,12 +85,12 @@ block main
                     small.text-muted.d-block Giá bán niêm yết:
                     strong.text-primary
                       - const sPrice = (variant && variant.salePriceOverride != null) ? variant.salePriceOverride : (product ? product.salePrice : null)
-                      | #{sPrice != null ? Number(sPrice).toLocaleString("vi-VN") + " đ" : "--"}
+                      | #{sPrice != null ? formatVND(sPrice) : "--"}
                   if canViewPurchasePrice
                     .col-6
                       small.text-muted.d-block Giá vốn nhập kho:
                       strong.text-muted
-                        | #{item.purchasePrice != null ? Number(item.purchasePrice).toLocaleString("vi-VN") + " đ" : "--"}
+                        | #{item.purchasePrice != null ? formatVND(item.purchasePrice) : "--"}
 
                 hr.my-3
 
@@ -153,7 +159,7 @@ block main
                         |  từ 
                         strong #{receipt && receipt.supplierId ? receipt.supplierId.name : "nhà cung cấp"}
                         |.
-                      span.badge.bg-success-subtle.text-success Trạng thái ban đầu: Có sẵn (Available)
+                      span.badge.bg-success-subtle.text-success Trạng thái ban đầu: Có sẵn
 
                   // Các mốc chuyển đổi trạng thái tiếp theo
                   if item.statusLogs && item.statusLogs.length
@@ -165,10 +171,10 @@ block main
                           .d-flex.justify-content-between.align-items-center.mb-1
                             strong.text-dark Thay đổi trạng thái thiết bị ##{index + 1}
                             small.text-muted #{log.updatedAt ? new Date(log.updatedAt).toLocaleString("vi-VN") : "--"}
-                          .mb-1
-                            span.badge.bg-secondary #{log.fromStatus || "available"}
-                            i.las.la-arrow-right.mx-1
-                            span.badge.bg-primary #{log.toStatus}
+                          .mb-1.d-flex.align-items-center.gap-1.flex-wrap
+                            +statusBadge(log.fromStatus || "available")
+                            i.las.la-arrow-right.text-muted.mx-1
+                            +statusBadge(log.toStatus)
                           if log.reason
                             p.mb-1.small
                               strong Lý do: 

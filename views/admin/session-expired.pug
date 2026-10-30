@@ -1,0 +1,35 @@
+extends ../layouts/blank.pug
+
+block main
+  .container.py-5
+    .row.justify-content-center.align-items-center.min-vh-75
+      .col-12.col-sm-9.col-md-6.col-lg-5
+        .auth-panel.text-center.p-4.p-md-5
+          .avatar-lg.bg-warning-subtle.text-warning.rounded-circle.d-inline-flex.align-items-center.justify-content-center.mb-3(style="width: 72px; height: 72px;")
+            i.las.la-user-clock(style="font-size: 2.5rem;")
+          h3.fw-bold.text-dark.mb-2 Phiên đăng nhập đã hết hạn
+          p.text-muted.mb-4 #{message || "Phiên làm việc của bạn trên hệ thống đã kết thúc hoặc token xác thực không còn hiệu lực. Vui lòng bấm vào nút bên dưới để tiến hành đăng nhập lại."}
+          
+          .d-grid.gap-2
+            a.btn.btn-primary.btn-lg.fw-semibold(href=`/${pathAdmin}/account/login`)
+              i.las.la-sign-in-alt.me-2
+              | Đăng nhập lại ngay
+            
+          p.small.text-muted.mt-3.mb-0
+            | Tự động chuyển hướng về trang đăng nhập sau 
+            span#countdown.fw-bold.text-primary 5
+            |  giây...
+
+block script
+  script.
+    let seconds = 5;
+    const countdownEl = document.getElementById("countdown");
+    const interval = setInterval(() => {
+      seconds--;
+      if (countdownEl) countdownEl.textContent = seconds;
+      if (seconds <= 0) {
+        clearInterval(interval);
+        window.location.href = "/#{pathAdmin}/account/login";
+      }
+    }, 1000);
+

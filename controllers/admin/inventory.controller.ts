@@ -9,6 +9,7 @@ import Category from "../../models/category.model";
 import AccountAdmin from "../../models/account-admin.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { buildCategoryTree, collectDescendantIds } from "../../helpers/category.helper";
+import { parseVNDate } from "../../helpers/date.helper";
 
 interface ReceiptLine {
   variantId: string;
@@ -392,9 +393,13 @@ export const receiptList = async (_req: Request, res: Response) => {
   const find: Record<string, unknown> = { deleted: { $ne: true } };
   if (from || to) {
     const createdAt: Record<string, Date> = {};
-    if (from && !Number.isNaN(Date.parse(from))) createdAt.$gte = new Date(`${from}T00:00:00`);
-    if (to && !Number.isNaN(Date.parse(to))) createdAt.$lte = new Date(`${to}T23:59:59.999`);
-    find.createdAt = createdAt;
+    const fromDate = parseVNDate(from, false);
+    const toDate = parseVNDate(to, true);
+    if (fromDate) createdAt.$gte = fromDate;
+    if (toDate) createdAt.$lte = toDate;
+    if (fromDate || toDate) {
+      find.createdAt = createdAt;
+    }
   }
   const [receiptList, trashCount] = await Promise.all([
     StockReceipt.find(find)
@@ -423,9 +428,13 @@ export const receiptTrash = async (_req: Request, res: Response) => {
 
   if (from || to) {
     const createdAt: Record<string, Date> = {};
-    if (from && !Number.isNaN(Date.parse(from))) createdAt.$gte = new Date(`${from}T00:00:00`);
-    if (to && !Number.isNaN(Date.parse(to))) createdAt.$lte = new Date(`${to}T23:59:59.999`);
-    find.createdAt = createdAt;
+    const fromDate = parseVNDate(from, false);
+    const toDate = parseVNDate(to, true);
+    if (fromDate) createdAt.$gte = fromDate;
+    if (toDate) createdAt.$lte = toDate;
+    if (fromDate || toDate) {
+      find.createdAt = createdAt;
+    }
   }
 
   const trashList = await StockReceipt.find(find)

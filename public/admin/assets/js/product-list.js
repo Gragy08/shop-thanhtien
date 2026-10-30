@@ -17,9 +17,12 @@ document.querySelectorAll(".product-status-switch").forEach((checkbox) => {
 
       if (!response.ok) {
         checkbox.checked = !isChecked;
-        window.alert(result.message || "Không thể cập nhật trạng thái sản phẩm.");
+        if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể cập nhật trạng thái sản phẩm.");
+        else window.alert(result.message || "Không thể cập nhật trạng thái sản phẩm.");
         return;
       }
+
+      if (typeof notyf !== "undefined") notyf.success(result.message || "Cập nhật trạng thái sản phẩm thành công!");
 
       if (badge) {
         if (nextStatus === "active") {
@@ -32,7 +35,8 @@ document.querySelectorAll(".product-status-switch").forEach((checkbox) => {
       }
     } catch (_error) {
       checkbox.checked = !isChecked;
-      window.alert("Lỗi kết nối khi cập nhật trạng thái!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi cập nhật trạng thái!");
+      else window.alert("Lỗi kết nối khi cập nhật trạng thái!");
     }
   });
 });
@@ -51,12 +55,15 @@ document.querySelectorAll(".product-soft-delete").forEach((button) => {
       const result = await response.json();
 
       if (response.ok) {
+        window.drawNotify("success", result.message || "Đã chuyển sản phẩm vào Thùng rác!");
         window.location.reload();
         return;
       }
-      window.alert(result.message || "Không thể xóa sản phẩm.");
+      if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể xóa sản phẩm.");
+      else window.alert(result.message || "Không thể xóa sản phẩm.");
     } catch (_error) {
-      window.alert("Lỗi kết nối khi xóa sản phẩm!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi xóa sản phẩm!");
+      else window.alert("Lỗi kết nối khi xóa sản phẩm!");
     }
   });
 });
@@ -75,12 +82,15 @@ document.querySelectorAll(".product-restore").forEach((button) => {
       const result = await response.json();
 
       if (response.ok) {
+        window.drawNotify("success", result.message || "Khôi phục sản phẩm thành công!");
         window.location.reload();
         return;
       }
-      window.alert(result.message || "Không thể khôi phục sản phẩm.");
+      if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể khôi phục sản phẩm.");
+      else window.alert(result.message || "Không thể khôi phục sản phẩm.");
     } catch (_error) {
-      window.alert("Lỗi kết nối khi khôi phục sản phẩm!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi khôi phục sản phẩm!");
+      else window.alert("Lỗi kết nối khi khôi phục sản phẩm!");
     }
   });
 });
@@ -99,12 +109,15 @@ document.querySelectorAll(".product-hard-delete").forEach((button) => {
       const result = await response.json();
 
       if (response.ok) {
+        window.drawNotify("success", result.message || "Đã xóa vĩnh viễn sản phẩm!");
         window.location.reload();
         return;
       }
-      window.alert(result.message || "Không thể xóa vĩnh viễn sản phẩm.");
+      if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể xóa vĩnh viễn sản phẩm.");
+      else window.alert(result.message || "Không thể xóa vĩnh viễn sản phẩm.");
     } catch (_error) {
-      window.alert("Lỗi kết nối khi xóa sản phẩm!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi xóa sản phẩm!");
+      else window.alert("Lỗi kết nối khi xóa sản phẩm!");
     }
   });
 });
@@ -137,7 +150,8 @@ document.querySelectorAll(".btn-view-product").forEach((button) => {
       const data = await response.json();
 
       if (!response.ok || data.code !== "success") {
-        window.alert(data.message || "Không thể tải chi tiết sản phẩm.");
+        if (typeof notyf !== "undefined") notyf.error(data.message || "Không thể tải chi tiết sản phẩm.");
+        else window.alert(data.message || "Không thể tải chi tiết sản phẩm.");
         if (productModal) productModal.hide();
         return;
       }
@@ -300,7 +314,8 @@ document.querySelectorAll(".btn-view-product").forEach((button) => {
       if (content) content.style.display = "block";
     } catch (err) {
       console.error(err);
-      window.alert("Lỗi khi tải thông tin chi tiết sản phẩm!");
+      if (typeof notyf !== "undefined") notyf.error("Lỗi khi tải thông tin chi tiết sản phẩm!");
+      else window.alert("Lỗi khi tải thông tin chi tiết sản phẩm!");
       if (productModal) productModal.hide();
     }
   });

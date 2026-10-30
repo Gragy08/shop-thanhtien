@@ -60,10 +60,17 @@ attributeForm?.addEventListener("submit", async (event) => {
   });
   const result = await response.json();
   const message = document.querySelector("#attributeMessage");
-  message.textContent = result.message || "";
-  message.classList.toggle("text-danger", !response.ok);
-  message.classList.toggle("text-success", response.ok);
-  if (response.ok) window.location.href = "/admin/product/attribute";
+  if (message) {
+    message.textContent = result.message || "";
+    message.classList.toggle("text-danger", !response.ok);
+    message.classList.toggle("text-success", response.ok);
+  }
+  if (response.ok) {
+    window.drawNotify("success", result.message || "Lưu thuộc tính thành công!");
+    window.location.href = "/admin/product/attribute";
+  } else {
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể lưu thuộc tính.");
+  }
 });
 
 document.querySelectorAll(".attribute-delete").forEach((button) => {
@@ -75,9 +82,11 @@ document.querySelectorAll(".attribute-delete").forEach((button) => {
     });
     const result = await response.json();
     if (response.ok) {
+      window.drawNotify("success", result.message || "Xóa thuộc tính thành công!");
       window.location.reload();
       return;
     }
-    window.alert(result.message || "Không thể xóa thuộc tính.");
+    if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể xóa thuộc tính.");
+    else window.alert(result.message || "Không thể xóa thuộc tính.");
   });
 });

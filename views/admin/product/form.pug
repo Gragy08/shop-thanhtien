@@ -14,6 +14,7 @@ block main
       .card
         .card-header
           h4.card-title #{pageTitle}
+          p.text-muted.mb-0 Tạo thông tin chi tiết của sản phẩm, giá mặc định và các biến thể hiện có.
         .card-body.pt-0
           form#productForm
             .row
@@ -43,12 +44,12 @@ block main
                     option(value="inactive") Tạm dừng
               .col-md-6
                 .mb-3
-                  label.form-label Giá nhập mặc định *
-                  input.form-control(name="purchasePrice", type="number", min="0", required)
+                  label.form-label Giá nhập mặc định (VNĐ) *
+                  input.form-control(name="purchasePrice", type="text", format-money, placeholder="0", required)
               .col-md-6
                 .mb-3
-                  label.form-label Giá bán mặc định *
-                  input.form-control(name="salePrice", type="number", min="0", required)
+                  label.form-label Giá bán mặc định (VNĐ) *
+                  input.form-control(name="salePrice", type="text", format-money, placeholder="0", required)
               .col-md-6
                 .mb-3
                   label.form-label Danh mục *
@@ -76,7 +77,7 @@ block main
                           code.ms-auto #{attribute.code}
               .col-12
                 .d-flex.justify-content-between.align-items-center.mb-2
-                  label.form-label.mb-0 Danh sách variant *
+                  label.form-label.mb-0 Danh sách biến thể *
                   button#generateVariants.btn.btn-outline-info(type="button") Tạo biến thể
                 .table-responsive
                   table#variantTable.table.table-bordered.align-middle
@@ -100,7 +101,7 @@ block main
                         | Chọn ảnh từ thư viện
                       button#btnPasteMedia.btn.btn-sm.btn-outline-info(type="button")
                         i.las.la-paste.me-1
-                        | Dán link ảnh (Clipboard)
+                        | Dán link ảnh
                       small.text-muted Chọn từ thư viện hoặc dán link các file đã copy từ Quản lý file.
                     #productImagesContainer.d-flex.flex-wrap.gap-2.p-2.border.rounded.bg-white(style="min-height: 90px;")
                       p#noImagesText.text-muted.small.m-auto.py-3 Chưa có ảnh nào được chọn.

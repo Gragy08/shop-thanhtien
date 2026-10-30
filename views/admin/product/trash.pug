@@ -58,18 +58,17 @@ block main
                       td.text-center
                         span.badge.bg-light.text-dark #{product.variantCount}
                       td.text-end.fw-semibold
-                        | #{product.salePrice != null ? product.salePrice.toLocaleString("vi-VN") + " đ" : "--"}
+                        | #{product.salePrice != null ? formatVND(product.salePrice) : "--"}
                       td.text-muted.small
                         | #{product.deletedAt ? new Date(product.deletedAt).toLocaleString("vi-VN") : "--"}
                       td.text-end
-                        if canWrite
-                          button.btn.btn-sm.btn-outline-success.product-restore.me-1(type="button", data-id=product._id, title="Khôi phục sản phẩm")
-                            i.las.la-undo.me-1
-                            | Khôi phục
-                        if permissions.includes("admin:all") || permissions.includes("product:delete")
-                          button.btn.btn-sm.btn-outline-danger.product-hard-delete(type="button", data-id=product._id, title="Xóa vĩnh viễn khỏi cơ sở dữ liệu")
-                            i.las.la-trash-alt.me-1
-                            | Xóa cứng
+                        .table-actions
+                          if canWrite
+                            button.btn-action.btn-action-copy.product-restore(type="button", data-id=product._id, title="Khôi phục sản phẩm")
+                              i.las.la-undo
+                          if permissions.includes("admin:all") || permissions.includes("product:delete")
+                            button.btn-action.btn-action-delete.product-hard-delete(type="button", data-id=product._id, title="Xóa vĩnh viễn khỏi cơ sở dữ liệu")
+                              i.las.la-trash-alt
                 else
                   tr
                     td.text-center.text-muted.py-5(colspan="7")

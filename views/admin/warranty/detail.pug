@@ -380,7 +380,7 @@ block main
                             span.text-muted Ghi chú KT: 
                             span #{ticket.technicianNotes}
                       td.text-end.align-top
-                        strong.fs-6.text-primary #{ticket.repairCost ? Number(ticket.repairCost).toLocaleString("vi-VN") + " đ" : "0 đ (Bảo hành)"}
+                        strong.fs-6.text-primary #{ticket.repairCost ? formatVND(ticket.repairCost) : "0 đ (Bảo hành)"}
                         if ticket.isUnderWarranty
                           div.small.text-success Miễn phí theo bảo hành
 
@@ -463,7 +463,7 @@ block main
                   strong.fs-6.text-danger #{ticket.expectedReturnDate ? new Date(ticket.expectedReturnDate).toLocaleDateString("vi-VN") : "Liên hệ sau"}
                 .d-flex.justify-content-between.mt-1
                   span Chi phí dự kiến:
-                  strong #{ticket.repairCost ? Number(ticket.repairCost).toLocaleString("vi-VN") + " đ" : "0 đ (Bảo hành)"}
+                  strong #{ticket.repairCost ? formatVND(ticket.repairCost) : "0 đ (Bảo hành)"}
 
               .border-bottom.border-dark.border-dashed.my-2
 
@@ -555,7 +555,7 @@ block main
                                 span.text-muted Thời hạn BH linh kiện: 
                                 strong.text-primary #{ticket.partsWarrantyMonths} tháng
                         td.text-end.align-top
-                          strong.fs-6.text-success #{ticket.repairCost ? Number(ticket.repairCost).toLocaleString("vi-VN") + " đ" : "0 đ (Bảo hành)"}
+                          strong.fs-6.text-success #{ticket.repairCost ? formatVND(ticket.repairCost) : "0 đ (Bảo hành)"}
                           div.small.text-muted Hình thức: #{ticket.paymentMethod === "transfer" ? "Chuyển khoản" : (ticket.paymentMethod === "cash" ? "Tiền mặt" : "Miễn phí")}
 
                 // Cam kết bàn giao
@@ -638,7 +638,7 @@ block main
                 .small
                   .d-flex.justify-content-between
                     span Tổng thanh toán:
-                    strong.fs-6.text-dark #{ticket.repairCost ? Number(ticket.repairCost).toLocaleString("vi-VN") + " đ" : "0 đ (Miễn phí)"}
+                    strong.fs-6.text-dark #{ticket.repairCost ? formatVND(ticket.repairCost) : "0 đ (Miễn phí)"}
                   .d-flex.justify-content-between.mt-1
                     span Hình thức:
                     span #{ticket.paymentMethod === "transfer" ? "Chuyển khoản" : (ticket.paymentMethod === "cash" ? "Tiền mặt" : "Miễn phí")}

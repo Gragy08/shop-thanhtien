@@ -50,7 +50,8 @@ const loadVariantItems = async (variantId) => {
     const data = await response.json();
 
     if (!response.ok || data.code !== "success") {
-      window.alert(data.message || "Không thể tải danh sách thiết bị.");
+      if (typeof notyf !== "undefined") notyf.error(data.message || "Không thể tải danh sách thiết bị.");
+      else window.alert(data.message || "Không thể tải danh sách thiết bị.");
       if (imeiModal) imeiModal.hide();
       return;
     }
@@ -69,7 +70,8 @@ const loadVariantItems = async (variantId) => {
     if (content) content.style.display = "block";
   } catch (err) {
     console.error(err);
-    window.alert("Lỗi khi tải danh sách IMEI!");
+    if (typeof notyf !== "undefined") notyf.error("Lỗi khi tải danh sách IMEI!");
+    else window.alert("Lỗi khi tải danh sách IMEI!");
     if (imeiModal) imeiModal.hide();
   }
 };

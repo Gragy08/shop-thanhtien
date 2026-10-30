@@ -69,7 +69,8 @@ const executeProductSearch = async (keyword) => {
 
     // 2. Nếu quét trúng IMEI nhưng máy không ở trạng thái bán
     if (data.code === "warning") {
-      window.alert(data.message);
+      if (typeof notyf !== "undefined") notyf.error(data.message);
+      else window.alert(data.message);
       if (searchResults) searchResults.style.display = "none";
       return;
     }
@@ -135,7 +136,8 @@ const renderSearchResults = (items) => {
     el.addEventListener("click", () => {
       const itemData = JSON.parse(el.dataset.item.replaceAll("&#39;", "'"));
       if (itemData.availableStock <= 0) {
-        window.alert(`Sản phẩm "${itemData.productName}" hiện đã hết hàng có sẵn trong kho!`);
+        if (typeof notyf !== "undefined") notyf.error(`Sản phẩm "${itemData.productName}" hiện đã hết hàng có sẵn trong kho!`);
+        else window.alert(`Sản phẩm "${itemData.productName}" hiện đã hết hàng có sẵn trong kho!`);
         return;
       }
       addVariantToCart(itemData);
@@ -159,7 +161,8 @@ const addDirectImeiToCart = (data) => {
 
   if (existing) {
     if (existing.identifiers.includes(data.matchedImei)) {
-      window.alert(`Mã IMEI "${data.matchedImei}" đã được chọn trong giỏ hàng!`);
+      if (typeof notyf !== "undefined") notyf.error(`Mã IMEI "${data.matchedImei}" đã được chọn trong giỏ hàng!`);
+      else window.alert(`Mã IMEI "${data.matchedImei}" đã được chọn trong giỏ hàng!`);
       return;
     }
     // Cập nhật lại availableStock và availableIdentifiers mới nhất
@@ -201,7 +204,8 @@ const addVariantToCart = (itemData) => {
 
   if (existing) {
     if (existing.quantity >= existing.availableStock) {
-      window.alert(`Sản phẩm "${existing.productName}" trong kho chỉ còn ${existing.availableStock} chiếc có sẵn!`);
+      if (typeof notyf !== "undefined") notyf.error(`Sản phẩm "${existing.productName}" trong kho chỉ còn ${existing.availableStock} chiếc có sẵn!`);
+      else window.alert(`Sản phẩm "${existing.productName}" trong kho chỉ còn ${existing.availableStock} chiếc có sẵn!`);
       return;
     }
     existing.quantity += 1;
@@ -339,7 +343,8 @@ const bindCartEvents = () => {
         cart[idx].totalPrice = cart[idx].quantity * cart[idx].unitPrice;
         renderCart();
       } else {
-        window.alert(`Sản phẩm này trong kho chỉ còn tối đa ${cart[idx].availableStock} chiếc!`);
+        if (typeof notyf !== "undefined") notyf.error(`Sản phẩm này trong kho chỉ còn tối đa ${cart[idx].availableStock} chiếc!`);
+        else window.alert(`Sản phẩm này trong kho chỉ còn tối đa ${cart[idx].availableStock} chiếc!`);
       }
     });
   });
@@ -451,7 +456,8 @@ const renderImeiChips = (identifiers) => {
         tempSelectedImeis = tempSelectedImeis.filter((i) => i !== imei);
       } else {
         if (tempSelectedImeis.length >= maxAllowed) {
-          window.alert(`Bạn chỉ cần chọn đúng ${maxAllowed} mã IMEI cho sản phẩm này!`);
+          if (typeof notyf !== "undefined") notyf.error(`Bạn chỉ cần chọn đúng ${maxAllowed} mã IMEI cho sản phẩm này!`);
+          else window.alert(`Bạn chỉ cần chọn đúng ${maxAllowed} mã IMEI cho sản phẩm này!`);
           return;
         }
         tempSelectedImeis.push(imei);
@@ -496,21 +502,22 @@ const changeDisplay = document.querySelector("#changeAmountDisplay");
 
 const updateSummary = () => {
   const subTotal = cart.reduce((acc, i) => acc + i.totalPrice, 0);
-  const discount = Math.max(0, parseFloat(discountInput?.value) || 0);
+  const discount = Math.max(0, (window.parseVND ? window.parseVND(discountInput?.value) : parseFloat(discountInput?.value)) || 0);
   const totalAmount = Math.max(0, subTotal - discount);
 
-  document.querySelector("#subTotalDisplay").textContent = `${subTotal.toLocaleString("vi-VN")} đ`;
-  document.querySelector("#totalAmountDisplay").textContent = `${totalAmount.toLocaleString("vi-VN")} đ`;
+  document.querySelector("#subTotalDisplay").textContent = window.formatVND ? window.formatVND(subTotal, "đ") : `${subTotal.toLocaleString("vi-VN")} đ`;
+  document.querySelector("#totalAmountDisplay").textContent = window.formatVND ? window.formatVND(totalAmount, "đ") : `${totalAmount.toLocaleString("vi-VN")} đ`;
 
   // Tính tiền thừa ban đầu
-  const paid = paidAmountInput?.value !== "" ? (parseFloat(paidAmountInput.value) || 0) : totalAmount;
+  const parsedPaid = window.parseVND ? window.parseVND(paidAmountInput?.value) : parseFloat(paidAmountInput?.value);
+  const paid = (paidAmountInput?.value !== "" && !isNaN(parsedPaid)) ? parsedPaid : totalAmount;
   const rawChange = Math.max(0, paid - totalAmount);
 
   // Xử lý tiền lẻ thừa (< 1.000 VNĐ)
   const smallRemainder = rawChange % 1000;
   if (rawChange > 0 && smallRemainder > 0) {
     if (keepSmallChangeContainer) keepSmallChangeContainer.style.display = "block";
-    if (smallChangeAmountText) smallChangeAmountText.textContent = `${smallRemainder.toLocaleString("vi-VN")} đ`;
+    if (smallChangeAmountText) smallChangeAmountText.textContent = window.formatVND ? window.formatVND(smallRemainder, "đ") : `${smallRemainder.toLocaleString("vi-VN")} đ`;
   } else {
     if (keepSmallChangeContainer) keepSmallChangeContainer.style.display = "none";
     if (keepSmallChangeCheck) keepSmallChangeCheck.checked = false;
@@ -523,10 +530,12 @@ const updateSummary = () => {
   }
 
   if (changeDisplay) {
+    const formattedActual = window.formatVND ? window.formatVND(actualChange, "đ") : `${actualChange.toLocaleString("vi-VN")} đ`;
+    const formattedRemainder = window.formatVND ? window.formatVND(smallRemainder, "đ") : `${smallRemainder.toLocaleString("vi-VN")} đ`;
     if (keepSmallChangeCheck && keepSmallChangeCheck.checked && smallRemainder > 0) {
-      changeDisplay.innerHTML = `${actualChange.toLocaleString("vi-VN")} đ <span class="badge bg-warning-subtle text-warning-emphasis ms-1 fw-normal">Khách tặng ${smallRemainder.toLocaleString("vi-VN")} đ</span>`;
+      changeDisplay.innerHTML = `${formattedActual} <span class="badge bg-warning-subtle text-warning-emphasis ms-1 fw-normal">Khách tặng ${formattedRemainder}</span>`;
     } else {
-      changeDisplay.textContent = `${actualChange.toLocaleString("vi-VN")} đ`;
+      changeDisplay.textContent = formattedActual;
     }
   }
 };
@@ -538,25 +547,27 @@ keepSmallChangeCheck?.addEventListener("change", updateSummary);
 // Nút tự động làm tròn bill (Bớt số tiền lẻ < 1.000 VNĐ vào ô Giảm giá)
 btnRoundDiscount?.addEventListener("click", () => {
   const subTotal = cart.reduce((acc, i) => acc + i.totalPrice, 0);
-  const currentDiscount = parseFloat(discountInput?.value) || 0;
+  const currentDiscount = (window.parseVND ? window.parseVND(discountInput?.value) : parseFloat(discountInput?.value)) || 0;
   const totalBeforeRounding = subTotal - currentDiscount;
   const remainder = totalBeforeRounding % 1000;
 
   if (remainder > 0 && discountInput) {
-    discountInput.value = currentDiscount + remainder;
+    const newDiscount = currentDiscount + remainder;
+    discountInput.value = window.formatVND ? window.formatVND(newDiscount) : newDiscount;
     updateSummary();
   } else {
-    window.alert("Hóa đơn đã tròn nghìn đồng, không có số tiền lẻ cần làm tròn!");
+    if (typeof notyf !== "undefined") notyf.success("Hóa đơn đã tròn nghìn đồng, không có số tiền lẻ cần làm tròn!");
+    else window.alert("Hóa đơn đã tròn nghìn đồng, không có số tiền lẻ cần làm tròn!");
   }
 });
 
 // Nút đúng số tiền
 document.querySelector("#btnExactAmount")?.addEventListener("click", () => {
   const subTotal = cart.reduce((acc, i) => acc + i.totalPrice, 0);
-  const discount = Math.max(0, parseFloat(discountInput?.value) || 0);
+  const discount = Math.max(0, (window.parseVND ? window.parseVND(discountInput?.value) : parseFloat(discountInput?.value)) || 0);
   const total = Math.max(0, subTotal - discount);
   if (paidAmountInput) {
-    paidAmountInput.value = total;
+    paidAmountInput.value = window.formatVND ? window.formatVND(total) : total;
     updateSummary();
   }
 });
@@ -565,7 +576,8 @@ document.querySelector("#btnExactAmount")?.addEventListener("click", () => {
 document.querySelectorAll(".btn-quick-cash").forEach((btn) => {
   btn.addEventListener("click", () => {
     if (paidAmountInput) {
-      paidAmountInput.value = btn.dataset.amount;
+      const val = parseInt(btn.dataset.amount, 10);
+      paidAmountInput.value = window.formatVND ? window.formatVND(val) : val;
       updateSummary();
     }
   });
@@ -588,7 +600,8 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
   if (msg) msg.textContent = "";
 
   if (!cart.length) {
-    window.alert("Giỏ hàng đang trống! Vui lòng chọn ít nhất một sản phẩm.");
+    if (typeof notyf !== "undefined") notyf.error("Giỏ hàng đang trống! Vui lòng chọn ít nhất một sản phẩm.");
+    else window.alert("Giỏ hàng đang trống! Vui lòng chọn ít nhất một sản phẩm.");
     return;
   }
 
@@ -596,7 +609,8 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
   for (const item of cart) {
     if (item.trackingType === "imei" || item.trackingType === "serial") {
       if (item.identifiers.length !== item.quantity) {
-        window.alert(`Sản phẩm "${item.productName}" yêu cầu chọn đủ ${item.quantity} mã ${item.trackingType === 'imei' ? 'IMEI' : 'Serial'} (Hiện có: ${item.identifiers.length})!`);
+        if (typeof notyf !== "undefined") notyf.error(`Sản phẩm "${item.productName}" yêu cầu chọn đủ ${item.quantity} mã ${item.trackingType === 'imei' ? 'IMEI' : 'Serial'} (Hiện có: ${item.identifiers.length})!`);
+        else window.alert(`Sản phẩm "${item.productName}" yêu cầu chọn đủ ${item.quantity} mã ${item.trackingType === 'imei' ? 'IMEI' : 'Serial'} (Hiện có: ${item.identifiers.length})!`);
         return;
       }
     }
@@ -606,10 +620,11 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
   const customerPhone = document.querySelector("#customerPhone")?.value.trim() || "";
   const customerAddress = document.querySelector("#customerAddress")?.value.trim() || "";
   const paymentMethod = document.querySelector("input[name=paymentMethod]:checked")?.value || "cash";
-  const discount = Math.max(0, parseFloat(discountInput?.value) || 0);
+  const discount = Math.max(0, (window.parseVND ? window.parseVND(discountInput?.value) : parseFloat(discountInput?.value)) || 0);
   const subTotal = cart.reduce((acc, i) => acc + i.totalPrice, 0);
   const totalAmount = Math.max(0, subTotal - discount);
-  const paidAmount = paidAmountInput?.value !== "" ? (parseFloat(paidAmountInput.value) || 0) : totalAmount;
+  const parsedPaid = window.parseVND ? window.parseVND(paidAmountInput?.value) : parseFloat(paidAmountInput?.value);
+  const paidAmount = (paidAmountInput?.value !== "" && !isNaN(parsedPaid)) ? parsedPaid : totalAmount;
   const rawChange = Math.max(0, paidAmount - totalAmount);
 
   const keepSmallChange = keepSmallChangeCheck?.checked;
@@ -618,7 +633,7 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
 
   let note = document.querySelector("#orderNote")?.value.trim() || "";
   if (keepSmallChange && smallRemainder > 0) {
-    const tipText = `[Khách không nhận tiền lẻ thừa: ${smallRemainder.toLocaleString("vi-VN")} đ]`;
+    const tipText = `[Khách không nhận tiền lẻ thừa: ${window.formatVND ? window.formatVND(smallRemainder, "đ") : smallRemainder + " đ"}]`;
     note = note ? `${note} | ${tipText}` : tipText;
   }
 
@@ -665,7 +680,8 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
         msg.textContent = result.message || "Không thể hoàn tất đơn hàng!";
         msg.className = "form-message mt-2 mb-0 text-danger fw-bold";
       }
-      window.alert(result.message || "Không thể tạo đơn hàng!");
+      if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể tạo đơn hàng!");
+      else window.alert(result.message || "Không thể tạo đơn hàng!");
       if (checkoutBtn) {
         checkoutBtn.disabled = false;
         checkoutBtn.innerHTML = '<i class="las la-check-circle fs-4 me-1"></i> THANH TOÁN &amp; XUẤT HÓA ĐƠN';
@@ -679,15 +695,15 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
     }
 
     // Tự động chuyển hướng sang xem & in hóa đơn bán hàng
-    setTimeout(() => {
-      window.location.href = `/admin/order/${result.orderId}`;
-    }, 500);
+    window.drawNotify("success", result.message || "Tạo đơn hàng thành công!");
+    window.location.href = `/admin/order/${result.orderId}`;
   } catch (err) {
     console.error(err);
     if (msg) {
       msg.textContent = "Lỗi kết nối khi gửi yêu cầu thanh toán!";
       msg.className = "form-message mt-2 mb-0 text-danger";
     }
+    if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi gửi yêu cầu thanh toán!");
     if (checkoutBtn) {
       checkoutBtn.disabled = false;
       checkoutBtn.innerHTML = '<i class="las la-check-circle fs-4 me-1"></i> THANH TOÁN &amp; XUẤT HÓA ĐƠN';

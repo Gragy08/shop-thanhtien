@@ -49,14 +49,17 @@ app.use("/media", async (req, res) => {
       timeout: 15000
     });
 
-    if (response.headers["content-type"]) {
-      res.setHeader("Content-Type", response.headers["content-type"]);
+    const contentType = response.headers["content-type"];
+    if (contentType) {
+      res.setHeader("Content-Type", String(contentType));
     }
-    if (response.headers["content-disposition"]) {
-      res.setHeader("Content-Disposition", response.headers["content-disposition"]);
+    const contentDisposition = response.headers["content-disposition"];
+    if (contentDisposition) {
+      res.setHeader("Content-Disposition", String(contentDisposition));
     }
-    if (response.headers["content-length"]) {
-      res.setHeader("Content-Length", response.headers["content-length"]);
+    const contentLength = response.headers["content-length"];
+    if (contentLength) {
+      res.setHeader("Content-Length", String(contentLength));
     }
     res.setHeader("Cache-Control", "public, max-age=86400");
     response.data.pipe(res);

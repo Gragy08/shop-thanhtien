@@ -93,14 +93,18 @@ const renderStaffDashboard = async (req: RequestAccount, res: Response) => {
     }
   }
 
-  // 2. Tồn kho thiết bị sẵn sàng bán & bảo hành
-  const [availableStockCount, activeWarrantyCount] = await Promise.all([
-    InventoryItem.countDocuments({ status: "available", deleted: { $ne: true } }),
+  // 2. Tồn kho thiết bị sẵn sàng bán & bảo hành (cộng đúng quantity cho hàng quản lý theo số lượng)
+  const [availAgg, activeWarrantyCount] = await Promise.all([
+    InventoryItem.aggregate([
+      { $match: { status: "available", deleted: { $ne: true } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$quantity", 1] } } } }
+    ]),
     WarrantyTicket.countDocuments({
       ticketStatus: { $in: ["received", "in_progress", "completed"] },
       deleted: { $ne: true }
     })
   ]);
+  const availableStockCount = availAgg[0]?.total || 0;
 
   // 3. Phiếu bảo hành đến hẹn trả hôm nay hoặc trễ hẹn
   const dueWarranties = await WarrantyTicket.find({
@@ -112,10 +116,16 @@ const renderStaffDashboard = async (req: RequestAccount, res: Response) => {
     .limit(8)
     .lean();
 
-  // 4. Cảnh báo sản phẩm sắp hết hàng (tồn <= 2)
+  // 4. Cảnh báo sản phẩm sắp hết hàng (tồn <= 2, cộng đúng trường quantity)
   const availableItems = await InventoryItem.aggregate([
     { $match: { status: "available", deleted: { $ne: true } } },
-    { $group: { _id: "$variantId", count: { $sum: 1 }, productId: { $first: "$productId" } } }
+    {
+      $group: {
+        _id: "$variantId",
+        count: { $sum: { $ifNull: ["$quantity", 1] } },
+        productId: { $first: "$productId" }
+      }
+    }
   ]);
   const stockMapByVariant = new Map<string, number>();
   for (const a of availableItems) {
@@ -124,17 +134,17 @@ const renderStaffDashboard = async (req: RequestAccount, res: Response) => {
 
   const activeVariants = await ProductVariant.find({ deleted: { $ne: true }, status: "active" })
     .populate("productId", "name inventoryType")
-    .limit(60)
+    .limit(200)
     .lean();
 
-  const lowStockAlerts: any[] = [];
+  const rawLowStock: any[] = [];
   for (const vr of activeVariants) {
     const prod = vr.productId as any;
     if (!prod) continue;
     const currentStock = stockMapByVariant.get(String(vr._id)) || 0;
     if (currentStock <= 2) {
       const variantName = (vr.attributeValues || []).map((a: any) => a.label).join(" / ");
-      lowStockAlerts.push({
+      rawLowStock.push({
         productId: prod._id,
         productName: prod.name,
         variantSku: vr.sku,
@@ -143,8 +153,8 @@ const renderStaffDashboard = async (req: RequestAccount, res: Response) => {
         isOut: currentStock === 0
       });
     }
-    if (lowStockAlerts.length >= 6) break;
   }
+  const lowStockAlerts = rawLowStock.sort((a, b) => a.currentStock - b.currentStock).slice(0, 6);
 
   // 5. 8 Đơn hàng gần nhất hôm nay
   const recentOrders = todayOrders.slice(0, 8);
@@ -204,32 +214,41 @@ export const index = async (req: RequestAccount, res: Response) => {
     }
     const avgOrderValue = allCompletedOrdersCount > 0 ? Math.round(totalRevenue / allCompletedOrdersCount) : 0;
 
-    // 2. Thống kê Tồn kho hiện tại
-    const [
-      availableStockCount,
-      soldStockCount,
-      warrantyStockCount,
-      damagedStockCount,
-      returnedStockCount,
-      allAvailableItems
-    ] = await Promise.all([
-      InventoryItem.countDocuments({ status: "available", deleted: { $ne: true } }),
-      InventoryItem.countDocuments({ status: "sold", deleted: { $ne: true } }),
-      InventoryItem.countDocuments({ status: "warranty", deleted: { $ne: true } }),
-      InventoryItem.countDocuments({ status: "damaged", deleted: { $ne: true } }),
-      InventoryItem.countDocuments({ status: "returned", deleted: { $ne: true } }),
-      canViewCost ? InventoryItem.find({ status: "available", deleted: { $ne: true } }).select("purchasePrice").lean() : []
+    // 2. Thống kê Tồn kho hiện tại (tính đúng tổng số lượng cho cả hàng IMEI/Serial lẫn hàng Số lượng)
+    const inventoryStatusAgg = await InventoryItem.aggregate([
+      { $match: { deleted: { $ne: true } } },
+      {
+        $group: {
+          _id: "$status",
+          totalQty: { $sum: { $ifNull: ["$quantity", 1] } },
+          totalCost: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ["$purchasePrice", 0] },
+                { $ifNull: ["$quantity", 1] }
+              ]
+            }
+          }
+        }
+      }
     ]);
 
-    let totalStockValue = 0;
-    if (canViewCost && Array.isArray(allAvailableItems)) {
-      for (const it of allAvailableItems) {
-        totalStockValue += it.purchasePrice || 0;
+    const statusQtyMap = new Map<string, { qty: number; cost: number }>();
+    for (const row of inventoryStatusAgg) {
+      if (row._id) {
+        statusQtyMap.set(String(row._id), { qty: row.totalQty || 0, cost: row.totalCost || 0 });
       }
     }
 
-    // 3. Thống kê Phiếu Bảo Hành đang xử lý
-    const [activeWarrantyCount, totalWarrantyPeriod, deliveredWarrantyPeriod] = await Promise.all([
+    const availableStockCount = statusQtyMap.get("available")?.qty || 0;
+    const soldStockCount = statusQtyMap.get("sold")?.qty || 0;
+    const warrantyStockCount = statusQtyMap.get("warranty")?.qty || 0;
+    const damagedStockCount = statusQtyMap.get("damaged")?.qty || 0;
+    const returnedStockCount = statusQtyMap.get("returned")?.qty || 0;
+    const totalStockValue = canViewCost ? (statusQtyMap.get("available")?.cost || 0) : 0;
+
+    // 3. Thống kê Phiếu Bảo Hành đang xử lý & Đã bàn giao trong kỳ
+    const [activeWarrantyCount, totalWarrantyPeriod, deliveredWarrantiesInPeriod] = await Promise.all([
       WarrantyTicket.countDocuments({
         ticketStatus: { $in: ["received", "in_progress", "completed"] },
         deleted: { $ne: true }
@@ -238,12 +257,16 @@ export const index = async (req: RequestAccount, res: Response) => {
         createdAt: { $gte: startDate, $lte: endDate },
         deleted: { $ne: true }
       }),
-      WarrantyTicket.countDocuments({
-        deliveredDate: { $gte: startDate, $lte: endDate },
+      WarrantyTicket.find({
+        $or: [
+          { deliveredDate: { $gte: startDate, $lte: endDate } },
+          { deliveredDate: null, updatedAt: { $gte: startDate, $lte: endDate } }
+        ],
         ticketStatus: "delivered",
         deleted: { $ne: true }
-      })
+      }).lean()
     ]);
+    const deliveredWarrantyPeriod = deliveredWarrantiesInPeriod.length;
 
     // 4. Thống kê Khách hàng
     const [totalCustomers, newCustomersInPeriod] = await Promise.all([
@@ -276,7 +299,7 @@ export const index = async (req: RequestAccount, res: Response) => {
     const chartDailyRevenues = chartDailyLabels.map((k) => dailyMap[k].revenue);
     const chartDailyOrders = chartDailyLabels.map((k) => dailyMap[k].orderCount);
 
-    // 6. Top 5 Sản phẩm bán chạy nhất trong kỳ (Top Best Sellers)
+    // 6. Top 5 Sản phẩm bán chạy nhất trong kỳ (Đơn POS + Linh kiện kho xuất qua Bảo hành đã bàn giao)
     const productSoldMap: Record<string, { productName: string; variantSku: string; quantity: number; revenue: number }> = {};
     for (const ord of ordersInPeriod) {
       for (const it of ord.items) {
@@ -296,15 +319,40 @@ export const index = async (req: RequestAccount, res: Response) => {
       }
     }
 
+    for (const wt of deliveredWarrantiesInPeriod) {
+      if (!Array.isArray(wt.requiredParts)) continue;
+      for (const part of wt.requiredParts) {
+        if (part.partType !== "inventory" || !part.isDeducted) continue;
+        const pKey = part.sku || String(part.variantId || part.productId || part.partName);
+        const qty = Number(part.quantity) || 1;
+        const partRev = (Number(part.price) || 0) * qty;
+        if (!productSoldMap[pKey]) {
+          productSoldMap[pKey] = {
+            productName: part.partName,
+            variantSku: part.sku || "Linh kiện kho",
+            quantity: 0,
+            revenue: 0
+          };
+        }
+        productSoldMap[pKey].quantity += qty;
+        productSoldMap[pKey].revenue += partRev;
+      }
+    }
+
     const topProducts = Object.values(productSoldMap)
-      .sort((a, b) => b.quantity - a.quantity)
+      .sort((a, b) => (b.quantity - a.quantity) || (b.revenue - a.revenue))
       .slice(0, 5);
 
-    // 7. Cảnh báo tồn kho thấp (Variants có số lượng available <= 2)
-    // Tổng hợp tồn kho theo variant
+    // 7. Cảnh báo tồn kho thấp (Variants có số lượng available <= 2, cộng đúng trường quantity)
     const availableItems = await InventoryItem.aggregate([
       { $match: { status: "available", deleted: { $ne: true } } },
-      { $group: { _id: "$variantId", count: { $sum: 1 }, productId: { $first: "$productId" } } }
+      {
+        $group: {
+          _id: "$variantId",
+          count: { $sum: { $ifNull: ["$quantity", 1] } },
+          productId: { $first: "$productId" }
+        }
+      }
     ]);
     const stockMapByVariant = new Map<string, number>();
     for (const a of availableItems) {
@@ -313,17 +361,17 @@ export const index = async (req: RequestAccount, res: Response) => {
 
     const activeVariants = await ProductVariant.find({ deleted: { $ne: true }, status: "active" })
       .populate("productId", "name inventoryType")
-      .limit(50)
+      .limit(200)
       .lean();
 
-    const lowStockAlerts: any[] = [];
+    const rawLowStock: any[] = [];
     for (const vr of activeVariants) {
       const prod = vr.productId as any;
       if (!prod) continue;
       const currentStock = stockMapByVariant.get(String(vr._id)) || 0;
       if (currentStock <= 2) {
         const variantName = (vr.attributeValues || []).map((a: any) => a.label).join(" / ");
-        lowStockAlerts.push({
+        rawLowStock.push({
           productId: prod._id,
           productName: prod.name,
           variantSku: vr.sku,
@@ -332,8 +380,8 @@ export const index = async (req: RequestAccount, res: Response) => {
           isOut: currentStock === 0
         });
       }
-      if (lowStockAlerts.length >= 5) break;
     }
+    const lowStockAlerts = rawLowStock.sort((a, b) => a.currentStock - b.currentStock).slice(0, 5);
 
     // 8. 5 Đơn hàng mới nhất
     const recentOrders = await Order.find({ deleted: { $ne: true } })
@@ -348,16 +396,21 @@ export const index = async (req: RequestAccount, res: Response) => {
       .limit(5)
       .lean();
 
-    // 10. Tỷ trọng doanh số theo danh mục
-    // Lấy thông tin category cho các order items thông thường trong kho
+    // 10. Tỷ trọng doanh số theo danh mục (gồm cả đơn POS và linh kiện kho xuất qua bảo hành)
     const categoryRevenueMap: Record<string, number> = {};
+    const warrantyInventoryProductIds = deliveredWarrantiesInPeriod
+      .flatMap((wt) => (Array.isArray(wt.requiredParts) ? wt.requiredParts : []))
+      .filter((p) => p.partType === "inventory" && p.isDeducted && p.productId && mongoose.isValidObjectId(p.productId))
+      .map((p) => String(p.productId));
+
     const validProductIdsInOrders = Array.from(
-      new Set(
-        ordersInPeriod
+      new Set([
+        ...ordersInPeriod
           .flatMap((o) => o.items)
           .filter((i) => !i.isCustomItem && i.productId && mongoose.isValidObjectId(i.productId))
-          .map((i) => String(i.productId))
-      )
+          .map((i) => String(i.productId)),
+        ...warrantyInventoryProductIds
+      ])
     );
     const productsInOrders = validProductIdsInOrders.length > 0
       ? await Product.find({ _id: { $in: validProductIdsInOrders } })
@@ -382,6 +435,16 @@ export const index = async (req: RequestAccount, res: Response) => {
           catName = prodCatMap.get(String(it.productId)) || "Khác";
         }
         categoryRevenueMap[catName] = (categoryRevenueMap[catName] || 0) + (it.totalPrice || 0);
+      }
+    }
+
+    for (const wt of deliveredWarrantiesInPeriod) {
+      if (!Array.isArray(wt.requiredParts)) continue;
+      for (const part of wt.requiredParts) {
+        if (part.partType !== "inventory" || !part.isDeducted) continue;
+        const catName = part.productId ? (prodCatMap.get(String(part.productId)) || "Linh kiện sửa chữa") : "Linh kiện sửa chữa";
+        const partRev = (Number(part.price) || 0) * (Number(part.quantity) || 1);
+        categoryRevenueMap[catName] = (categoryRevenueMap[catName] || 0) + partRev;
       }
     }
 

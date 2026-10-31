@@ -233,6 +233,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     const orderItems: any[] = [];
     let calculatedSubTotal = 0;
     const imeiToSellList: string[] = [];
+    const quantityToSellList: Array<{ variantId: mongoose.Types.ObjectId; productName: string; quantity: number }> = [];
 
     for (const rawItem of itemsInput) {
       if (rawItem.isCustomItem) {
@@ -328,12 +329,15 @@ export const createPost = async (req: RequestAccount, res: Response) => {
 
         imeiToSellList.push(...identifiers);
       } else {
-        // Hàng số lượng: kiểm tra số lượng tồn kho khả dụng
-        const availableCount = await InventoryItem.countDocuments({
+        // Hàng số lượng: kiểm tra tổng số lượng tồn kho khả dụng (cộng trường quantity)
+        const availDocs = await InventoryItem.find({
           variantId: variant._id,
           status: "available",
           deleted: { $ne: true }
-        });
+        })
+          .select("quantity")
+          .lean();
+        const availableCount = availDocs.reduce((sum, doc) => sum + (Number(doc.quantity) || 1), 0);
         if (availableCount < quantity) {
           res.status(400).json({
             code: "error",
@@ -341,6 +345,11 @@ export const createPost = async (req: RequestAccount, res: Response) => {
           });
           return;
         }
+        quantityToSellList.push({
+          variantId: variant._id as mongoose.Types.ObjectId,
+          productName: product.name,
+          quantity
+        });
       }
 
       const variantAttributesText = (variant.attributeValues || []).map((a) => a.label).join(" / ");
@@ -426,6 +435,9 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     });
 
     // Cập nhật trạng thái các thiết bị IMEI/Serial sang "sold"
+    const adminObjId = req.adminId ? new mongoose.Types.ObjectId(req.adminId) : undefined;
+    const customerNote = customerInfo.phone ? `Khách hàng: ${order.customerInfo?.fullName || "Khách lẻ"} (${customerInfo.phone})` : "Khách lẻ";
+
     if (imeiToSellList.length > 0) {
       const itemsToUpdate = await InventoryItem.find({
         identifier: { $in: imeiToSellList },
@@ -439,11 +451,75 @@ export const createPost = async (req: RequestAccount, res: Response) => {
           fromStatus,
           toStatus: "sold",
           reason: `Bán lẻ theo hóa đơn ${orderCode}`,
-          note: customerInfo.phone ? `Khách hàng: ${order.customerInfo?.fullName || "Khách lẻ"} (${customerInfo.phone})` : "Khách lẻ",
-          updatedBy: req.adminId ? new mongoose.Types.ObjectId(req.adminId) : undefined,
+          note: customerNote,
+          updatedBy: adminObjId,
           updatedAt: new Date()
         });
         await item.save();
+      }
+    }
+
+    // Trừ kho (có tách dòng split) cho các mặt hàng quản lý theo Số lượng (quantity)
+    if (quantityToSellList.length > 0) {
+      for (const qItem of quantityToSellList) {
+        let needed = qItem.quantity;
+        const availItems = await InventoryItem.find({
+          variantId: qItem.variantId,
+          status: "available",
+          deleted: { $ne: true }
+        }).sort({ createdAt: 1 });
+
+        for (const invItem of availItems) {
+          if (needed <= 0) break;
+          const currentQty = Number(invItem.quantity) || 1;
+          if (currentQty > needed) {
+            invItem.quantity = currentQty - needed;
+            invItem.statusLogs.push({
+              fromStatus: "available",
+              toStatus: "available",
+              reason: `Tách xuất bán lẻ ${needed} sp theo hóa đơn ${orderCode} (còn sẵn ${invItem.quantity})`,
+              note: customerNote,
+              updatedBy: adminObjId,
+              updatedAt: new Date()
+            });
+            await invItem.save();
+
+            await InventoryItem.create({
+              productId: invItem.productId,
+              variantId: invItem.variantId,
+              trackingType: "quantity",
+              quantity: needed,
+              purchasePrice: invItem.purchasePrice,
+              status: "sold",
+              note: invItem.note || "",
+              receivedAt: invItem.receivedAt || new Date(),
+              receiptId: invItem.receiptId || null,
+              statusLogs: [
+                {
+                  fromStatus: "available",
+                  toStatus: "sold",
+                  reason: `Bán lẻ ${needed} sp theo hóa đơn ${orderCode}`,
+                  note: customerNote,
+                  updatedBy: adminObjId,
+                  updatedAt: new Date()
+                }
+              ]
+            });
+            needed = 0;
+          } else {
+            invItem.status = "sold";
+            invItem.statusLogs.push({
+              fromStatus: "available",
+              toStatus: "sold",
+              reason: `Bán lẻ ${currentQty} sp theo hóa đơn ${orderCode}`,
+              note: customerNote,
+              updatedBy: adminObjId,
+              updatedAt: new Date()
+            });
+            await invItem.save();
+            needed -= currentQty;
+          }
+        }
       }
     }
 

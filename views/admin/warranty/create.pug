@@ -207,35 +207,69 @@ block main
                     placeholder="Mã PIN hoặc 'Không có'"
                   )
 
-            // Phần 4: Lịch hẹn & Dự kiến chi phí
+            // Phần 4: Lịch hẹn & Dự toán chi phí
             h6.text-primary.border-bottom.pb-2.mb-3
-              i.las.la-calendar-check.me-1
-              | 4. Lịch hẹn trả máy &amp; Dự toán chi phí
+              | 4. Lịch hẹn trả máy, linh kiện &amp; Dự toán chi phí
             .row.g-3.mb-4
-              .col-md-4
-                label.form-label.fw-bold Ngày hẹn trả máy dự kiến
-                .input-group
-                  span.input-group-text
-                    i.las.la-calendar
-                  input#inputExpectedReturnDate.form-control(type="text", data-datepicker, placeholder="dd/mm/yyyy", autocomplete="off", name="expectedReturnDate")
-              .col-md-4
-                label.form-label.fw-bold Chi phí sửa chữa dự kiến (VNĐ)
-                .input-group
-                  input#inputRepairCost.form-control.text-end.fw-bold(
+              .col-lg-7
+                label.form-label.fw-bold Thêm linh kiện cần thay thế (Kho hoặc Nhập tự do)
+                .position-relative.mb-2
+                  input#inputSearchPart.form-control(
                     type="text",
-                    format-money,
-                    name="repairCost",
-                    value="0"
+                    placeholder="Gõ tìm linh kiện kho (màn hình, pin...) hoặc gõ tên linh kiện ngoài...",
+                    autocomplete="off"
                   )
-                  span.input-group-text đ
-                small.text-muted Nhập 0 đ nếu thuộc diện bảo hành chính hãng miễn phí.
-              .col-md-4
-                label.form-label Ghi chú nội bộ cho kỹ thuật viên
-                input#inputTechnicianNotes.form-control(
-                  type="text",
-                  name="technicianNotes",
-                  placeholder="Lưu ý kỹ thuật, chỉ định linh kiện cần thay..."
-                )
+                  #partSearchResults.dropdown-menu.w-100.p-2.shadow-sm(style="display: none; max-height: 240px; overflow-y: auto; z-index: 1050;")
+                
+                // Bảng danh sách các linh kiện đã thêm
+                .table-responsive.border.rounded
+                  table.table.table-sm.table-hover.align-middle.mb-0
+                    thead.table-light
+                      tr
+                        th Linh kiện
+                        th.text-center(style="width: 75px;") Nguồn
+                        th.text-center(style="width: 75px;") SL
+                        th.text-end(style="width: 130px;") Đơn giá
+                        th.text-end(style="width: 110px;") Thành tiền
+                        th.text-center(style="width: 50px;")
+                    tbody#partsTableBody
+                      tr#emptyPartsRow
+                        td.text-center.py-3.text-muted.small(colspan="6") Chưa thêm linh kiện nào. Bạn có thể tìm chọn linh kiện kho hoặc gõ tên linh kiện ngoài ở ô trên.
+                    tfoot#partsTableFoot(style="display: none;")
+                      tr.bg-light.fw-bold
+                        td(colspan="4") Tổng tiền linh kiện dự tính:
+                        td#partsTotalAmountText.text-end.text-primary 0 đ
+                        td
+
+                input#hiddenPartsJson(type="hidden", name="requiredParts", value="[]")
+
+              .col-lg-5
+                .mb-3
+                  label.form-label.fw-bold Chi phí sửa chữa dự kiến (VNĐ)
+                  .input-group
+                    input#inputRepairCost.form-control.text-end.fw-bold(
+                      type="text",
+                      format-money,
+                      name="repairCost",
+                      value="0"
+                    )
+                    span.input-group-text đ
+                  small.text-muted Chi phí thỏa thuận với khách (Nhập 0 đ nếu bảo hành miễn phí).
+                
+                .mb-3
+                  label.form-label.fw-bold Ngày hẹn trả máy dự kiến
+                  .input-group
+                    span.input-group-text
+                      i.las.la-calendar
+                    input#inputExpectedReturnDate.form-control(type="text", data-datepicker, placeholder="dd/mm/yyyy", autocomplete="off", name="expectedReturnDate")
+
+                .mb-3
+                  label.form-label Ghi chú nội bộ cho kỹ thuật viên
+                  textarea#inputTechnicianNotes.form-control(
+                    name="technicianNotes",
+                    rows="2",
+                    placeholder="Lưu ý kỹ thuật, hiện tượng chi tiết khi tháo máy..."
+                  )
 
             // Nút hành động
             .d-flex.justify-content-end.gap-2.pt-3.border-top

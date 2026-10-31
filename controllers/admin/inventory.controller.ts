@@ -95,7 +95,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
 
   const variantIds = lines.map((line) => line.variantId);
   if (variantIds.some((id) => typeof id !== "string" || !mongoose.isValidObjectId(id)) || new Set(variantIds).size !== variantIds.length) {
-    res.status(400).json({ code: "error", message: "Variant trong phiếu nhập không hợp lệ hoặc bị trùng!" });
+    res.status(400).json({ code: "error", message: "Biển thể của sản phẩm trong phiếu nhập không hợp lệ hoặc bị trùng!" });
     return;
   }
 
@@ -103,7 +103,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     .populate("productId", "name inventoryType purchasePrice")
     .lean();
   if (variants.length !== variantIds.length) {
-    res.status(400).json({ code: "error", message: "Một hoặc nhiều variant không còn hoạt động!" });
+    res.status(400).json({ code: "error", message: "Một hoặc nhiều biển thể của sản phẩm trong phiếu nhập không còn hoạt động!" });
     return;
   }
 
@@ -123,7 +123,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
   for (const line of lines) {
     const variant = variantMap.get(line.variantId);
     if (!variant || !variant.productId || typeof variant.productId === "string") {
-      res.status(400).json({ code: "error", message: "Không đọc được sản phẩm của variant!" });
+      res.status(400).json({ code: "error", message: "Không đọc được thông tin biến thể của sản phẩm!" });
       return;
     }
     const product = variant.productId as unknown as { _id: mongoose.Types.ObjectId; inventoryType: "imei" | "serial" | "quantity"; purchasePrice?: number };

@@ -2,6 +2,18 @@ import mongoose from "mongoose";
 
 export type WarrantyStatus = "received" | "in_progress" | "completed" | "delivered" | "cancelled";
 
+export interface WarrantyPartItem {
+  _id?: mongoose.Types.ObjectId;
+  partType: "inventory" | "external";
+  partName: string;
+  variantId?: mongoose.Types.ObjectId;
+  productId?: mongoose.Types.ObjectId;
+  sku?: string;
+  price: number;
+  quantity: number;
+  isDeducted?: boolean;
+}
+
 export interface WarrantyTicketDocument extends mongoose.Document {
   ticketCode: string;
   customerId?: mongoose.Types.ObjectId;
@@ -27,6 +39,14 @@ export interface WarrantyTicketDocument extends mongoose.Document {
   passcode?: string;
   technicianNotes?: string;
   repairCost: number;
+  requiredParts?: WarrantyPartItem[];
+  requiredPartType?: "inventory" | "external" | "none";
+  requiredPartName?: string;
+  requiredPartVariantId?: mongoose.Types.ObjectId;
+  requiredPartProductId?: mongoose.Types.ObjectId;
+  requiredPartPrice?: number;
+  requiredPartQuantity?: number;
+  isPartDeducted?: boolean;
   ticketStatus: WarrantyStatus;
   receivedDate: Date;
   expectedReturnDate?: Date;
@@ -54,6 +74,49 @@ export interface WarrantyTicketDocument extends mongoose.Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+const warrantyPartSchema = new mongoose.Schema(
+  {
+    partType: {
+      type: String,
+      enum: ["inventory", "external"],
+      default: "external"
+    },
+    partName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ProductVariant"
+    },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product"
+    },
+    sku: {
+      type: String,
+      default: "",
+      trim: true
+    },
+    price: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 1
+    },
+    isDeducted: {
+      type: Boolean,
+      default: false
+    }
+  },
+  { _id: true }
+);
 
 const warrantyTicketSchema = new mongoose.Schema(
   {
@@ -162,6 +225,42 @@ const warrantyTicketSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0
+    },
+    requiredParts: {
+      type: [warrantyPartSchema],
+      default: []
+    },
+    requiredPartType: {
+      type: String,
+      enum: ["inventory", "external", "none"],
+      default: "none"
+    },
+    requiredPartName: {
+      type: String,
+      default: "",
+      trim: true
+    },
+    requiredPartVariantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ProductVariant"
+    },
+    requiredPartProductId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product"
+    },
+    requiredPartPrice: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    requiredPartQuantity: {
+      type: Number,
+      default: 1,
+      min: 1
+    },
+    isPartDeducted: {
+      type: Boolean,
+      default: false
     },
     ticketStatus: {
       type: String,

@@ -221,6 +221,10 @@ block main
                       td
                         div.small.text-danger.fw-semibold.text-truncate(style="max-width: 260px;", title=tk.issueDescription)
                           | #{tk.issueDescription}
+                        if tk.requiredPartName
+                          div.small.text-primary.text-truncate(style="max-width: 260px;", title=tk.requiredPartName)
+                            span.text-muted Thay: 
+                            span.fw-semibold #{tk.requiredPartName}
                         if tk.physicalCondition
                           div.small.text-muted.text-truncate(style="max-width: 260px;") Ngoại quan: #{tk.physicalCondition}
                       td.text-center

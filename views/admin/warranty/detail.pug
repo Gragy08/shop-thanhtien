@@ -201,8 +201,15 @@ block main
                 i.las.la-receipt.me-1
                 | In bill trả K80
 
-          // Các thao tác nghiệp vụ nâng cao (Đổi 1-đổi-1 / Bàn giao / Tiến độ)
+          // Các thao tác nghiệp vụ nâng cao (Đổi 1-đổi-1 / Bàn giao / Tiến độ / Chỉnh sửa)
           if canWrite && ticket.ticketStatus !== "delivered" && ticket.ticketStatus !== "cancelled"
+            button.btn.btn-outline-primary.btn-sm(
+              type="button",
+              data-bs-toggle="modal",
+              data-bs-target="#modalEditTicket",
+              title="Chỉnh sửa chi phí, ngày hẹn, linh kiện và ghi chú kỹ thuật"
+            ) Chỉnh sửa phiếu
+
             // Nút Đổi mới 1-đổi-1 cho thiết bị lỗi phần cứng
             button.btn.btn-outline-success.btn-sm(
               type="button",
@@ -375,6 +382,25 @@ block main
                         div.small.mt-1
                           span.text-muted Phụ kiện kèm: 
                           span #{ticket.accessoriesAttached || "Thân máy"}
+                        if ticket.requiredParts && ticket.requiredParts.length
+                          div.small.mt-1
+                            span.text-muted Linh kiện thay: 
+                            each p in ticket.requiredParts
+                              div.ms-2
+                                span &bull; #{p.partName} 
+                                span.text-muted (x#{p.quantity})
+                                if p.partType === "inventory"
+                                  span.badge.bg-primary-subtle.text-primary.ms-1 Kho
+                                else
+                                  span.badge.bg-secondary-subtle.text-secondary.ms-1 Ngoài
+                        else if ticket.requiredPartName
+                          div.small.mt-1
+                            span.text-muted Linh kiện thay: 
+                            strong #{ticket.requiredPartName}
+                            if ticket.requiredPartType === "inventory"
+                              span.badge.bg-primary-subtle.text-primary.ms-1 Kho
+                            else if ticket.requiredPartType === "external"
+                              span.badge.bg-secondary-subtle.text-secondary.ms-1 Ngoài
                         if ticket.technicianNotes
                           div.small.mt-1.text-primary
                             span.text-muted Ghi chú KT: 
@@ -464,6 +490,15 @@ block main
                 .d-flex.justify-content-between.mt-1
                   span Chi phí dự kiến:
                   strong #{ticket.repairCost ? formatVND(ticket.repairCost) : "0 đ (Bảo hành)"}
+                if ticket.requiredParts && ticket.requiredParts.length
+                  .mt-1
+                    span.text-muted Linh kiện thay:
+                    each p in ticket.requiredParts
+                      div.fw-bold.ms-1 &bull; #{p.partName} (x#{p.quantity})
+                else if ticket.requiredPartName
+                  .d-flex.justify-content-between.mt-1
+                    span Linh kiện thay:
+                    strong #{ticket.requiredPartName}
 
               .border-bottom.border-dark.border-dashed.my-2
 
@@ -688,7 +723,7 @@ block main
               input#deliverReplacedParts.form-control(
                 type="text",
                 placeholder="Ví dụ: Màn hình OLED zin bóc máy, cáp sạc, pin chính hãng...",
-                value=ticket.replacedParts
+                value=(ticket.replacedParts || ticket.requiredPartName || "")
               )
             
             .row.g-2.mb-3
@@ -808,7 +843,110 @@ block main
               i.las.la-sync-alt.me-1
               | XÁC NHẬN ĐỔI 1-ĐỔI-1 &amp; ĐIỀU CHUYỂN KHO
 
+  // ========================================================
+  // MODAL 3: CHỈNH SỬA PHIẾU BẢO HÀNH / SỬA CHỮA
+  // ========================================================
+  if canWrite && ticket.ticketStatus !== "delivered" && ticket.ticketStatus !== "cancelled"
+    .modal.fade#modalEditTicket(tabindex="-1", aria-hidden="true")
+      .modal-dialog.modal-dialog-centered.modal-lg
+        .modal-content.border-0.shadow
+          .modal-header.bg-light
+            h6.modal-title.fw-bold Chỉnh sửa thông tin phiếu bảo hành: #{ticket.ticketCode}
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+          
+          form#formEditTicket
+            .modal-body.p-4
+              // Khối thông tin cố định (Không cho sửa)
+              .row.g-2.mb-3.p-2.bg-light.rounded.border
+                .col-md-6
+                  label.form-label.small.text-muted.mb-0 Khách hàng (Cố định):
+                  .fw-bold.text-dark #{ticket.customerInfo ? ticket.customerInfo.fullName : "Khách lẻ"} - #{ticket.customerInfo ? ticket.customerInfo.phone : "--"}
+                .col-md-6
+                  label.form-label.small.text-muted.mb-0 Thiết bị &amp; IMEI (Cố định):
+                  .fw-bold.text-dark #{ticket.productName} (#{ticket.identifier})
+
+              .row.g-3.mb-3
+                .col-md-6
+                  label.form-label.fw-bold Chi phí sửa chữa (VNĐ)
+                  .input-group
+                    input#editRepairCost.form-control.text-end.fw-bold(
+                      type="text",
+                      format-money,
+                      value=(ticket.repairCost || 0)
+                    )
+                    span.input-group-text đ
+                  small.text-muted Điều chỉnh giá sau khi trao đổi và khách đã đồng ý.
+
+                .col-md-6
+                  label.form-label.fw-bold Ngày hẹn trả máy
+                  input#editExpectedReturnDate.form-control(
+                    type="text",
+                    data-datepicker,
+                    placeholder="dd/mm/yyyy",
+                    autocomplete="off",
+                    value=(ticket.expectedReturnDate ? new Date(ticket.expectedReturnDate).toLocaleDateString("vi-VN") : "")
+                  )
+
+              .mb-3
+                label.form-label.fw-bold Thêm linh kiện cần thay thế (Kho hoặc Nhập tự do)
+                .position-relative.mb-2
+                  input#editSearchPartInput.form-control(
+                    type="text",
+                    placeholder="Gõ tìm linh kiện kho (màn hình, pin...) hoặc gõ tên linh kiện ngoài...",
+                    autocomplete="off"
+                  )
+                  #editPartSearchResults.dropdown-menu.w-100.p-2.shadow-sm(style="display: none; max-height: 220px; overflow-y: auto; z-index: 1060;")
+                
+                .table-responsive.border.rounded
+                  table.table.table-sm.table-hover.align-middle.mb-0
+                    thead.table-light
+                      tr
+                        th Linh kiện
+                        th.text-center(style="width: 75px;") Nguồn
+                        th.text-center(style="width: 75px;") SL
+                        th.text-end(style="width: 130px;") Đơn giá
+                        th.text-end(style="width: 110px;") Thành tiền
+                        th.text-center(style="width: 50px;")
+                    tbody#editPartsTableBody
+                      tr#editEmptyPartsRow
+                        td.text-center.py-3.text-muted.small(colspan="6") Chưa thêm linh kiện nào.
+                    tfoot#editPartsTableFoot(style="display: none;")
+                      tr.bg-light.fw-bold
+                        td(colspan="4") Tổng tiền linh kiện:
+                        td#editPartsTotalAmountText.text-end.text-primary 0 đ
+                        td
+
+                input#editHiddenPartsJson(type="hidden", value=(ticket.requiredParts ? JSON.stringify(ticket.requiredParts) : "[]"))
+
+              .mb-3
+                label.form-label.fw-bold Ghi chú nội bộ cho kỹ thuật viên
+                input#editTechnicianNotes.form-control(
+                  type="text",
+                  placeholder="Ghi chú nội dung trao đổi phát sinh với khách...",
+                  value=(ticket.technicianNotes || "")
+                )
+
+              .mb-3
+                label.form-label.fw-bold Hiện tượng lỗi / Yêu cầu bổ sung
+                textarea#editIssueDescription.form-control(rows="2") #{ticket.issueDescription || ""}
+
+              .row.g-3
+                .col-md-4
+                  label.form-label Tình trạng ngoại quan
+                  input#editPhysicalCondition.form-control(type="text", value=(ticket.physicalCondition || ""))
+                .col-md-4
+                  label.form-label Phụ kiện kèm theo
+                  input#editAccessories.form-control(type="text", value=(ticket.accessoriesAttached || ""))
+                .col-md-4
+                  label.form-label Mật khẩu máy test
+                  input#editPasscode.form-control(type="text", value=(ticket.passcode || ""))
+
+            .modal-footer.bg-light
+              button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Hủy bỏ
+              button#btnSubmitEditTicket.btn.btn-primary.fw-bold.px-4(type="submit") Lưu thay đổi
+
 block script
   script.
     window.WARRANTY_TICKET_ID = "#{ticket._id}";
+    window.INITIAL_WARRANTY_PARTS = !{ticket.requiredParts ? JSON.stringify(ticket.requiredParts) : "[]"};
   script(src="/admin/assets/js/warranty-detail.js")

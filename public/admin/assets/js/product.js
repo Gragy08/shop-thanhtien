@@ -57,7 +57,7 @@ const renderVariants = () => {
     return;
   }
   if (!selected.length) {
-    message.textContent = "Hãy chọn ít nhất một thuộc tính để sinh variant.";
+    message.textContent = "Hãy chọn ít nhất một thuộc tính để sinh biến thể của sản phẩm.";
     message.className = "form-message mt-3 mb-0 text-danger";
     return;
   }

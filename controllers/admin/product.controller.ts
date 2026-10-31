@@ -228,7 +228,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     const inventoryType = req.body.inventoryType;
 
     if (!name || !categoryIds?.length || !attributeIds || attributeIds.length > 2 || !Array.isArray(variants) || variants.length === 0 || purchasePrice === null || salePrice === null || !["imei", "serial", "quantity"].includes(inventoryType)) {
-      res.status(400).json({ code: "error", message: "Thông tin sản phẩm hoặc variant không hợp lệ!" });
+      res.status(400).json({ code: "error", message: "Thông tin sản phẩm hoặc biến thể không hợp lệ!" });
       return;
     }
 
@@ -249,12 +249,12 @@ export const createPost = async (req: RequestAccount, res: Response) => {
 
     for (const variant of variants) {
       if (!Array.isArray(variant.attributeValues) || variant.attributeValues.length !== attributeIds.length) {
-        res.status(400).json({ code: "error", message: "Mỗi variant phải có đủ giá trị thuộc tính đã chọn!" });
+        res.status(400).json({ code: "error", message: "Mỗi biến thể phải có đủ giá trị thuộc tính đã chọn!" });
         return;
       }
       const variantAttributeIds = variant.attributeValues.map((item) => item.attributeId);
       if (new Set(variantAttributeIds).size !== variantAttributeIds.length || variantAttributeIds.some((id) => !attributeIds.includes(id))) {
-        res.status(400).json({ code: "error", message: "Giá trị thuộc tính của variant không hợp lệ!" });
+        res.status(400).json({ code: "error", message: "Giá trị thuộc tính của biến thể không hợp lệ!" });
         return;
       }
     }

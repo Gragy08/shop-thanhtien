@@ -214,7 +214,7 @@ const syncLineMode = (line, isInitial = false) => {
   if (!trackingType) {
     identifiers.disabled = true;
     identifiers.value = "";
-    identifiers.placeholder = "Chọn variant sản phẩm trước";
+    identifiers.placeholder = "Chọn biến thể sản phẩm trước";
     quantity.disabled = true;
     quantity.value = 1;
     price.value = 0;
@@ -336,7 +336,7 @@ const createLine = () => {
         <input class="variant-id-input" type="hidden" name="variantId">
       </div>
     </td>
-    <td><textarea class="form-control variant-identifiers" rows="2" placeholder="Chọn variant sản phẩm trước" disabled></textarea></td>
+    <td><textarea class="form-control variant-identifiers" rows="2" placeholder="Chọn biến thể sản phẩm trước" disabled></textarea></td>
     <td><input class="form-control variant-quantity" type="number" min="1" value="1" disabled></td>
     <td><input class="form-control variant-price" type="text" format-money value="0" placeholder="0"></td>
     <td><input class="form-control variant-total" type="text" readonly value="0 đ"></td>

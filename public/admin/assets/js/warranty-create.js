@@ -296,7 +296,8 @@ document.addEventListener("DOMContentLoaded", () => {
           passcode,
           expectedReturnDate,
           repairCost,
-          technicianNotes
+          technicianNotes,
+          requiredParts: partsList
         })
       });
 
@@ -319,6 +320,325 @@ document.addEventListener("DOMContentLoaded", () => {
       else window.alert("Lỗi kết nối khi gửi dữ liệu!");
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="las la-check-circle fs-4 me-1"></i> LẬP PHIẾU TIẾP NHẬN &amp; IN PHIẾU HẸN';
+    }
+  });
+
+  // ==========================================
+  // XỬ LÝ DANH SÁCH LINH KIỆN THAY THẾ (LIST)
+  // ==========================================
+  let partsList = [];
+
+  const searchPartInput = document.querySelector("#inputSearchPart");
+  const partSearchResults = document.querySelector("#partSearchResults");
+  const partsTableBody = document.querySelector("#partsTableBody");
+  const partsTableFoot = document.querySelector("#partsTableFoot");
+  const partsTotalAmountText = document.querySelector("#partsTotalAmountText");
+  const hiddenPartsJson = document.querySelector("#hiddenPartsJson");
+  const repairCostInput = document.querySelector("#inputRepairCost");
+
+  let partSearchTimer = null;
+
+  searchPartInput?.addEventListener("input", (e) => {
+    const keyword = e.target.value.trim();
+    clearTimeout(partSearchTimer);
+
+    if (!keyword) {
+      if (partSearchResults) partSearchResults.style.display = "none";
+      return;
+    }
+
+    partSearchTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/admin/warranty/api/search-parts?q=${encodeURIComponent(keyword)}`, {
+          credentials: "same-origin"
+        });
+        const data = await res.json();
+        renderPartResults(keyword, data.results || []);
+      } catch (err) {
+        console.error("Lỗi tìm kiếm linh kiện:", err);
+      }
+    }, 220);
+  });
+
+  const renderPartResults = (keyword, items) => {
+    if (!partSearchResults) return;
+
+    let html = "";
+
+    // 1. Dòng chọn nhanh linh kiện ngoài (Nhập tên tự do)
+    html += `
+      <div class="dropdown-item p-2 border-bottom part-search-item bg-light-subtle" data-type="external" data-name="${keyword.replaceAll('"', '&quot;')}">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong class="text-primary">[Linh kiện ngoài]</strong>
+            <span class="ms-1">${keyword}</span>
+          </div>
+          <span class="badge bg-secondary">Nhập tự do</span>
+        </div>
+      </div>
+    `;
+
+    // 2. Danh sách linh kiện tìm thấy trong kho
+    if (items && items.length) {
+      for (const item of items) {
+        const isOutOfStock = item.availableStock <= 0;
+        const priceStr = Number(item.unitPrice || 0).toLocaleString("vi-VN") + " đ";
+        const stockHtml = isOutOfStock
+          ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Hết hàng - Không thể chọn</span>'
+          : `<small class="text-success fw-medium">Còn ${item.availableStock} sẵn</small>`;
+        const itemJson = JSON.stringify(item).replaceAll("'", "&#39;");
+
+        html += `
+          <div class="dropdown-item p-2 border-bottom part-search-item ${isOutOfStock ? 'bg-light text-muted' : ''}" 
+            data-type="inventory" 
+            data-out-of-stock="${isOutOfStock ? 'true' : 'false'}"
+            data-item='${itemJson}'
+            style="cursor: ${isOutOfStock ? 'not-allowed' : 'pointer'}; opacity: ${isOutOfStock ? '0.6' : '1'};">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong class="${isOutOfStock ? 'text-muted' : 'text-dark'}">${item.productName}</strong>
+                <span class="text-muted ms-1">(${item.variantName})</span>
+                <div class="small text-muted">Mã SKU: ${item.variantSku || '--'}</div>
+              </div>
+              <div class="text-end">
+                <span class="fw-bold ${isOutOfStock ? 'text-muted' : 'text-dark'} d-block">${priceStr}</span>
+                ${stockHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    partSearchResults.innerHTML = html;
+    partSearchResults.style.display = "block";
+
+    partSearchResults.querySelectorAll(".part-search-item").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        if (el.dataset.outOfStock === "true") {
+          e.preventDefault();
+          e.stopPropagation();
+          const msg = "Linh kiện kho này đã hết hàng! Nếu cửa hàng mua ngoài để thay cho khách, vui lòng chọn dòng [Linh kiện ngoài] ở đầu danh sách.";
+          if (typeof notyf !== "undefined") notyf.error(msg);
+          else window.alert(msg);
+          return;
+        }
+
+        const type = el.dataset.type;
+        if (type === "external") {
+          const name = el.dataset.name;
+          addPartToList({
+            partType: "external",
+            partName: name,
+            variantId: null,
+            productId: null,
+            sku: "",
+            price: 0,
+            quantity: 1
+          });
+        } else {
+          const item = JSON.parse(el.dataset.item.replaceAll("&#39;", "'"));
+          addPartToList({
+            partType: "inventory",
+            partName: `${item.productName} (${item.variantName})`,
+            variantId: item.variantId,
+            productId: item.productId,
+            sku: item.variantSku || "",
+            price: item.unitPrice || 0,
+            quantity: 1,
+            maxStock: item.availableStock || 1
+          });
+        }
+        partSearchResults.style.display = "none";
+        if (searchPartInput) searchPartInput.value = "";
+      });
+    });
+  };
+
+  const addPartToList = (part) => {
+    const existing = partsList.find((p) => {
+      if (part.variantId && p.variantId) {
+        return String(p.variantId) === String(part.variantId);
+      }
+      return p.partName.toLowerCase() === part.partName.toLowerCase();
+    });
+
+    if (existing) {
+      if (existing.partType === "inventory" && existing.maxStock && existing.quantity >= existing.maxStock) {
+        const msg = `Linh kiện "${existing.partName}" trong kho chỉ còn tối đa ${existing.maxStock} sẵn!`;
+        if (typeof notyf !== "undefined") notyf.error(msg);
+        else window.alert(msg);
+        return;
+      }
+      existing.quantity += 1;
+    } else {
+      partsList.push(part);
+    }
+
+    renderPartsTable();
+  };
+
+  const renderPartsTable = () => {
+    if (!partsTableBody) return;
+
+    if (!partsList.length) {
+      partsTableBody.innerHTML = `
+        <tr id="emptyPartsRow">
+          <td class="text-center py-3 text-muted small" colspan="6">
+            Chưa thêm linh kiện nào. Bạn có thể tìm chọn linh kiện kho hoặc gõ tên linh kiện ngoài ở ô trên.
+          </td>
+        </tr>
+      `;
+      if (partsTableFoot) partsTableFoot.style.display = "none";
+      if (hiddenPartsJson) hiddenPartsJson.value = "[]";
+      return;
+    }
+
+    let total = 0;
+    partsTableBody.innerHTML = partsList.map((item, idx) => {
+      const lineTotal = (item.price || 0) * (item.quantity || 1);
+      total += lineTotal;
+
+      const typeBadge = item.partType === "inventory"
+        ? '<span class="badge bg-primary-subtle text-primary border border-primary">Kho</span>'
+        : '<span class="badge bg-secondary-subtle text-secondary border">Ngoài</span>';
+
+      const priceCell = item.partType === "external"
+        ? `<div class="d-flex justify-content-end align-items-center">
+            <input class="form-control form-control-sm text-end part-price-input" 
+              type="number" min="0" step="1000" value="${item.price || ''}" 
+              placeholder="0" data-index="${idx}" style="width: 105px;">
+            <span class="small text-muted ms-1">đ</span>
+          </div>`
+        : `<span class="fw-medium text-dark">${item.price > 0 ? Number(item.price).toLocaleString("vi-VN") + " đ" : "--"}</span>`;
+
+      return `
+        <tr>
+          <td>
+            <strong class="text-dark">${item.partName}</strong>
+            ${item.sku ? `<code class="small d-block text-muted">${item.sku}</code>` : ''}
+          </td>
+          <td class="text-center">${typeBadge}</td>
+          <td class="text-center">
+            <input class="form-control form-control-sm text-center part-qty-input" 
+              type="number" min="1" max="${item.partType === 'inventory' && item.maxStock ? item.maxStock : 99}" value="${item.quantity}" data-index="${idx}" style="width: 65px; margin: 0 auto;">
+          </td>
+          <td class="text-end">
+            ${priceCell}
+          </td>
+          <td class="text-end fw-semibold text-dark">
+            <span class="part-line-total-text" data-index="${idx}">${lineTotal > 0 ? Number(lineTotal).toLocaleString("vi-VN") + " đ" : "0 đ"}</span>
+          </td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-part" type="button" data-index="${idx}">
+              Xóa
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    if (partsTableFoot) partsTableFoot.style.display = "";
+    if (partsTotalAmountText) {
+      partsTotalAmountText.textContent = total > 0 ? Number(total).toLocaleString("vi-VN") + " đ" : "0 đ";
+    }
+
+    if (hiddenPartsJson) {
+      hiddenPartsJson.value = JSON.stringify(partsList);
+    }
+
+    if (repairCostInput && total > 0) {
+      const currentVal = window.parseVND ? window.parseVND(repairCostInput.value) : parseFloat(repairCostInput.value);
+      if (!currentVal || currentVal === 0) {
+        repairCostInput.value = window.formatVND ? window.formatVND(total) : total;
+      }
+    }
+
+    partsTableBody.querySelectorAll(".part-price-input").forEach((input) => {
+      input.addEventListener("input", (e) => {
+        const idx = parseInt(input.dataset.index, 10);
+        const val = Math.max(0, parseFloat(e.target.value) || 0);
+        if (partsList[idx]) {
+          partsList[idx].price = val;
+          const currentLineTotal = val * (partsList[idx].quantity || 1);
+          const lineTotalEl = partsTableBody.querySelector(`.part-line-total-text[data-index="${idx}"]`);
+          if (lineTotalEl) {
+            lineTotalEl.textContent = currentLineTotal > 0 ? Number(currentLineTotal).toLocaleString("vi-VN") + " đ" : "0 đ";
+          }
+          let newTotal = 0;
+          for (const p of partsList) {
+            newTotal += (p.price || 0) * (p.quantity || 1);
+          }
+          if (partsTotalAmountText) {
+            partsTotalAmountText.textContent = newTotal > 0 ? Number(newTotal).toLocaleString("vi-VN") + " đ" : "0 đ";
+          }
+          if (hiddenPartsJson) {
+            hiddenPartsJson.value = JSON.stringify(partsList);
+          }
+          if (repairCostInput) {
+            const currentVal = window.parseVND ? window.parseVND(repairCostInput.value) : parseFloat(repairCostInput.value);
+            if (!currentVal || currentVal === 0) {
+              repairCostInput.value = window.formatVND ? window.formatVND(newTotal) : newTotal;
+            }
+          }
+        }
+      });
+    });
+
+    partsTableBody.querySelectorAll(".part-qty-input").forEach((input) => {
+      input.addEventListener("input", (e) => {
+        const idx = parseInt(input.dataset.index, 10);
+        let val = Math.max(1, parseInt(e.target.value, 10) || 1);
+        if (partsList[idx]) {
+          if (partsList[idx].partType === "inventory" && partsList[idx].maxStock && val > partsList[idx].maxStock) {
+            val = partsList[idx].maxStock;
+            e.target.value = val;
+            const msg = `Linh kiện "${partsList[idx].partName}" chỉ còn ${partsList[idx].maxStock} sẵn trong kho!`;
+            if (typeof notyf !== "undefined") notyf.error(msg);
+          }
+          partsList[idx].quantity = val;
+          const currentLineTotal = (partsList[idx].price || 0) * val;
+          const lineTotalEl = partsTableBody.querySelector(`.part-line-total-text[data-index="${idx}"]`);
+          if (lineTotalEl) {
+            lineTotalEl.textContent = currentLineTotal > 0 ? Number(currentLineTotal).toLocaleString("vi-VN") + " đ" : "0 đ";
+          }
+          let newTotal = 0;
+          for (const p of partsList) {
+            newTotal += (p.price || 0) * (p.quantity || 1);
+          }
+          if (partsTotalAmountText) {
+            partsTotalAmountText.textContent = newTotal > 0 ? Number(newTotal).toLocaleString("vi-VN") + " đ" : "0 đ";
+          }
+          if (hiddenPartsJson) {
+            hiddenPartsJson.value = JSON.stringify(partsList);
+          }
+        }
+      });
+      input.addEventListener("change", (e) => {
+        const idx = parseInt(input.dataset.index, 10);
+        let val = Math.max(1, parseInt(e.target.value, 10) || 1);
+        if (partsList[idx]) {
+          if (partsList[idx].partType === "inventory" && partsList[idx].maxStock && val > partsList[idx].maxStock) {
+            val = partsList[idx].maxStock;
+          }
+          partsList[idx].quantity = val;
+          renderPartsTable();
+        }
+      });
+    });
+
+    partsTableBody.querySelectorAll(".btn-remove-part").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        partsList.splice(idx, 1);
+        renderPartsTable();
+      });
+    });
+  };
+
+  document.addEventListener("click", (e) => {
+    if (partSearchResults && !partSearchResults.contains(e.target) && e.target !== searchPartInput) {
+      partSearchResults.style.display = "none";
     }
   });
 });

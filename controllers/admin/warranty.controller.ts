@@ -16,6 +16,155 @@ const createTicketCode = (): string => {
 };
 
 /**
+ * Kiểm tra tồn kho khả dụng của danh sách linh kiện nguồn kho (chưa trừ kho)
+ */
+const validateInventoryPartsStock = async (
+  parts: Array<{ partType?: string; partName: string; variantId?: mongoose.Types.ObjectId | string; quantity?: number; isDeducted?: boolean }>
+): Promise<{ ok: boolean; message?: string }> => {
+  const pendingInventoryParts = (parts || []).filter(
+    (p) => p.partType === "inventory" && p.variantId && mongoose.isValidObjectId(p.variantId) && !p.isDeducted
+  );
+
+  if (!pendingInventoryParts.length) {
+    return { ok: true };
+  }
+
+  const reqQtyByVariant = new Map<string, { qty: number; name: string }>();
+  const variantObjIds: mongoose.Types.ObjectId[] = [];
+
+  for (const p of pendingInventoryParts) {
+    const vIdStr = String(p.variantId);
+    const reqQty = Math.max(1, Number(p.quantity) || 1);
+    const prev = reqQtyByVariant.get(vIdStr);
+    if (prev) {
+      prev.qty += reqQty;
+    } else {
+      reqQtyByVariant.set(vIdStr, { qty: reqQty, name: p.partName });
+      variantObjIds.push(new mongoose.Types.ObjectId(vIdStr));
+    }
+  }
+
+  const availableItems = await InventoryItem.find({
+    variantId: { $in: variantObjIds },
+    status: "available",
+    deleted: { $ne: true }
+  })
+    .select("variantId quantity trackingType")
+    .lean();
+
+  const availMap = new Map<string, number>();
+  for (const it of availableItems) {
+    const vIdStr = String(it.variantId);
+    const qty = it.trackingType === "quantity" ? (Number(it.quantity) || 1) : 1;
+    availMap.set(vIdStr, (availMap.get(vIdStr) || 0) + qty);
+  }
+
+  for (const [vIdStr, info] of reqQtyByVariant.entries()) {
+    const available = availMap.get(vIdStr) || 0;
+    if (available < info.qty) {
+      return {
+        ok: false,
+        message:
+          available <= 0
+            ? `Linh kiện kho "${info.name}" hiện đã hết hàng! Nếu cửa hàng mua ngoài để thay cho khách, vui lòng gõ tên và chọn dòng [Linh kiện ngoài].`
+            : `Linh kiện kho "${info.name}" chỉ còn ${available} sẵn trong kho (yêu cầu ${info.qty})!`
+      };
+    }
+  }
+
+  return { ok: true };
+};
+
+/**
+ * Thực hiện trừ kho (có tách dòng split với hàng quản lý theo Số lượng) khi bàn giao phiếu bảo hành
+ */
+const deductWarrantyPartsFromInventory = async (
+  ticket: any,
+  adminObjId?: mongoose.Types.ObjectId
+): Promise<{ ok: boolean; message?: string }> => {
+  if (!Array.isArray(ticket.requiredParts) || !ticket.requiredParts.length) {
+    return { ok: true };
+  }
+
+  const check = await validateInventoryPartsStock(ticket.requiredParts);
+  if (!check.ok) {
+    return check;
+  }
+
+  for (const part of ticket.requiredParts) {
+    if (part.partType === "inventory" && part.variantId && !part.isDeducted) {
+      let needed = Math.max(1, Number(part.quantity) || 1);
+      const partItems = await InventoryItem.find({
+        variantId: part.variantId,
+        status: "available",
+        deleted: { $ne: true }
+      }).sort({ createdAt: 1 });
+
+      for (const partItem of partItems) {
+        if (needed <= 0) break;
+        const currentQty = partItem.trackingType === "quantity" ? (Number(partItem.quantity) || 1) : 1;
+
+        if (partItem.trackingType === "quantity" && currentQty > needed) {
+          // 1. Giảm số lượng của bản ghi đang có sẵn (available)
+          partItem.quantity = currentQty - needed;
+          partItem.statusLogs.push({
+            fromStatus: "available",
+            toStatus: "available",
+            reason: `Tách xuất ${needed} linh kiện thay thế theo phiếu bảo hành ${ticket.ticketCode} (còn sẵn ${partItem.quantity})`,
+            note: `Linh kiện: ${part.partName} | Khách: ${ticket.customerInfo?.fullName || "Khách lẻ"}`,
+            updatedBy: adminObjId,
+            updatedAt: new Date()
+          });
+          await partItem.save();
+
+          // 2. Tạo bản ghi mới với status = "sold" cho số lượng vừa xuất đi để bảo toàn tổng số lượng nhập
+          await InventoryItem.create({
+            productId: partItem.productId,
+            variantId: partItem.variantId,
+            trackingType: "quantity",
+            quantity: needed,
+            purchasePrice: partItem.purchasePrice,
+            status: "sold",
+            note: partItem.note || "",
+            receivedAt: partItem.receivedAt || new Date(),
+            receiptId: partItem.receiptId || null,
+            statusLogs: [
+              {
+                fromStatus: "available",
+                toStatus: "sold",
+                reason: `Xuất ${needed} linh kiện thay thế theo phiếu bảo hành ${ticket.ticketCode}`,
+                note: `Linh kiện: ${part.partName} | Khách: ${ticket.customerInfo?.fullName || "Khách lẻ"}`,
+                updatedBy: adminObjId,
+                updatedAt: new Date()
+              }
+            ]
+          });
+
+          needed = 0;
+        } else {
+          // Chuyển toàn bộ bản ghi hiện tại sang trạng thái đã bán (sold)
+          partItem.status = "sold";
+          partItem.statusLogs.push({
+            fromStatus: "available",
+            toStatus: "sold",
+            reason: `Xuất ${currentQty} linh kiện thay thế theo phiếu bảo hành ${ticket.ticketCode}`,
+            note: `Linh kiện: ${part.partName} | Khách: ${ticket.customerInfo?.fullName || "Khách lẻ"}`,
+            updatedBy: adminObjId,
+            updatedAt: new Date()
+          });
+          await partItem.save();
+          needed -= currentQty;
+        }
+      }
+
+      part.isDeducted = true;
+    }
+  }
+
+  return { ok: true };
+};
+
+/**
  * API Kiểm tra thiết bị & Tra cứu lịch sử mua để tự động điền form bảo hành
  * GET /admin/warranty/api/check-device?query=...
  */
@@ -191,6 +340,32 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     const expectedReturnDate = req.body.expectedReturnDate ? parseVNDate(req.body.expectedReturnDate, false) : undefined;
     const technicianNotes = typeof req.body.technicianNotes === "string" ? req.body.technicianNotes.trim() : "";
 
+    let requiredParts: any[] = [];
+    if (Array.isArray(req.body.requiredParts)) {
+      requiredParts = req.body.requiredParts;
+    } else if (typeof req.body.requiredParts === "string") {
+      try {
+        requiredParts = JSON.parse(req.body.requiredParts);
+      } catch (_e) {
+        requiredParts = [];
+      }
+    }
+
+    const sanitizedParts = requiredParts
+      .filter((p: any) => p && typeof p.partName === "string" && p.partName.trim())
+      .map((p: any) => ({
+        partType: p.partType === "inventory" ? "inventory" : "external",
+        partName: p.partName.trim(),
+        variantId: mongoose.isValidObjectId(p.variantId) ? new mongoose.Types.ObjectId(p.variantId) : undefined,
+        productId: mongoose.isValidObjectId(p.productId) ? new mongoose.Types.ObjectId(p.productId) : undefined,
+        sku: typeof p.sku === "string" ? p.sku.trim() : "",
+        price: Math.max(0, parseFloat(String(p.price)) || 0),
+        quantity: Math.max(1, parseInt(String(p.quantity), 10) || 1),
+        isDeducted: false
+      }));
+
+    const partNamesSummary = sanitizedParts.map((p) => `${p.partName} (x${p.quantity})`).join(", ");
+
     if (!identifier) {
       res.status(400).json({ code: "error", message: "Mã IMEI/Serial thiết bị không được để trống!" });
       return;
@@ -203,6 +378,13 @@ export const createPost = async (req: RequestAccount, res: Response) => {
 
     if (!fullName || !cleanPhone) {
       res.status(400).json({ code: "error", message: "Họ tên và số điện thoại khách hàng không được để trống!" });
+      return;
+    }
+
+    // Kiểm tra tồn kho khả dụng cho các linh kiện nguồn kho được chỉ định
+    const partsStockCheck = await validateInventoryPartsStock(sanitizedParts);
+    if (!partsStockCheck.ok) {
+      res.status(400).json({ code: "error", message: partsStockCheck.message });
       return;
     }
 
@@ -310,6 +492,8 @@ export const createPost = async (req: RequestAccount, res: Response) => {
       passcode,
       technicianNotes,
       repairCost,
+      requiredParts: sanitizedParts,
+      requiredPartName: partNamesSummary,
       ticketStatus: "received",
       receivedDate: new Date(),
       expectedReturnDate,
@@ -373,13 +557,23 @@ export const updateStatus = async (req: RequestAccount, res: Response) => {
     }
 
     const oldStatus = ticket.ticketStatus;
+    const adminObjId = req.adminId && mongoose.isValidObjectId(req.adminId) ? new mongoose.Types.ObjectId(req.adminId) : undefined;
+
+    if (nextStatus === "delivered" && oldStatus !== "delivered") {
+      const deductRes = await deductWarrantyPartsFromInventory(ticket, adminObjId);
+      if (!deductRes.ok) {
+        res.status(400).json({ code: "error", message: deductRes.message });
+        return;
+      }
+    }
+
     ticket.ticketStatus = nextStatus;
 
     if (technicianNotes) ticket.technicianNotes = technicianNotes;
     if (repairCost != null) ticket.repairCost = repairCost;
 
-    if (req.adminId && mongoose.isValidObjectId(req.adminId)) {
-      ticket.updatedBy = new mongoose.Types.ObjectId(req.adminId);
+    if (adminObjId) {
+      ticket.updatedBy = adminObjId;
     }
 
     // Ghi nhận mốc thời gian theo trạng thái
@@ -465,9 +659,29 @@ export const bulkUpdateStatus = async (req: RequestAccount, res: Response) => {
     let updatedCount = 0;
     const adminObjId = req.adminId && mongoose.isValidObjectId(req.adminId) ? new mongoose.Types.ObjectId(req.adminId) : undefined;
 
+    // Nếu chuyển hàng loạt sang trạng thái Đã bàn giao (delivered), kiểm tra tổng tồn kho linh kiện trước
+    if (nextStatus === "delivered") {
+      const combinedPendingParts = tickets
+        .filter((t) => t.ticketStatus !== "delivered")
+        .flatMap((t) => t.requiredParts || []);
+      const bulkStockCheck = await validateInventoryPartsStock(combinedPendingParts as any);
+      if (!bulkStockCheck.ok) {
+        res.status(400).json({ code: "error", message: bulkStockCheck.message });
+        return;
+      }
+    }
+
     for (const ticket of tickets) {
       const oldStatus = ticket.ticketStatus;
       if (oldStatus === nextStatus) continue;
+
+      if (nextStatus === "delivered" && oldStatus !== "delivered") {
+        const deductRes = await deductWarrantyPartsFromInventory(ticket, adminObjId);
+        if (!deductRes.ok) {
+          res.status(400).json({ code: "error", message: `Phiếu ${ticket.ticketCode}: ${deductRes.message}` });
+          return;
+        }
+      }
 
       ticket.ticketStatus = nextStatus;
       if (technicianNotes) {
@@ -658,17 +872,32 @@ export const deliver = async (req: RequestAccount, res: Response) => {
     const handoverNotes = typeof req.body.handoverNotes === "string" ? req.body.handoverNotes.trim() : "";
     const technicianNotes = typeof req.body.technicianNotes === "string" ? req.body.technicianNotes.trim() : "";
 
+    const adminObjId = req.adminId && mongoose.isValidObjectId(req.adminId) ? new mongoose.Types.ObjectId(req.adminId) : undefined;
+
+    // Trừ kho linh kiện (kèm tách dòng split cho hàng số lượng) nếu lấy từ kho và chưa bị trừ
+    const deductRes = await deductWarrantyPartsFromInventory(ticket, adminObjId);
+    if (!deductRes.ok) {
+      res.status(400).json({ code: "error", message: deductRes.message });
+      return;
+    }
+
     ticket.ticketStatus = "delivered";
     ticket.deliveredDate = new Date();
     ticket.resolution = resolution;
-    ticket.replacedParts = replacedParts;
+    if (replacedParts) {
+      ticket.replacedParts = replacedParts;
+    } else if (Array.isArray(ticket.requiredParts) && ticket.requiredParts.length > 0) {
+      ticket.replacedParts = ticket.requiredParts.map((p) => `${p.partName} x${p.quantity}`).join(", ");
+    } else {
+      ticket.replacedParts = ticket.requiredPartName || "";
+    }
     ticket.partsWarrantyMonths = partsWarrantyMonths;
     ticket.repairCost = repairCost;
     ticket.paymentMethod = paymentMethod;
     ticket.handoverNotes = handoverNotes;
     if (technicianNotes) ticket.technicianNotes = technicianNotes;
-    if (req.adminId && mongoose.isValidObjectId(req.adminId)) {
-      ticket.updatedBy = new mongoose.Types.ObjectId(req.adminId);
+    if (adminObjId) {
+      ticket.updatedBy = adminObjId;
     }
 
     await ticket.save();
@@ -758,6 +987,193 @@ export const searchAvailableImei = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error searchAvailableImei:", error);
     res.status(500).json({ code: "error", message: "Lỗi tra cứu IMEI sẵn có!" });
+  }
+};
+
+/**
+ * API Tìm kiếm linh kiện trong kho phục vụ thay thế sửa chữa
+ * GET /admin/warranty/api/search-parts?q=...
+ */
+export const searchParts = async (req: Request, res: Response) => {
+  try {
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (!q) {
+      res.json({ code: "success", results: [] });
+      return;
+    }
+
+    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+
+    const matchedProducts = await Product.find({
+      $or: [{ name: regex }, { sku: regex }],
+      deleted: { $ne: true },
+      status: "active"
+    })
+      .select("_id name slug inventoryType salePrice")
+      .limit(20)
+      .lean();
+
+    const productIds = matchedProducts.map((p) => p._id);
+
+    const variants = await ProductVariant.find({
+      $or: [{ productId: { $in: productIds } }, { sku: regex }],
+      status: "active",
+      deleted: { $ne: true }
+    })
+      .populate("productId", "name slug inventoryType salePrice status")
+      .limit(30)
+      .lean();
+
+    const activeVariants = variants.filter((v: any) => v.productId && (v.productId as any).status === "active");
+    const variantIds = activeVariants.map((v) => v._id);
+
+    const availableItems = await InventoryItem.find({
+      variantId: { $in: variantIds },
+      status: "available",
+      deleted: { $ne: true }
+    })
+      .select("variantId quantity trackingType")
+      .lean();
+
+    const stockMap = new Map<string, number>();
+    for (const item of availableItems) {
+      const vId = String(item.variantId);
+      const qty = Number(item.quantity) || 1;
+      stockMap.set(vId, (stockMap.get(vId) || 0) + qty);
+    }
+
+    const results = activeVariants.map((v: any) => {
+      const p = v.productId as any;
+      const vId = String(v._id);
+      const availableStock = stockMap.get(vId) || 0;
+      const unitPrice = v.salePriceOverride != null ? v.salePriceOverride : (p.salePrice || 0);
+      const variantName = (v.attributeValues || []).map((a: any) => a.label).join(" / ");
+
+      return {
+        productId: p._id,
+        productName: p.name,
+        variantId: v._id,
+        variantSku: v.sku,
+        variantName: variantName || "Mặc định",
+        unitPrice,
+        availableStock
+      };
+    });
+
+    results.sort((a, b) => b.availableStock - a.availableStock);
+
+    res.json({ code: "success", results });
+  } catch (error) {
+    console.error("Error searchParts:", error);
+    res.status(500).json({ code: "error", message: "Lỗi tìm kiếm linh kiện!" });
+  }
+};
+
+/**
+ * Chỉnh sửa phiếu bảo hành / sửa chữa (trước khi bàn giao trả khách)
+ * PATCH /admin/warranty/edit/:id
+ */
+export const editTicket = async (req: RequestAccount, res: Response) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    if (!mongoose.isValidObjectId(id)) {
+      res.status(400).json({ code: "error", message: "ID phiếu không hợp lệ!" });
+      return;
+    }
+
+    const ticket = await WarrantyTicket.findOne({ _id: id, deleted: { $ne: true } });
+    if (!ticket) {
+      res.status(404).json({ code: "error", message: "Phiếu bảo hành không tồn tại!" });
+      return;
+    }
+
+    if (ticket.ticketStatus === "delivered" || ticket.ticketStatus === "cancelled") {
+      res.status(400).json({
+        code: "error",
+        message: `Không thể chỉnh sửa phiếu bảo hành ở trạng thái "${ticket.ticketStatus === "delivered" ? "Đã bàn giao" : "Đã hủy"}"!`
+      });
+      return;
+    }
+
+    if (req.body.repairCost != null) {
+      ticket.repairCost = Math.max(0, parseFloat(String(req.body.repairCost)) || 0);
+    }
+
+    if (req.body.expectedReturnDate) {
+      const parsedDate = parseVNDate(req.body.expectedReturnDate, false);
+      if (parsedDate) {
+        ticket.expectedReturnDate = parsedDate;
+      }
+    }
+
+    if (typeof req.body.technicianNotes === "string") {
+      ticket.technicianNotes = req.body.technicianNotes.trim();
+    }
+
+    if (typeof req.body.issueDescription === "string" && req.body.issueDescription.trim()) {
+      ticket.issueDescription = req.body.issueDescription.trim();
+    }
+
+    if (typeof req.body.physicalCondition === "string") {
+      ticket.physicalCondition = req.body.physicalCondition.trim();
+    }
+
+    if (typeof req.body.accessoriesAttached === "string") {
+      ticket.accessoriesAttached = req.body.accessoriesAttached.trim();
+    }
+
+    if (typeof req.body.passcode === "string") {
+      ticket.passcode = req.body.passcode.trim();
+    }
+
+    if (req.body.requiredParts != null) {
+      let partsInput: any[] = [];
+      if (Array.isArray(req.body.requiredParts)) {
+        partsInput = req.body.requiredParts;
+      } else if (typeof req.body.requiredParts === "string") {
+        try {
+          partsInput = JSON.parse(req.body.requiredParts);
+        } catch (_e) {
+          partsInput = [];
+        }
+      }
+
+      const sanitizedParts = partsInput
+        .filter((p: any) => p && typeof p.partName === "string" && p.partName.trim())
+        .map((p: any) => ({
+          partType: p.partType === "inventory" ? "inventory" : "external",
+          partName: p.partName.trim(),
+          variantId: mongoose.isValidObjectId(p.variantId) ? new mongoose.Types.ObjectId(p.variantId) : undefined,
+          productId: mongoose.isValidObjectId(p.productId) ? new mongoose.Types.ObjectId(p.productId) : undefined,
+          sku: typeof p.sku === "string" ? p.sku.trim() : "",
+          price: Math.max(0, parseFloat(String(p.price)) || 0),
+          quantity: Math.max(1, parseInt(String(p.quantity), 10) || 1),
+          isDeducted: Boolean(p.isDeducted)
+        }));
+
+      const partsStockCheck = await validateInventoryPartsStock(sanitizedParts);
+      if (!partsStockCheck.ok) {
+        res.status(400).json({ code: "error", message: partsStockCheck.message });
+        return;
+      }
+
+      ticket.requiredParts = sanitizedParts as any;
+      ticket.requiredPartName = sanitizedParts.map((p) => `${p.partName} (x${p.quantity})`).join(", ");
+    }
+
+    ticket.updatedBy = req.adminId ? new mongoose.Types.ObjectId(req.adminId) : undefined;
+    ticket.updatedAt = new Date();
+
+    await ticket.save();
+
+    res.json({
+      code: "success",
+      message: "Cập nhật thông tin phiếu bảo hành thành công!",
+      ticket
+    });
+  } catch (error) {
+    console.error("Error editTicket:", error);
+    res.status(500).json({ code: "error", message: "Lỗi hệ thống khi cập nhật phiếu bảo hành!" });
   }
 };
 

@@ -9,6 +9,8 @@ router.use(requireAuth);
 router.get("/", requirePermission("order:read"), orderController.list);
 router.get("/pos", requirePermission("order:write"), orderController.pos);
 router.post("/create", requirePermission("order:write"), orderController.createPost);
+router.patch("/installment/:id", requirePermission("order:write"), orderController.updateInstallmentInfo);
+router.patch("/settle-installment/:id", requirePermission("order:settle"), orderController.settleInstallment);
 router.patch("/cancel/:id", requirePermission("order:cancel"), orderController.cancel);
 
 router.get("/api/search-products", requirePermission("order:read"), orderController.searchProducts);

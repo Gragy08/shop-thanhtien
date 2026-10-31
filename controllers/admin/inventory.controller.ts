@@ -10,6 +10,7 @@ import AccountAdmin from "../../models/account-admin.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { buildCategoryTree, collectDescendantIds } from "../../helpers/category.helper";
 import { parseVNDate } from "../../helpers/date.helper";
+import { buildPagination } from "../../helpers/pagination.helper";
 
 interface ReceiptLine {
   variantId: string;
@@ -366,21 +367,25 @@ export const list = async (req: Request, res: Response) => {
     }
   }
 
-  const inventoryList = Array.from(skuMap.values());
+  const allInventoryGroups = Array.from(skuMap.values());
 
   const rawCategories = await Category.find({ deleted: false, status: "active" }).select("_id parentId name slug status").lean();
   rawCategories.sort((a, b) => a.name.localeCompare(b.name, "vi"));
   const categoryTree = buildCategoryTree(rawCategories);
 
-  const totalSKUs = inventoryList.length;
-  const totalStock = inventoryList.reduce((acc, g) => acc + g.totalQuantity, 0);
-  const totalAvailable = inventoryList.reduce((acc, g) => acc + g.availableCount, 0);
+  const totalSKUs = allInventoryGroups.length;
+  const totalStock = allInventoryGroups.reduce((acc, g) => acc + g.totalQuantity, 0);
+  const totalAvailable = allInventoryGroups.reduce((acc, g) => acc + g.availableCount, 0);
+
+  const pagination = buildPagination(req, totalSKUs, 10);
+  const inventoryList = allInventoryGroups.slice(pagination.skip, pagination.skip + pagination.limit);
 
   res.render("admin/inventory/list", {
     pageTitle: "Tồn kho",
     inventoryList,
     stats: { totalSKUs, totalStock, totalAvailable },
     filters: { keyword, categoryId, status },
+    pagination,
     categoryTree,
     canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:write")
   });
@@ -401,21 +406,26 @@ export const receiptList = async (_req: Request, res: Response) => {
       find.createdAt = createdAt;
     }
   }
-  const [receiptList, trashCount] = await Promise.all([
-    StockReceipt.find(find)
-      .populate("supplierId", "name phone")
-      .populate("createdBy", "fullName")
-      .sort({ createdAt: "desc" })
-      .limit(200)
-      .lean(),
+  const [filteredReceiptCount, trashCount] = await Promise.all([
+    StockReceipt.countDocuments(find),
     StockReceipt.countDocuments({ deleted: true })
   ]);
+  const pagination = buildPagination(req, filteredReceiptCount, 10);
+
+  const receiptList = await StockReceipt.find(find)
+    .populate("supplierId", "name phone")
+    .populate("createdBy", "fullName")
+    .sort({ createdAt: "desc" })
+    .skip(pagination.skip)
+    .limit(pagination.limit)
+    .lean();
 
   res.render("admin/inventory/receipt-list", {
     pageTitle: "Phiếu nhập kho",
     receiptList,
     trashCount,
     filters: { from, to },
+    pagination,
     canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:write"),
     canManageReceipt: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:receipt:manage"),
     canViewPurchasePrice: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("price:purchase:read")
@@ -439,17 +449,22 @@ export const receiptTrash = async (_req: Request, res: Response) => {
     }
   }
 
+  const totalTrashCount = await StockReceipt.countDocuments(find);
+  const pagination = buildPagination(req, totalTrashCount, 10);
+
   const trashList = await StockReceipt.find(find)
     .populate("supplierId", "name phone")
     .populate("createdBy", "fullName")
     .sort({ deletedAt: "desc" })
-    .limit(200)
+    .skip(pagination.skip)
+    .limit(pagination.limit)
     .lean();
 
   res.render("admin/inventory/receipt-trash", {
     pageTitle: "Thùng rác phiếu nhập kho",
     trashList,
     filters: { from, to },
+    pagination,
     canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:write"),
     canManageReceipt: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:receipt:manage"),
     canViewPurchasePrice: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("price:purchase:read")

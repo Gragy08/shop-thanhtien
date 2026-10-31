@@ -57,7 +57,6 @@ block main
   .row.align-items-center.mb-3
     .col-lg-7
       h4.fw-bold.text-black.mb-1
-        i.las.la-id-badge.text-primary.me-2
         | Bàn Làm Việc Nhân Viên
       p.text-muted.small.mb-0
         | Xin chào 
@@ -188,7 +187,7 @@ block main
                     | TIỀN MẶT
                   span.badge.bg-success-subtle.text-success #{payments.cash.count} đơn
                 h4.fw-bold.text-success.mb-1 #{formatVND(payments.cash.revenue)}
-                small.text-muted Đối soát tiền mặt thu trong ngày
+                small.text-muted Đối soát tiền theo phương thức tiền mặt
 
             // Chuyển khoản
             .col-md-4
@@ -199,7 +198,7 @@ block main
                     | CHUYỂN KHOẢN
                   span.badge.bg-primary-subtle.text-primary #{payments.bank_transfer.count} đơn
                 h4.fw-bold.text-primary.mb-1 #{formatVND(payments.bank_transfer.revenue)}
-                small.text-muted Đối soát tin nhắn biến động số dư tài khoản cửa hàng
+                small.text-muted Đối soát tiền theo phương thức chuyển khoản
 
             // Trả góp
             .col-md-4
@@ -210,7 +209,7 @@ block main
                     | TRẢ GÓP
                   span.badge.bg-warning-subtle.text-warning-emphasis #{payments.installment.count} đơn
                 h4.fw-bold.text-warning-emphasis.mb-1 #{formatVND(payments.installment.revenue)}
-                small.text-muted Đối soát tiền khách trả góp đã nộp trong ngày
+                small.text-muted Đối soát tiền theo phương thức trả góp
 
   // 5. HAI CỘT CẢNH BÁO TÁC NGHIỆP: MÁY HẸN TRẢ & CẢNH BÁO SẮP HẾT HÀNG
   .row.g-3.mb-4

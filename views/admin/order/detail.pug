@@ -1,6 +1,20 @@
 extends ../../layouts/admin.pug
 
 block main
+  -
+    const providerLabels = {
+      home_credit: "Home Credit",
+      mirae_asset: "Mirae Asset",
+      hd_saison: "HD Saison (Ngân hàng HD Sài Gòn)"
+    };
+    const providerShortLabels = {
+      home_credit: "Home Credit",
+      mirae_asset: "Mirae Asset",
+      hd_saison: "HD Saison"
+    };
+    const inst = order.paymentMethod === "installment" && order.installmentInfo ? order.installmentInfo : null;
+    const instProviderName = inst ? (providerLabels[inst.provider] || inst.provider) : "";
+    const instProviderShort = inst ? (providerShortLabels[inst.provider] || inst.provider) : "";
   // CSS chuyên dụng cho chế độ Xem & In Hóa Đơn (Hỗ trợ cả A4/A5 và Xprinter K80)
   style.
     .invoice-title {
@@ -146,6 +160,59 @@ block main
               div.small Lý do hủy: #{order.cancelReason || "Không nêu rõ"}
               div.small.mt-1 Các thiết bị trong đơn đã được tự động hoàn lại kho với trạng thái "Có sẵn".
 
+      if inst
+        .card.border.shadow-sm.mb-3.no-print
+          .card-header.bg-light.py-2.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
+            .d-flex.align-items-center.gap-2
+              h6.mb-0.fw-bold.text-dark Hồ sơ thanh toán trả góp — #{instProviderName}
+              if order.orderStatus === "cancelled"
+                span.badge.bg-secondary Đơn đã hủy
+              else if inst.settlementStatus === "settled"
+                span.badge.bg-success Đã nhận giải ngân 100%
+              else
+                span.badge.bg-warning.text-dark Chờ đối tác giải ngân
+            if order.orderStatus !== "cancelled"
+              .d-flex.gap-2
+                if canWrite
+                  button#btnOpenUpdateInstallment.btn.btn-outline-primary.btn-sm(type="button")
+                    | Bổ sung / Sửa hồ sơ góp
+                if canSettle && inst.settlementStatus === "pending"
+                  button#btnOpenSettleInstallment.btn.btn-success.btn-sm.fw-semibold(type="button")
+                    | Xác nhận đã nhận giải ngân
+          .card-body.p-3
+            .row.g-3
+              .col-md-3.col-6
+                div.small.text-muted Đơn vị tài chính &amp; Kỳ hạn
+                strong.text-dark #{instProviderShort}
+                span.text-muted.small.ms-1 (#{inst.termMonths || 6} tháng)
+              .col-md-3.col-6
+                div.small.text-muted Số CCCD khách đứng tên
+                strong.font-monospace.text-dark #{inst.cccd || "--"}
+              .col-md-3.col-6
+                div.small.text-muted Mã hợp đồng trả góp
+                if inst.contractCode
+                  strong.font-monospace.text-primary #{inst.contractCode}
+                else
+                  span.text-danger.small.fst-italic Chưa bổ sung mã hợp đồng
+              .col-md-3.col-6
+                div.small.text-muted Đối tác giải ngân (100%)
+                strong.fs-6.text-primary #{formatVND(inst.loanAmount || 0)}
+                div.small.text-muted
+                  | Trả trước: #{formatVND(inst.downPayment || 0)}
+                  if inst.downPayment > 0
+                    |  (#{inst.downPaymentMethod === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt"})
+            if inst.note || inst.settlementStatus === "settled"
+              .border-top.mt-2.pt-2.d-flex.justify-content-between.flex-wrap.gap-2.small
+                if inst.note
+                  div.text-muted
+                    | Ghi chú hồ sơ: 
+                    span.text-dark #{inst.note}
+                if inst.settlementStatus === "settled"
+                  div.text-success.fw-semibold
+                    | Đã đối soát nhận tiền lúc #{inst.settledAt ? new Date(inst.settledAt).toLocaleString("vi-VN") : "--"}
+                    if inst.settledBy
+                      |  bởi #{inst.settledBy.fullName || inst.settledBy.email}
+
       // Tabs chọn xem trước: Mẫu A4/A5 hoặc Mẫu Bill Xprinter K80 (Chỉ hiển thị trên màn hình, không in)
       ul.nav.nav-tabs.mb-3.no-print#invoicePreviewTabs(role="tablist")
         li.nav-item(role="presentation")
@@ -203,6 +270,8 @@ block main
                     div.text-muted.small
                       i.las.la-phone.me-1
                       | Số điện thoại: #{order.customerInfo.phone}
+                  if inst && inst.cccd
+                    div.text-muted.small Số CCCD: #{inst.cccd}
                   if order.customerInfo && order.customerInfo.address
                     div.text-muted.small
                       i.las.la-map-pin.me-1
@@ -219,9 +288,15 @@ block main
                       when "credit_card"
                         strong Quẹt thẻ POS
                       when "installment"
-                        strong Trả góp
+                        strong Trả góp#{instProviderShort ? ` - ${instProviderShort}` : ""}
                       default
                         strong #{order.paymentMethod}
+                  if inst
+                    div.text-muted.small
+                      | Kỳ hạn: #{inst.termMonths || 6} tháng
+                      if inst.contractCode
+                        |  | Mã HĐ: 
+                        strong.text-dark #{inst.contractCode}
                   div.text-muted.small
                     | Trạng thái đơn: 
                     if order.orderStatus === "completed"
@@ -310,12 +385,28 @@ block main
                       if totalInWords
                         tr
                           td.text-muted.fst-italic.small.py-0(colspan="2") (#{totalInWords})
-                      tr
-                        td.text-muted.py-1 Tiền khách đưa:
-                        td.text-end.py-1 #{formatVND(order.paidAmount)}
-                      tr
-                        td.text-muted.py-1 Tiền thừa trả lại:
-                        td.text-end.text-success.fw-bold.py-1 #{formatVND(order.changeAmount)}
+                      if inst
+                        tr
+                          td.text-muted.py-1
+                            | Trả trước tại quầy#{inst.downPayment > 0 ? ` (${inst.downPaymentMethod === "bank_transfer" ? "CK" : "TM"})` : ""}:
+                          td.text-end.fw-semibold.py-1 #{formatVND(inst.downPayment || 0)}
+                        tr
+                          td.text-muted.py-1 Khoản vay (#{instProviderShort}):
+                          td.text-end.fw-bold.text-dark.py-1 #{formatVND(inst.loanAmount || 0)}
+                        if order.changeAmount > 0
+                          tr
+                            td.text-muted.py-1 Tiền mặt khách đưa:
+                            td.text-end.py-1 #{formatVND(order.paidAmount)}
+                          tr
+                            td.text-muted.py-1 Tiền thừa trả lại:
+                            td.text-end.text-success.fw-bold.py-1 #{formatVND(order.changeAmount)}
+                      else
+                        tr
+                          td.text-muted.py-1 Tiền khách đưa:
+                          td.text-end.py-1 #{formatVND(order.paidAmount)}
+                        tr
+                          td.text-muted.py-1 Tiền thừa trả lại:
+                          td.text-end.text-success.fw-bold.py-1 #{formatVND(order.changeAmount)}
 
               // Chữ ký xác nhận cuối hóa đơn (Thu gọn khoảng cách để vừa in trong 1 trang)
               .row.text-center.mt-3.pt-2.signature-block(style="break-inside: avoid; page-break-inside: avoid;")
@@ -359,6 +450,10 @@ block main
                   .d-flex.justify-content-between
                     span SĐT:
                     span #{order.customerInfo.phone}
+                if inst && inst.cccd
+                  .d-flex.justify-content-between
+                    span CCCD:
+                    span #{inst.cccd}
                 .d-flex.justify-content-between
                   span Mã HĐ:
                   strong #{order.orderCode}
@@ -416,15 +511,37 @@ block main
               .border-bottom.border-dark.border-dashed.my-2
 
               .small
-                .d-flex.justify-content-between
-                  span Hình thức:
-                  span #{order.paymentMethod === 'cash' ? 'Tiền mặt' : (order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : order.paymentMethod)}
-                .d-flex.justify-content-between
-                  span Tiền khách đưa:
-                  span #{formatVND(order.paidAmount)}
-                .d-flex.justify-content-between
-                  span Tiền thừa:
-                  strong #{formatVND(order.changeAmount)}
+                if inst
+                  .d-flex.justify-content-between
+                    span Hình thức:
+                    strong Trả góp (#{instProviderShort})
+                  .d-flex.justify-content-between
+                    span Kỳ hạn:
+                    span #{inst.termMonths || 6} tháng
+                  if inst.contractCode
+                    .d-flex.justify-content-between
+                      span Mã HĐ góp:
+                      strong #{inst.contractCode}
+                  .d-flex.justify-content-between
+                    span Trả trước#{inst.downPayment > 0 ? ` (${inst.downPaymentMethod === 'bank_transfer' ? 'CK' : 'TM'})` : ''}:
+                    span #{formatVND(inst.downPayment || 0)}
+                  .d-flex.justify-content-between
+                    span Khoản vay góp:
+                    strong #{formatVND(inst.loanAmount || 0)}
+                  if order.changeAmount > 0
+                    .d-flex.justify-content-between
+                      span Tiền thừa:
+                      strong #{formatVND(order.changeAmount)}
+                else
+                  .d-flex.justify-content-between
+                    span Hình thức:
+                    span #{order.paymentMethod === 'cash' ? 'Tiền mặt' : (order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : (order.paymentMethod === 'credit_card' ? 'Thẻ POS' : order.paymentMethod))}
+                  .d-flex.justify-content-between
+                    span Tiền khách đưa:
+                    span #{formatVND(order.paidAmount)}
+                  .d-flex.justify-content-between
+                    span Tiền thừa:
+                    strong #{formatVND(order.changeAmount)}
                 if order.note
                   .fst-italic.mt-1(style="font-size: 11px;") * Ghi chú: #{order.note}
 
@@ -461,6 +578,79 @@ block main
             button#btnConfirmCancelOrder.btn.btn-danger(type="button")
               i.las.la-ban.me-1
               | Xác nhận hủy &amp; Hoàn kho
+
+  // Modal Bổ sung / Sửa thông tin hồ sơ trả góp (Mã hợp đồng, CCCD, Kỳ hạn, Ghi chú)
+  if inst && order.orderStatus !== "cancelled" && canWrite
+    #modalUpdateInstallment.modal.fade(tabindex="-1", aria-hidden="true")
+      .modal-dialog.modal-dialog-centered
+        .modal-content
+          .modal-header.bg-light
+            h5.modal-title.fw-bold.text-dark Cập nhật hồ sơ trả góp (#{instProviderShort})
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+          .modal-body
+            .mb-3
+              label.form-label.small.fw-bold(for="editInstContractCode") Mã hợp đồng trả góp
+              input#editInstContractCode.form-control.text-uppercase(
+                type="text",
+                value=inst.contractCode || "",
+                placeholder="Nhập mã hợp đồng do đối tác cấp..."
+              )
+            .row.g-2.mb-3
+              .col-7
+                label.form-label.small.fw-bold(for="editInstCccd") Số CCCD khách đứng tên *
+                input#editInstCccd.form-control(
+                  type="text",
+                  maxlength="12",
+                  value=inst.cccd || "",
+                  placeholder="9 - 12 chữ số..."
+                )
+              .col-5
+                label.form-label.small.fw-bold(for="editInstTermMonths") Kỳ hạn góp
+                select#editInstTermMonths.form-select
+                  each m in [3, 6, 9, 12, 15, 18, 24]
+                    option(value=m, selected=(inst.termMonths || 6) === m) #{m} tháng
+            .mb-0
+              label.form-label.small.fw-bold(for="editInstNote") Ghi chú hồ sơ
+              textarea#editInstNote.form-control(
+                rows="2",
+                placeholder="VD: Tên nhân viên tài chính duyệt hồ sơ, lưu ý..."
+              ) #{inst.note || ""}
+          .modal-footer.bg-light
+            button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Đóng
+            button#btnSaveInstallmentInfo.btn.btn-primary.fw-semibold(type="button") Lưu thông tin hồ sơ
+
+  // Modal Xác nhận Đối tác tài chính đã giải ngân 100% (Chỉ Admin & Manager)
+  if inst && order.orderStatus === "completed" && inst.settlementStatus === "pending" && canSettle
+    #modalSettleInstallment.modal.fade(tabindex="-1", aria-hidden="true")
+      .modal-dialog.modal-dialog-centered
+        .modal-content
+          .modal-header.bg-success-subtle
+            h5.modal-title.fw-bold.text-success Xác nhận nhận giải ngân trả góp
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+          .modal-body
+            .p-3.bg-light.border.rounded.mb-3
+              .d-flex.justify-content-between.mb-1
+                span.text-muted.small Đơn vị giải ngân:
+                strong.text-dark #{instProviderName}
+              .d-flex.justify-content-between.align-items-center
+                span.text-muted.small Số tiền nhận về (100%):
+                strong.fs-5.text-success #{formatVND(inst.loanAmount || 0)}
+            .mb-3
+              label.form-label.small.fw-bold(for="settleInstContractCode") Mã hợp đồng trả góp (bổ sung hoặc kiểm tra lại)
+              input#settleInstContractCode.form-control.text-uppercase(
+                type="text",
+                value=inst.contractCode || "",
+                placeholder="Nhập mã hợp đồng nếu chưa bổ sung..."
+              )
+            .mb-0
+              label.form-label.small.fw-bold(for="settleInstNote") Ghi chú đối soát (tùy chọn)
+              textarea#settleInstNote.form-control(
+                rows="2",
+                placeholder="VD: Đã nhận chuyển khoản về Vietcombank..."
+              ) #{inst.note || ""}
+          .modal-footer.bg-light
+            button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Đóng
+            button#btnConfirmSettleInstallment.btn.btn-success.fw-semibold(type="button") Xác nhận đã nhận đủ 100%
 
 block script
   script.
@@ -521,6 +711,96 @@ block script
           else window.alert("Lỗi kết nối khi gửi yêu cầu hủy đơn!");
           confirmBtn.disabled = false;
           confirmBtn.innerHTML = '<i class="las la-ban me-1"></i> Xác nhận hủy &amp; Hoàn kho';
+        }
+      });
+
+      // Bổ sung / Sửa thông tin hồ sơ trả góp
+      const updateInstModalEl = document.querySelector("#modalUpdateInstallment");
+      const updateInstModal = updateInstModalEl && window.bootstrap ? window.bootstrap.Modal.getOrCreateInstance(updateInstModalEl) : null;
+      document.querySelector("#btnOpenUpdateInstallment")?.addEventListener("click", () => {
+        if (updateInstModal) updateInstModal.show();
+      });
+
+      const btnSaveInst = document.querySelector("#btnSaveInstallmentInfo");
+      btnSaveInst?.addEventListener("click", async () => {
+        const contractCode = document.querySelector("#editInstContractCode")?.value.trim().toUpperCase() || "";
+        const cccd = (document.querySelector("#editInstCccd")?.value || "").replace(/\s+/g, "").trim();
+        const termMonths = parseInt(document.querySelector("#editInstTermMonths")?.value, 10) || 6;
+        const note = document.querySelector("#editInstNote")?.value.trim() || "";
+
+        if (!/^\d{9,12}$/.test(cccd)) {
+          if (typeof notyf !== "undefined") notyf.error("Số CCCD/CMND không hợp lệ (cần từ 9 đến 12 chữ số)!");
+          else window.alert("Số CCCD/CMND không hợp lệ (cần từ 9 đến 12 chữ số)!");
+          return;
+        }
+
+        btnSaveInst.disabled = true;
+        btnSaveInst.textContent = "Đang lưu...";
+
+        try {
+          const response = await fetch("/admin/order/installment/#{order._id}", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ contractCode, cccd, termMonths, note })
+          });
+          const result = await response.json();
+          if (!response.ok || result.code !== "success") {
+            if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể cập nhật hồ sơ trả góp!");
+            else window.alert(result.message || "Không thể cập nhật hồ sơ trả góp!");
+            btnSaveInst.disabled = false;
+            btnSaveInst.textContent = "Lưu thông tin hồ sơ";
+            return;
+          }
+          window.drawNotify("success", result.message || "Đã cập nhật hồ sơ trả góp!");
+          window.location.reload();
+        } catch (err) {
+          console.error(err);
+          if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi lưu hồ sơ trả góp!");
+          else window.alert("Lỗi kết nối khi lưu hồ sơ trả góp!");
+          btnSaveInst.disabled = false;
+          btnSaveInst.textContent = "Lưu thông tin hồ sơ";
+        }
+      });
+
+      // Xác nhận đã nhận giải ngân 100% (Chỉ Admin & Manager)
+      const settleInstModalEl = document.querySelector("#modalSettleInstallment");
+      const settleInstModal = settleInstModalEl && window.bootstrap ? window.bootstrap.Modal.getOrCreateInstance(settleInstModalEl) : null;
+      document.querySelector("#btnOpenSettleInstallment")?.addEventListener("click", () => {
+        if (settleInstModal) settleInstModal.show();
+      });
+
+      const btnConfirmSettle = document.querySelector("#btnConfirmSettleInstallment");
+      btnConfirmSettle?.addEventListener("click", async () => {
+        const contractCode = document.querySelector("#settleInstContractCode")?.value.trim().toUpperCase() || "";
+        const note = document.querySelector("#settleInstNote")?.value.trim() || "";
+
+        btnConfirmSettle.disabled = true;
+        btnConfirmSettle.textContent = "Đang xác nhận...";
+
+        try {
+          const response = await fetch("/admin/order/settle-installment/#{order._id}", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ contractCode, note })
+          });
+          const result = await response.json();
+          if (!response.ok || result.code !== "success") {
+            if (typeof notyf !== "undefined") notyf.error(result.message || "Không thể xác nhận giải ngân!");
+            else window.alert(result.message || "Không thể xác nhận giải ngân!");
+            btnConfirmSettle.disabled = false;
+            btnConfirmSettle.textContent = "Xác nhận đã nhận đủ 100%";
+            return;
+          }
+          window.drawNotify("success", result.message || "Đã xác nhận nhận giải ngân thành công!");
+          window.location.reload();
+        } catch (err) {
+          console.error(err);
+          if (typeof notyf !== "undefined") notyf.error("Lỗi kết nối khi xác nhận giải ngân!");
+          else window.alert("Lỗi kết nối khi xác nhận giải ngân!");
+          btnConfirmSettle.disabled = false;
+          btnConfirmSettle.textContent = "Xác nhận đã nhận đủ 100%";
         }
       });
     });

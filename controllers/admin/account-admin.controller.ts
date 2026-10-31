@@ -2,8 +2,9 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import AccountAdmin from "../../models/account-admin.model";
 import { RequestAccount } from "../../interfaces/request.interface";
-
+import { buildPagination } from "../../helpers/pagination.helper";
 import { adminRoles } from "../../configs/variable.config";
+
 const allowedRoles = adminRoles;
 const allowedStatuses = ["active", "inactive"] as const;
 
@@ -24,15 +25,22 @@ const parseAccountInput = (body: Record<string, unknown>) => {
   return { fullName, email, role, status: status || "active" };
 };
 
-export const list = async (_req: Request, res: Response) => {
-  const accountList = await AccountAdmin.find({ deleted: false })
+export const list = async (req: Request, res: Response) => {
+  const find = { deleted: false };
+  const totalCount = await AccountAdmin.countDocuments(find);
+  const pagination = buildPagination(req, totalCount, 10);
+
+  const accountList = await AccountAdmin.find(find)
     .select("fullName email role status avatar lastLoginAt createdAt")
     .sort({ createdAt: "desc" })
+    .skip(pagination.skip)
+    .limit(pagination.limit)
     .lean();
 
   res.render("admin/account-admin/list", {
     pageTitle: "Tài khoản quản trị",
-    accountList
+    accountList,
+    pagination
   });
 };
 

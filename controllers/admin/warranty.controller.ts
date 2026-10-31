@@ -9,6 +9,7 @@ import Customer from "../../models/customer.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { syncCustomerOrdersByPhone } from "./customer.controller";
 import { parseVNDate } from "../../helpers/date.helper";
+import { buildPagination } from "../../helpers/pagination.helper";
 
 const createTicketCode = (): string => {
   const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
@@ -777,12 +778,8 @@ export const list = async (req: Request, res: Response) => {
       ];
     }
 
-    const [tickets, totalTickets, receivedCount, inProgressCount, completedCount, deliveredCount] = await Promise.all([
-      WarrantyTicket.find(find)
-        .populate("createdBy", "fullName email")
-        .sort({ createdAt: -1 })
-        .limit(100)
-        .lean(),
+    const [filteredTicketsCount, totalTickets, receivedCount, inProgressCount, completedCount, deliveredCount] = await Promise.all([
+      WarrantyTicket.countDocuments(find),
       WarrantyTicket.countDocuments({ deleted: { $ne: true } }),
       WarrantyTicket.countDocuments({ deleted: { $ne: true }, ticketStatus: "received" }),
       WarrantyTicket.countDocuments({ deleted: { $ne: true }, ticketStatus: "in_progress" }),
@@ -790,11 +787,20 @@ export const list = async (req: Request, res: Response) => {
       WarrantyTicket.countDocuments({ deleted: { $ne: true }, ticketStatus: "delivered" })
     ]);
 
+    const pagination = buildPagination(req, filteredTicketsCount, 10);
+    const tickets = await WarrantyTicket.find(find)
+      .populate("createdBy", "fullName email")
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+
     res.render("admin/warranty/list", {
       pageTitle: "Quản lý bảo hành & sửa chữa",
       tickets,
       stats: { totalTickets, receivedCount, inProgressCount, completedCount, deliveredCount },
       filters: { keyword, ticketStatus, from, to },
+      pagination,
       canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("warranty:write")
     });
   } catch (error) {

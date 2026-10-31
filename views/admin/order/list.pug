@@ -1,6 +1,12 @@
 extends ../../layouts/admin.pug
 
 block main
+  -
+    const providerShortMap = {
+      home_credit: "Home Credit",
+      mirae_asset: "Mirae Asset",
+      hd_saison: "HD Saison"
+    };
   .row
     .col-12
       // Thẻ Thống Kê Nhanh (KPIs)
@@ -58,6 +64,20 @@ block main
                   i.las.la-cash-register.me-1
                   | Bán hàng tại quầy
         .card-body.pt-0
+          if stats && stats.pendingInstallmentCount > 0
+            .alert.alert-warning.py-2.px-3.mb-3.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
+              div.small
+                | Công nợ trả góp chờ đối tác giải ngân: 
+                strong.text-dark #{stats.pendingInstallmentCount} đơn
+                |  — Tổng tiền chờ nhận về (100%): 
+                strong.text-danger #{formatVND(stats.pendingInstallmentAmount)}
+              if filters.settlementStatus !== "pending"
+                a.btn.btn-sm.btn-warning.fw-semibold.py-0(href=`/${pathAdmin}/order?paymentMethod=installment&settlementStatus=pending`)
+                  | Lọc đơn chờ giải ngân
+              else
+                a.btn.btn-sm.btn-outline-secondary.py-0(href=`/${pathAdmin}/order`)
+                  | Bỏ lọc
+
           form.row.g-2.mb-3(method="get", action=`/${pathAdmin}/order`)
             .col-xl-3.col-md-6
               .input-group
@@ -67,44 +87,55 @@ block main
                   type="text",
                   name="keyword",
                   value=filters.keyword,
-                  placeholder="Mã đơn, tên/SĐT khách, IMEI đã bán..."
+                  placeholder="Mã đơn, SĐT, CCCD, mã HĐ góp, IMEI..."
                 )
             .col-xl-2.col-md-3
               select.form-select(name="orderStatus")
-                option(value="") -- Tất cả trạng thái --
+                option(value="") -- Trạng thái đơn --
                 option(value="completed", selected=filters.orderStatus === "completed") Hoàn tất (Đã bán)
                 option(value="cancelled", selected=filters.orderStatus === "cancelled") Đã hủy
             .col-xl-2.col-md-3
               select.form-select(name="paymentMethod")
-                option(value="") -- Phương thức thanh toán --
+                option(value="") -- Thanh toán --
                 option(value="cash", selected=filters.paymentMethod === "cash") Tiền mặt
                 option(value="bank_transfer", selected=filters.paymentMethod === "bank_transfer") Chuyển khoản
                 option(value="credit_card", selected=filters.paymentMethod === "credit_card") Thẻ POS
                 option(value="installment", selected=filters.paymentMethod === "installment") Trả góp
             .col-xl-2.col-md-4
-              input.form-control(
+              select.form-select(name="installmentProvider")
+                option(value="") -- Đối tác trả góp --
+                option(value="home_credit", selected=filters.installmentProvider === "home_credit") Home Credit
+                option(value="mirae_asset", selected=filters.installmentProvider === "mirae_asset") Mirae Asset
+                option(value="hd_saison", selected=filters.installmentProvider === "hd_saison") HD Saison
+            .col-xl-2.col-md-4
+              select.form-select(name="settlementStatus")
+                option(value="") -- Đối soát giải ngân --
+                option(value="pending", selected=filters.settlementStatus === "pending") Chờ giải ngân
+                option(value="settled", selected=filters.settlementStatus === "settled") Đã nhận giải ngân
+            .col-xl-1.col-md-4.d-grid
+              button.btn.btn-outline-primary(type="submit")
+                i.las.la-filter.me-1
+                | Lọc
+            .col-xl-2.col-md-4
+              input.form-control.form-control-sm(
                 type="text",
                 data-datepicker,
-                placeholder="dd/mm/yyyy",
+                placeholder="Từ ngày (dd/mm/yyyy)",
                 autocomplete="off",
                 name="from",
                 value=filters.from,
                 title="Từ ngày"
               )
             .col-xl-2.col-md-4
-              input.form-control(
+              input.form-control.form-control-sm(
                 type="text",
                 data-datepicker,
-                placeholder="dd/mm/yyyy",
+                placeholder="Đến ngày (dd/mm/yyyy)",
                 autocomplete="off",
                 name="to",
                 value=filters.to,
                 title="Đến ngày"
               )
-            .col-xl-1.col-md-4.d-grid
-              button.btn.btn-outline-primary(type="submit")
-                i.las.la-filter.me-1
-                | Lọc
 
           .table-responsive
             table.table.table-hover.align-middle.mb-0
@@ -123,7 +154,7 @@ block main
                 if orders && orders.length
                   each order, index in orders
                     tr
-                      td.text-center.text-muted #{index + 1}
+                      td.text-center.text-muted #{(pagination ? pagination.skip : 0) + index + 1}
                       td
                         a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/order/${order._id}`)
                           | #{order.orderCode}
@@ -140,6 +171,8 @@ block main
                           div.small.text-muted
                             i.las.la-phone.me-1
                             | #{order.customerInfo.phone}
+                        if order.paymentMethod === "installment" && order.installmentInfo && order.installmentInfo.cccd
+                          div.small.text-muted CCCD: #{order.installmentInfo.cccd}
                       td
                         if order.items && order.items.length
                           each item in order.items
@@ -170,13 +203,26 @@ block main
                           when "credit_card"
                             span.badge.bg-primary-subtle.text-primary Thẻ POS
                           when "installment"
-                            span.badge.bg-warning-subtle.text-warning Trả góp
+                            span.badge.bg-warning-subtle.text-warning-emphasis Trả góp
+                            if order.installmentInfo
+                              div.small.fw-semibold.text-dark.mt-1 #{providerShortMap[order.installmentInfo.provider] || order.installmentInfo.provider}
+                              if order.installmentInfo.contractCode
+                                div.small.font-monospace.text-primary #{order.installmentInfo.contractCode}
+                              else
+                                div.small.text-danger.fst-italic Chưa có mã HĐ
+                              if order.orderStatus === "completed"
+                                if order.installmentInfo.settlementStatus === "settled"
+                                  span.badge.bg-success-subtle.text-success.mt-1 Đã giải ngân
+                                else
+                                  span.badge.bg-warning.text-dark.mt-1 Chờ giải ngân
                           default
                             span.badge.bg-secondary #{order.paymentMethod}
                       td.text-end
                         strong.text-primary.fs-6 #{formatVND(order.totalAmount)}
                         if order.discount > 0
                           div.small.text-muted -#{formatVND(order.discount)}
+                        if order.paymentMethod === "installment" && order.installmentInfo
+                          div.small.text-muted Vay: #{formatVND(order.installmentInfo.loanAmount || 0)}
                       td.text-center
                         if order.orderStatus === "completed"
                           span.badge.bg-success-subtle.text-success.fs-7 Hoàn tất
@@ -202,6 +248,8 @@ block main
                       i.las.la-receipt.fs-1.d-block.mb-2.text-muted.opacity-50
                       span.fw-semibold Không tìm thấy đơn hàng nào!
                       p.small.text-muted.mb-0 Hãy thử thay đổi bộ lọc tìm kiếm hoặc tạo đơn hàng mới tại quầy.
+
+          include ../../partials/pagination.pug
 
   // Modal Xác nhận Hủy đơn hàng
   #modalCancelOrder.modal.fade(tabindex="-1", aria-hidden="true")

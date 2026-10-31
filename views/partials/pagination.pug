@@ -1,0 +1,26 @@
+if pagination && pagination.totalItems > 0
+  .d-flex.justify-content-between.align-items-center.flex-wrap.gap-2.pt-3.mt-2.border-top
+    div.small.text-muted
+      | Hiển thị 
+      strong.text-dark #{pagination.startItem}–#{pagination.endItem}
+      |  trong tổng số 
+      strong.text-dark #{pagination.totalItems}
+      |  mục (Tối đa #{pagination.limit}/trang)
+    nav(aria-label="Phân trang danh sách")
+      ul.pagination.pagination-sm.mb-0
+        li.page-item(class=pagination.currentPage <= 1 ? "disabled" : "")
+          a.page-link(
+            href=pagination.currentPage > 1 ? pagination.buildPageUrl(pagination.currentPage - 1) : "javascript:void(0)"
+          ) Trước
+        each p in pagination.pages
+          if p === "..."
+            li.page-item.disabled
+              span.page-link ...
+          else
+            li.page-item(class=p === pagination.currentPage ? "active" : "")
+              a.page-link(href=pagination.buildPageUrl(p)) #{p}
+        li.page-item(class=pagination.currentPage >= pagination.totalPages ? "disabled" : "")
+          a.page-link(
+            href=pagination.currentPage < pagination.totalPages ? pagination.buildPageUrl(pagination.currentPage + 1) : "javascript:void(0)"
+          ) Sau
+

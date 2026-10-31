@@ -82,6 +82,10 @@ block main
           .mb-3
             span.text-muted.small.d-block Số điện thoại:
             strong.font-monospace.fs-6.text-primary #{customer.phone}
+          if customer.cccd
+            .mb-3
+              span.text-muted.small.d-block Số CCCD / CMND:
+              strong.font-monospace.text-dark #{customer.cccd}
           .mb-3
             span.text-muted.small.d-block Họ và tên:
             strong.text-dark #{customer.fullName}

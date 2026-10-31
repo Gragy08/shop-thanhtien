@@ -73,6 +73,10 @@ block main
               | #{kpis.allCompletedOrdersCount || 0} đơn hoàn tất
             if kpis.cancelledOrdersCount > 0
               span.text-danger (#{kpis.cancelledOrdersCount} đơn hủy)
+          if kpis.pendingInstallmentCount > 0
+            .mt-1.pt-1.border-top.small
+              a.text-warning-emphasis.fw-semibold.text-decoration-none(href=`/${pathAdmin}/order?paymentMethod=installment&settlementStatus=pending`)
+                | Chờ giải ngân trả góp: #{formatVND(kpis.pendingInstallmentAmount)} (#{kpis.pendingInstallmentCount} đơn)
 
     // KPI 2: Giá Trị Vốn Tồn Kho Hoặc Số Lượng Tồn
     .col-xl-3.col-md-6

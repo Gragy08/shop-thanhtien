@@ -8,6 +8,7 @@ import Customer from "../../models/customer.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { readVietnameseNumber } from "../../helpers/number-to-words.helper";
 import { parseVNDate } from "../../helpers/date.helper";
+import { buildPagination } from "../../helpers/pagination.helper";
 
 interface OrderItemInput {
   isCustomItem?: boolean;
@@ -222,7 +223,9 @@ export const createPost = async (req: RequestAccount, res: Response) => {
   try {
     const customerInfo = req.body.customerInfo || {};
     const itemsInput: OrderItemInput[] = req.body.items || [];
-    const paymentMethod = req.body.paymentMethod || "cash";
+    const paymentMethod = ["cash", "bank_transfer", "credit_card", "installment"].includes(req.body.paymentMethod)
+      ? req.body.paymentMethod
+      : "cash";
     const note = typeof req.body.note === "string" ? req.body.note.trim() : "";
 
     if (!Array.isArray(itemsInput) || itemsInput.length === 0) {
@@ -371,21 +374,106 @@ export const createPost = async (req: RequestAccount, res: Response) => {
 
     const orderDiscount = Math.max(0, parseFloat(String(req.body.discount)) || 0);
     const totalAmount = Math.max(0, calculatedSubTotal - orderDiscount);
-    const paidAmount = req.body.paidAmount != null ? Math.max(0, parseFloat(String(req.body.paidAmount))) : totalAmount;
-    const changeAmount = Math.max(0, paidAmount - totalAmount);
+
+    const rawPhone = typeof customerInfo.phone === "string" ? customerInfo.phone.trim() : "";
+    const cleanPhone = rawPhone.replace(/\D/g, "");
+    const rawFullName = typeof customerInfo.fullName === "string" ? customerInfo.fullName.trim() : "";
+    const validName = rawFullName && rawFullName !== "Khách lẻ vãng lai" && rawFullName !== "Khách lẻ" ? rawFullName : "";
+    const validAddress = typeof customerInfo.address === "string" ? customerInfo.address.trim() : "";
+
+    let paidAmount = 0;
+    let changeAmount = 0;
+    let installmentData: Record<string, unknown> | null = null;
+    let cleanCccd = "";
+
+    if (paymentMethod === "installment") {
+      if (cleanPhone.length < 9) {
+        res.status(400).json({ code: "error", message: "Đơn hàng trả góp bắt buộc phải nhập Số điện thoại hợp lệ của khách hàng!" });
+        return;
+      }
+      if (!validName) {
+        res.status(400).json({ code: "error", message: "Đơn hàng trả góp bắt buộc phải nhập Họ và tên thật của khách hàng!" });
+        return;
+      }
+      if (totalAmount <= 0) {
+        res.status(400).json({ code: "error", message: "Tổng tiền đơn hàng trả góp phải lớn hơn 0 đ!" });
+        return;
+      }
+
+      const instInput = req.body.installmentInfo || {};
+      const provider = typeof instInput.provider === "string" ? instInput.provider.trim() : "";
+      if (!["home_credit", "mirae_asset", "hd_saison"].includes(provider)) {
+        res.status(400).json({ code: "error", message: "Vui lòng chọn đơn vị tài chính trả góp (Home Credit, Mirae Asset hoặc HD Saison)!" });
+        return;
+      }
+
+      cleanCccd = typeof instInput.cccd === "string" ? instInput.cccd.replace(/\s+/g, "").trim() : "";
+      if (!/^\d{9,12}$/.test(cleanCccd)) {
+        res.status(400).json({ code: "error", message: "Vui lòng nhập số CCCD/CMND hợp lệ của khách hàng (9 đến 12 chữ số)!" });
+        return;
+      }
+
+      const contractCode = typeof instInput.contractCode === "string" ? instInput.contractCode.trim().toUpperCase() : "";
+      const termMonths = Math.max(1, parseInt(String(instInput.termMonths), 10) || 6);
+      const downPayment = Math.max(0, parseFloat(String(instInput.downPayment)) || 0);
+
+      if (downPayment >= totalAmount) {
+        res.status(400).json({
+          code: "error",
+          message: "Số tiền trả trước phải nhỏ hơn tổng hóa đơn! Nếu khách thanh toán đủ 100%, vui lòng chọn Tiền mặt hoặc Chuyển khoản."
+        });
+        return;
+      }
+
+      const loanAmount = Math.max(0, totalAmount - downPayment);
+      const downPaymentMethod = instInput.downPaymentMethod === "bank_transfer" ? "bank_transfer" : "cash";
+      const instNote = typeof instInput.note === "string" ? instInput.note.trim() : "";
+
+      if (downPayment === 0) {
+        paidAmount = 0;
+        changeAmount = 0;
+      } else if (downPaymentMethod === "bank_transfer") {
+        paidAmount = downPayment;
+        changeAmount = 0;
+      } else {
+        const hasPaidInput = req.body.paidAmount != null && String(req.body.paidAmount).trim() !== "";
+        const parsedPaid = hasPaidInput ? Math.max(0, parseFloat(String(req.body.paidAmount)) || 0) : downPayment;
+        if (parsedPaid < downPayment) {
+          res.status(400).json({
+            code: "error",
+            message: `Số tiền khách đưa tại quầy (${parsedPaid.toLocaleString("vi-VN")} đ) chưa đủ cho khoản trả trước (${downPayment.toLocaleString("vi-VN")} đ)!`
+          });
+          return;
+        }
+        paidAmount = parsedPaid;
+        const maxChange = Math.max(0, paidAmount - downPayment);
+        changeAmount = req.body.changeAmount != null ? Math.min(maxChange, Math.max(0, parseFloat(String(req.body.changeAmount)) || 0)) : maxChange;
+      }
+
+      installmentData = {
+        provider,
+        contractCode,
+        cccd: cleanCccd,
+        termMonths,
+        downPayment,
+        downPaymentMethod,
+        loanAmount,
+        settlementStatus: "pending",
+        note: instNote
+      };
+    } else {
+      paidAmount = req.body.paidAmount != null ? Math.max(0, parseFloat(String(req.body.paidAmount)) || 0) : totalAmount;
+      const maxChange = Math.max(0, paidAmount - totalAmount);
+      changeAmount = req.body.changeAmount != null ? Math.min(maxChange, Math.max(0, parseFloat(String(req.body.changeAmount)) || 0)) : maxChange;
+    }
 
     const orderCode = createOrderCode();
 
     // Tự động lưu / cập nhật hồ sơ khách hàng (Phương thức 1: Auto-upsert từ POS)
     let linkedCustomerId: mongoose.Types.ObjectId | undefined;
-    const rawPhone = typeof customerInfo.phone === "string" ? customerInfo.phone.trim() : "";
-    const cleanPhone = rawPhone.replace(/\D/g, "");
 
     if (cleanPhone.length >= 9) {
       let customer = await Customer.findOne({ phone: cleanPhone, deleted: { $ne: true } });
-      const rawFullName = typeof customerInfo.fullName === "string" ? customerInfo.fullName.trim() : "";
-      const validName = rawFullName && rawFullName !== "Khách lẻ vãng lai" ? rawFullName : "";
-      const validAddress = typeof customerInfo.address === "string" ? customerInfo.address.trim() : "";
 
       if (customer) {
         customer.totalSpent = (customer.totalSpent || 0) + totalAmount;
@@ -397,12 +485,16 @@ export const createPost = async (req: RequestAccount, res: Response) => {
         if (validAddress && !customer.address) {
           customer.address = validAddress;
         }
+        if (cleanCccd) {
+          customer.cccd = cleanCccd;
+        }
         await customer.save();
         linkedCustomerId = customer._id as mongoose.Types.ObjectId;
       } else {
         customer = await Customer.create({
           fullName: validName || "Khách lẻ",
           phone: cleanPhone,
+          cccd: cleanCccd || "",
           address: validAddress,
           totalSpent: totalAmount,
           orderCount: 1,
@@ -418,15 +510,16 @@ export const createPost = async (req: RequestAccount, res: Response) => {
       orderCode,
       customerId: linkedCustomerId,
       customerInfo: {
-        fullName: typeof customerInfo.fullName === "string" && customerInfo.fullName.trim() ? customerInfo.fullName.trim() : "Khách lẻ vãng lai",
+        fullName: validName || (rawFullName ? rawFullName : "Khách lẻ vãng lai"),
         phone: cleanPhone || rawPhone,
-        address: typeof customerInfo.address === "string" ? customerInfo.address.trim() : ""
+        address: validAddress
       },
       items: orderItems,
       subTotal: calculatedSubTotal,
       discount: orderDiscount,
       totalAmount,
       paymentMethod,
+      installmentInfo: installmentData,
       paidAmount,
       changeAmount,
       orderStatus: "completed",
@@ -628,6 +721,133 @@ export const pos = async (_req: Request, res: Response) => {
 };
 
 /**
+ * Bổ sung / Cập nhật thông tin hồ sơ trả góp (Mã hợp đồng, CCCD, kỳ hạn, ghi chú)
+ * PATCH /admin/order/installment/:id
+ */
+export const updateInstallmentInfo = async (req: RequestAccount, res: Response) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    if (!mongoose.isValidObjectId(id)) {
+      res.status(400).json({ code: "error", message: "ID đơn hàng không hợp lệ!" });
+      return;
+    }
+
+    const order = await Order.findOne({ _id: id, deleted: { $ne: true } });
+    if (!order) {
+      res.status(404).json({ code: "error", message: "Đơn hàng không tồn tại!" });
+      return;
+    }
+
+    if (order.paymentMethod !== "installment" || !order.installmentInfo) {
+      res.status(400).json({ code: "error", message: "Đơn hàng này không phải đơn thanh toán trả góp!" });
+      return;
+    }
+
+    if (order.orderStatus === "cancelled") {
+      res.status(400).json({ code: "error", message: "Không thể cập nhật hồ sơ của đơn hàng đã hủy!" });
+      return;
+    }
+
+    const contractCode = typeof req.body.contractCode === "string" ? req.body.contractCode.trim().toUpperCase() : undefined;
+    const rawCccd = typeof req.body.cccd === "string" ? req.body.cccd.replace(/\s+/g, "").trim() : undefined;
+    const rawTermMonths = req.body.termMonths != null ? parseInt(String(req.body.termMonths), 10) : undefined;
+    const instNote = typeof req.body.note === "string" ? req.body.note.trim() : undefined;
+
+    if (rawCccd !== undefined) {
+      if (!/^\d{9,12}$/.test(rawCccd)) {
+        res.status(400).json({ code: "error", message: "Số CCCD/CMND không hợp lệ (cần từ 9 đến 12 chữ số)!" });
+        return;
+      }
+      order.installmentInfo.cccd = rawCccd;
+      if (order.customerId) {
+        await Customer.updateOne({ _id: order.customerId }, { $set: { cccd: rawCccd } });
+      }
+    }
+
+    if (contractCode !== undefined) {
+      order.installmentInfo.contractCode = contractCode;
+    }
+
+    if (rawTermMonths !== undefined && !isNaN(rawTermMonths) && rawTermMonths >= 1) {
+      order.installmentInfo.termMonths = rawTermMonths;
+    }
+
+    if (instNote !== undefined) {
+      order.installmentInfo.note = instNote;
+    }
+
+    await order.save();
+
+    res.json({
+      code: "success",
+      message: "Cập nhật thông tin hồ sơ trả góp thành công!"
+    });
+  } catch (error) {
+    console.error("Error updateInstallmentInfo:", error);
+    res.status(500).json({ code: "error", message: "Lỗi hệ thống khi cập nhật hồ sơ trả góp!" });
+  }
+};
+
+/**
+ * Xác nhận đối tác tài chính đã giải ngân 100% khoản vay về cửa hàng (Chỉ Admin & Manager)
+ * PATCH /admin/order/settle-installment/:id
+ */
+export const settleInstallment = async (req: RequestAccount, res: Response) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    if (!mongoose.isValidObjectId(id)) {
+      res.status(400).json({ code: "error", message: "ID đơn hàng không hợp lệ!" });
+      return;
+    }
+
+    const order = await Order.findOne({ _id: id, deleted: { $ne: true } });
+    if (!order) {
+      res.status(404).json({ code: "error", message: "Đơn hàng không tồn tại!" });
+      return;
+    }
+
+    if (order.paymentMethod !== "installment" || !order.installmentInfo) {
+      res.status(400).json({ code: "error", message: "Đơn hàng này không phải đơn thanh toán trả góp!" });
+      return;
+    }
+
+    if (order.orderStatus !== "completed") {
+      res.status(400).json({ code: "error", message: "Chỉ có thể xác nhận giải ngân cho đơn hàng đang hoàn tất!" });
+      return;
+    }
+
+    if (order.installmentInfo.settlementStatus === "settled") {
+      res.status(400).json({ code: "error", message: "Đơn trả góp này đã được xác nhận giải ngân trước đó!" });
+      return;
+    }
+
+    if (typeof req.body.contractCode === "string" && req.body.contractCode.trim()) {
+      order.installmentInfo.contractCode = req.body.contractCode.trim().toUpperCase();
+    }
+
+    if (typeof req.body.note === "string") {
+      order.installmentInfo.note = req.body.note.trim();
+    }
+
+    order.installmentInfo.settlementStatus = "settled";
+    order.installmentInfo.settledAt = new Date();
+    if (req.adminId && mongoose.isValidObjectId(req.adminId)) {
+      order.installmentInfo.settledBy = new mongoose.Types.ObjectId(req.adminId);
+    }
+
+    await order.save();
+
+    res.json({
+      code: "success",
+      message: `Đã xác nhận nhận đủ giải ngân ${order.installmentInfo.loanAmount.toLocaleString("vi-VN")} đ cho đơn ${order.orderCode}!`
+    });
+  } catch (error) {
+    console.error("Error settleInstallment:", error);
+    res.status(500).json({ code: "error", message: "Lỗi hệ thống khi xác nhận giải ngân trả góp!" });
+  }
+};
+
+/**
  * Danh sách đơn hàng
  * GET /admin/order
  */
@@ -635,6 +855,8 @@ export const list = async (req: Request, res: Response) => {
   const keyword = typeof req.query.keyword === "string" ? req.query.keyword.trim() : "";
   const paymentMethod = typeof req.query.paymentMethod === "string" ? req.query.paymentMethod : "";
   const orderStatus = typeof req.query.orderStatus === "string" ? req.query.orderStatus : "";
+  const installmentProvider = typeof req.query.installmentProvider === "string" ? req.query.installmentProvider : "";
+  const settlementStatus = typeof req.query.settlementStatus === "string" ? req.query.settlementStatus : "";
   const from = typeof req.query.from === "string" ? req.query.from : "";
   const to = typeof req.query.to === "string" ? req.query.to : "";
 
@@ -645,6 +867,14 @@ export const list = async (req: Request, res: Response) => {
   }
   if (["cash", "bank_transfer", "credit_card", "installment"].includes(paymentMethod)) {
     find.paymentMethod = paymentMethod;
+  }
+  if (["home_credit", "mirae_asset", "hd_saison"].includes(installmentProvider)) {
+    find.paymentMethod = "installment";
+    find["installmentInfo.provider"] = installmentProvider;
+  }
+  if (["pending", "settled"].includes(settlementStatus)) {
+    find.paymentMethod = "installment";
+    find["installmentInfo.settlementStatus"] = settlementStatus;
   }
   if (from || to) {
     const createdAtQuery: Record<string, Date> = {};
@@ -663,34 +893,68 @@ export const list = async (req: Request, res: Response) => {
       { orderCode: regex },
       { "customerInfo.fullName": regex },
       { "customerInfo.phone": regex },
+      { "installmentInfo.contractCode": regex },
+      { "installmentInfo.cccd": regex },
       { "items.identifiers": regex.source.toUpperCase() }
     ];
   }
 
-  const [orders, totalOrders, completedCount, cancelledCount, revenueAgg] = await Promise.all([
-    Order.find(find)
-      .populate("createdBy", "fullName email")
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean(),
+  const [filteredOrdersCount, totalOrders, completedCount, cancelledCount, revenueAgg, pendingInstallmentAgg] = await Promise.all([
+    Order.countDocuments(find),
     Order.countDocuments({ deleted: { $ne: true } }),
     Order.countDocuments({ deleted: { $ne: true }, orderStatus: "completed" }),
     Order.countDocuments({ deleted: { $ne: true }, orderStatus: "cancelled" }),
     Order.aggregate([
       { $match: { deleted: { $ne: true }, orderStatus: "completed" } },
       { $group: { _id: null, totalRevenue: { $sum: "$totalAmount" } } }
+    ]),
+    Order.aggregate([
+      {
+        $match: {
+          deleted: { $ne: true },
+          orderStatus: "completed",
+          paymentMethod: "installment",
+          "installmentInfo.settlementStatus": "pending"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          pendingInstallmentAmount: { $sum: "$installmentInfo.loanAmount" },
+          pendingInstallmentCount: { $sum: 1 }
+        }
+      }
     ])
   ]);
 
+  const pagination = buildPagination(req, filteredOrdersCount, 10);
+  const orders = await Order.find(find)
+    .populate("createdBy", "fullName email")
+    .sort({ createdAt: -1 })
+    .skip(pagination.skip)
+    .limit(pagination.limit)
+    .lean();
+
   const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].totalRevenue : 0;
+  const pendingInstallmentAmount = pendingInstallmentAgg.length > 0 ? pendingInstallmentAgg[0].pendingInstallmentAmount : 0;
+  const pendingInstallmentCount = pendingInstallmentAgg.length > 0 ? pendingInstallmentAgg[0].pendingInstallmentCount : 0;
 
   res.render("admin/order/list", {
     pageTitle: "Quản lý đơn hàng",
     orders,
-    stats: { totalOrders, completedCount, cancelledCount, totalRevenue },
-    filters: { keyword, paymentMethod, orderStatus, from, to },
+    stats: {
+      totalOrders,
+      completedCount,
+      cancelledCount,
+      totalRevenue,
+      pendingInstallmentAmount,
+      pendingInstallmentCount
+    },
+    filters: { keyword, paymentMethod, orderStatus, installmentProvider, settlementStatus, from, to },
+    pagination,
     canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:write"),
-    canCancel: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:cancel")
+    canCancel: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:cancel"),
+    canSettle: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:settle")
   });
 };
 
@@ -708,6 +972,7 @@ export const detail = async (req: Request, res: Response) => {
   const order = await Order.findOne({ _id: id, deleted: { $ne: true } })
     .populate("createdBy", "fullName email")
     .populate("cancelledBy", "fullName email")
+    .populate("installmentInfo.settledBy", "fullName email")
     .lean();
 
   if (!order) {
@@ -719,6 +984,8 @@ export const detail = async (req: Request, res: Response) => {
     pageTitle: `Hóa đơn: ${order.orderCode}`,
     order,
     totalInWords: readVietnameseNumber(order.totalAmount || 0),
-    canCancel: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:cancel")
+    canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:write"),
+    canCancel: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:cancel"),
+    canSettle: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:settle")
   });
 };

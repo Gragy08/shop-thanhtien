@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import slugify from "slugify";
 import Category from "../../models/category.model";
 import { buildCategoryTree, collectDescendantIds, flattenCategoryTree } from "../../helpers/category.helper";
+import { buildPagination } from "../../helpers/pagination.helper";
 
 const getCategoryRecords = async () => {
   return Category.find({ deleted: false })
@@ -23,12 +24,17 @@ const parseParentId = (value: unknown): mongoose.Types.ObjectId | null | undefin
   return new mongoose.Types.ObjectId(value);
 };
 
-export const list = async (_req: Request, res: Response) => {
+export const list = async (req: Request, res: Response) => {
   const records = await getCategoryRecords();
   const tree = buildCategoryTree(records);
+  const fullRecordList = flattenCategoryTree(tree);
+  const pagination = buildPagination(req, fullRecordList.length, 10);
+  const recordList = fullRecordList.slice(pagination.skip, pagination.skip + pagination.limit);
+
   res.render("admin/category/list", {
     pageTitle: "Danh mục sản phẩm",
-    recordList: flattenCategoryTree(tree)
+    recordList,
+    pagination
   });
 };
 

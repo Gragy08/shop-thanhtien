@@ -155,32 +155,110 @@ block main
                   i.las.la-handshake
                   | Trả góp
 
-          // Tiền khách đưa
-          .mb-2
-            .d-flex.justify-content-between.align-items-center.mb-1
-              label.form-label.small.mb-0 Tiền khách đưa (VNĐ)
-              button#btnExactAmount.btn.btn-link.btn-sm.p-0.text-decoration-none(type="button") [Đúng số tiền]
-            input#paidAmountInput.form-control.text-end.fw-bold(type="text", format-money, placeholder="Nhập tiền khách đưa...")
-            // Các nút tiền nhanh
-            .d-flex.gap-1.mt-1.flex-wrap
-              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="500000") 500k
-              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="1000000") 1tr
-              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="2000000") 2tr
-              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="5000000") 5tr
-              button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="10000000") 10tr
+          // Khối thông tin Hồ sơ Trả góp (Hiển thị khi chọn phương thức Trả góp)
+          #installmentSection.p-3.border.border-warning.rounded.bg-warning-subtle.bg-opacity-10.mb-3(style="display: none;")
+            .fw-bold.text-dark.small.mb-2 Thông tin hồ sơ trả góp bên thứ 3
+            .mb-2
+              label.form-label.small.mb-1(for="installmentProvider") Đơn vị tài chính liên kết *
+              select#installmentProvider.form-select.form-select-sm
+                option(value="home_credit") Home Credit
+                option(value="mirae_asset") Mirae Asset
+                option(value="hd_saison") HD Saison (Ngân hàng HD Sài Gòn)
 
-          // Tiền thừa trả khách & Tùy chọn xử lý tiền lẻ
-          .p-2.bg-light.rounded.mb-3
-            .d-flex.justify-content-between.align-items-center
-              span.small.fw-bold.text-muted Tiền thừa trả lại:
-              strong#changeAmountDisplay.fs-6.text-success 0 đ
-            #keepSmallChangeContainer.mt-2.pt-2.border-top(style="display: none;")
-              .form-check
-                input#keepSmallChangeCheck.form-check-input(type="checkbox")
-                label.form-check-label.small.text-secondary(for="keepSmallChangeCheck")
-                  | Khách tặng lại / Không nhận tiền lẻ thừa (
-                  strong#smallChangeAmountText 0 đ
-                  | )
+            .row.g-2.mb-2
+              .col-7
+                label.form-label.small.mb-1(for="installmentCccd") Số CCCD khách hàng *
+                input#installmentCccd.form-control.form-control-sm(
+                  type="text",
+                  maxlength="12",
+                  placeholder="Nhập 9 - 12 số CCCD...",
+                  autocomplete="off"
+                )
+              .col-5
+                label.form-label.small.mb-1(for="installmentTermMonths") Kỳ hạn góp
+                select#installmentTermMonths.form-select.form-select-sm
+                  option(value="3") 3 tháng
+                  option(value="6", selected) 6 tháng
+                  option(value="9") 9 tháng
+                  option(value="12") 12 tháng
+                  option(value="15") 15 tháng
+                  option(value="18") 18 tháng
+                  option(value="24") 24 tháng
+
+            .mb-2
+              label.form-label.small.mb-1(for="installmentContractCode") Mã hợp đồng (hoặc bổ sung sau)
+              input#installmentContractCode.form-control.form-control-sm.text-uppercase(
+                type="text",
+                placeholder="Để trống nếu bổ sung sau...",
+                autocomplete="off"
+              )
+
+            .mb-2
+              label.form-label.small.mb-1(for="installmentDownPayment") Tiền khách trả trước (VNĐ)
+              .input-group.input-group-sm
+                input#installmentDownPayment.form-control.text-end.fw-bold(
+                  type="text",
+                  format-money,
+                  value="0",
+                  placeholder="0"
+                )
+                span.input-group-text đ
+              .d-flex.gap-1.mt-1.flex-wrap
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-downpayment(type="button", data-percent="0") 0 đ
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-downpayment(type="button", data-percent="10") 10%
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-downpayment(type="button", data-percent="20") 20%
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-downpayment(type="button", data-percent="30") 30%
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-downpayment(type="button", data-percent="50") 50%
+
+            #downPaymentMethodBox.mb-2(style="display: none;")
+              label.form-label.small.mb-1 Hình thức thu khoản trả trước
+              .d-flex.gap-3
+                .form-check
+                  input#dpMethodCash.form-check-input(type="radio", name="downPaymentMethod", value="cash", checked)
+                  label.form-check-label.small(for="dpMethodCash") Tiền mặt
+                .form-check
+                  input#dpMethodBank.form-check-input(type="radio", name="downPaymentMethod", value="bank_transfer")
+                  label.form-check-label.small(for="dpMethodBank") Chuyển khoản
+
+            .p-2.bg-white.border.rounded.mb-2
+              .d-flex.justify-content-between.align-items-center
+                span.small.text-muted Đối tác giải ngân (100%):
+                strong#installmentLoanDisplay.fs-6.text-primary 0 đ
+
+            .mb-0
+              label.form-label.small.mb-1(for="installmentNote") Ghi chú hồ sơ góp (tùy chọn)
+              input#installmentNote.form-control.form-control-sm(
+                type="text",
+                placeholder="VD: Tên nhân viên tài chính duyệt hồ sơ..."
+              )
+
+          #cashTenderSection
+            // Tiền khách đưa
+            .mb-2
+              .d-flex.justify-content-between.align-items-center.mb-1
+                label#paidAmountLabel.form-label.small.mb-0 Tiền khách đưa (VNĐ)
+                button#btnExactAmount.btn.btn-link.btn-sm.p-0.text-decoration-none(type="button") [Đúng số tiền]
+              input#paidAmountInput.form-control.text-end.fw-bold(type="text", format-money, placeholder="Nhập tiền khách đưa...")
+              // Các nút tiền nhanh
+              .d-flex.gap-1.mt-1.flex-wrap
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="500000") 500k
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="1000000") 1tr
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="2000000") 2tr
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="5000000") 5tr
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-cash(type="button", data-amount="10000000") 10tr
+
+            // Tiền thừa trả khách & Tùy chọn xử lý tiền lẻ
+            .p-2.bg-light.rounded.mb-3
+              .d-flex.justify-content-between.align-items-center
+                span.small.fw-bold.text-muted Tiền thừa trả lại:
+                strong#changeAmountDisplay.fs-6.text-success 0 đ
+              #keepSmallChangeContainer.mt-2.pt-2.border-top(style="display: none;")
+                .form-check
+                  input#keepSmallChangeCheck.form-check-input(type="checkbox")
+                  label.form-check-label.small.text-secondary(for="keepSmallChangeCheck")
+                    | Khách tặng lại / Không nhận tiền lẻ thừa (
+                    strong#smallChangeAmountText 0 đ
+                    | )
 
           // Ghi chú đơn hàng
           .mb-3

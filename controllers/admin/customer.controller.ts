@@ -4,6 +4,7 @@ import Customer from "../../models/customer.model";
 import Order from "../../models/order.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 import { parseVNDate } from "../../helpers/date.helper";
+import { buildPagination } from "../../helpers/pagination.helper";
 
 /**
  * API Tra cứu nhanh khách hàng theo số điện thoại (Dùng cho POS và Bảo hành)
@@ -23,7 +24,7 @@ export const lookup = async (req: Request, res: Response) => {
       phone: cleanPhone,
       deleted: { $ne: true }
     })
-      .select("_id fullName phone address email totalSpent orderCount customerGroup lastOrderAt")
+      .select("_id fullName phone cccd address email totalSpent orderCount customerGroup lastOrderAt")
       .lean();
 
     if (!customer) {
@@ -139,12 +140,8 @@ export const list = async (req: Request, res: Response) => {
       find.$or = orConditions;
     }
 
-    const [customers, totalCustomers, totalOrdersAgg, totalSpentAgg] = await Promise.all([
-      Customer.find(find)
-        .populate("createdBy", "fullName email")
-        .sort({ updatedAt: -1 })
-        .limit(100)
-        .lean(),
+    const [filteredCustomerCount, totalCustomers, totalOrdersAgg, totalSpentAgg] = await Promise.all([
+      Customer.countDocuments(find),
       Customer.countDocuments({ deleted: { $ne: true } }),
       Customer.aggregate([
         { $match: { deleted: { $ne: true } } },
@@ -156,6 +153,14 @@ export const list = async (req: Request, res: Response) => {
       ])
     ]);
 
+    const pagination = buildPagination(req, filteredCustomerCount, 10);
+    const customers = await Customer.find(find)
+      .populate("createdBy", "fullName email")
+      .sort({ updatedAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+
     const totalOrders = totalOrdersAgg.length > 0 ? totalOrdersAgg[0].totalOrders : 0;
     const totalSpent = totalSpentAgg.length > 0 ? totalSpentAgg[0].totalSpent : 0;
 
@@ -164,6 +169,7 @@ export const list = async (req: Request, res: Response) => {
       customers,
       stats: { totalCustomers, totalOrders, totalSpent },
       filters: { keyword, customerGroup, source },
+      pagination,
       canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("customer:write"),
       canDelete: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("customer:delete")
     });

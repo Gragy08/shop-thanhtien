@@ -93,7 +93,7 @@ block main
                 if customers && customers.length
                   each c, index in customers
                     tr
-                      td.text-center.text-muted #{index + 1}
+                      td.text-center.text-muted #{(pagination ? pagination.skip : 0) + index + 1}
                       td
                         a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/customer/${c._id}`)
                           | #{c.fullName}
@@ -158,6 +158,8 @@ block main
                       i.las.la-user-slash.fs-1.d-block.mb-2.text-muted.opacity-50
                       span.fw-semibold Không tìm thấy khách hàng nào!
                       p.small.text-muted.mb-0 Hãy thử thay đổi bộ lọc tìm kiếm hoặc thêm khách hàng mới.
+
+          include ../../partials/pagination.pug
 
 block script
   script.

@@ -7,6 +7,7 @@ import Product from "../../models/product.model";
 import ProductVariant from "../../models/product-variant.model";
 import InventoryItem from "../../models/inventory-item.model";
 import { buildCategoryTree, collectDescendantIds } from "../../helpers/category.helper";
+import { buildPagination } from "../../helpers/pagination.helper";
 import { RequestAccount } from "../../interfaces/request.interface";
 
 interface VariantInput {
@@ -91,12 +92,8 @@ export const list = async (req: Request, res: Response) => {
     ];
   }
 
-  const [products, rawCategories, trashCount, totalProducts, activeCount, draftCount, inactiveCount] = await Promise.all([
-    Product.find(find)
-      .populate("categoryIds", "name slug")
-      .sort({ createdAt: "desc" })
-      .limit(200)
-      .lean(),
+  const [filteredCount, rawCategories, trashCount, totalProducts, activeCount, draftCount, inactiveCount] = await Promise.all([
+    Product.countDocuments(find),
     Category.find({ deleted: false, status: "active" }).select("_id parentId name slug status").lean(),
     Product.countDocuments({ deleted: true }),
     Product.countDocuments({ deleted: { $ne: true } }),
@@ -104,6 +101,15 @@ export const list = async (req: Request, res: Response) => {
     Product.countDocuments({ deleted: { $ne: true }, status: "draft" }),
     Product.countDocuments({ deleted: { $ne: true }, status: "inactive" })
   ]);
+
+  const pagination = buildPagination(req, filteredCount, 10);
+
+  const products = await Product.find(find)
+    .populate("categoryIds", "name slug")
+    .sort({ createdAt: "desc" })
+    .skip(pagination.skip)
+    .limit(pagination.limit)
+    .lean();
 
   rawCategories.sort((a, b) => a.name.localeCompare(b.name, "vi"));
   const categoryTree = buildCategoryTree(rawCategories);
@@ -164,6 +170,7 @@ export const list = async (req: Request, res: Response) => {
     trashCount,
     stats: { totalProducts, activeCount, draftCount, inactiveCount },
     filters: { keyword, categoryId, status },
+    pagination,
     canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("product:write")
   });
 };
@@ -177,10 +184,14 @@ export const trash = async (req: Request, res: Response) => {
     find.$or = [{ name: regex }, { sku: regex }];
   }
 
+  const totalTrash = await Product.countDocuments(find);
+  const pagination = buildPagination(req, totalTrash, 10);
+
   const trashProducts = await Product.find(find)
     .populate("categoryIds", "name slug")
     .sort({ deletedAt: "desc" })
-    .limit(200)
+    .skip(pagination.skip)
+    .limit(pagination.limit)
     .lean();
 
   const productIds = trashProducts.map((p) => p._id);
@@ -200,6 +211,7 @@ export const trash = async (req: Request, res: Response) => {
     pageTitle: "Thùng rác sản phẩm",
     trashList,
     keyword,
+    pagination,
     canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("product:write")
   });
 };

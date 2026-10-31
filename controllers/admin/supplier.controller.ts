@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Supplier from "../../models/supplier.model";
+import { buildPagination } from "../../helpers/pagination.helper";
 
 const parseSupplierInput = (body: Record<string, unknown>) => {
   const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -10,11 +11,21 @@ const parseSupplierInput = (body: Record<string, unknown>) => {
   return { name, address, phone, status };
 };
 
-export const list = async (_req: Request, res: Response) => {
-  const supplierList = await Supplier.find({ deleted: false }).sort({ createdAt: "desc" }).lean();
+export const list = async (req: Request, res: Response) => {
+  const find = { deleted: false };
+  const totalCount = await Supplier.countDocuments(find);
+  const pagination = buildPagination(req, totalCount, 10);
+
+  const supplierList = await Supplier.find(find)
+    .sort({ createdAt: "desc" })
+    .skip(pagination.skip)
+    .limit(pagination.limit)
+    .lean();
+
   res.render("admin/supplier/list", {
     pageTitle: "Nhà cung cấp",
-    supplierList
+    supplierList,
+    pagination
   });
 };
 

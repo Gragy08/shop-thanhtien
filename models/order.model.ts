@@ -78,6 +78,65 @@ const orderItemSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const installmentInfoSchema = new mongoose.Schema(
+  {
+    provider: {
+      type: String,
+      enum: ["home_credit", "mirae_asset", "hd_saison"],
+      required: true
+    },
+    contractCode: {
+      type: String,
+      default: "",
+      trim: true,
+      uppercase: true
+    },
+    cccd: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    termMonths: {
+      type: Number,
+      default: 6,
+      min: 1
+    },
+    downPayment: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    downPaymentMethod: {
+      type: String,
+      enum: ["cash", "bank_transfer"],
+      default: "cash"
+    },
+    loanAmount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    settlementStatus: {
+      type: String,
+      enum: ["pending", "settled"],
+      default: "pending"
+    },
+    settledAt: {
+      type: Date
+    },
+    settledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AccountAdmin"
+    },
+    note: {
+      type: String,
+      default: "",
+      trim: true
+    }
+  },
+  { _id: false }
+);
+
 const schema = new mongoose.Schema(
   {
     orderCode: {
@@ -135,6 +194,10 @@ const schema = new mongoose.Schema(
       type: String,
       enum: ["cash", "bank_transfer", "credit_card", "installment"],
       default: "cash"
+    },
+    installmentInfo: {
+      type: installmentInfoSchema,
+      default: null
     },
     paidAmount: {
       type: Number,

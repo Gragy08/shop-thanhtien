@@ -26,6 +26,7 @@ export const rolePermissions: Record<AdminRole, string[]> = {
 		"order:read",
 		"order:write",
 		"order:cancel",
+		"order:settle",
 		"customer:read",
 		"customer:write",
 		"customer:delete",

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import slugify from "slugify";
 import Attribute from "../../models/attribute.model";
+import { buildPagination } from "../../helpers/pagination.helper";
 
 const attributeTypes = ["text", "select", "color"] as const;
 
@@ -58,14 +59,21 @@ const parseInput = (body: Record<string, unknown>) => {
   };
 };
 
-export const list = async (_req: Request, res: Response) => {
-  const attributeList = await Attribute.find({ deleted: false })
+export const list = async (req: Request, res: Response) => {
+  const find = { deleted: false };
+  const totalCount = await Attribute.countDocuments(find);
+  const pagination = buildPagination(req, totalCount, 10);
+
+  const attributeList = await Attribute.find(find)
     .sort({ createdAt: "desc" })
+    .skip(pagination.skip)
+    .limit(pagination.limit)
     .lean();
 
   res.render("admin/attribute/list", {
     pageTitle: "Thuộc tính sản phẩm",
-    attributeList
+    attributeList,
+    pagination
   });
 };
 

@@ -93,18 +93,18 @@ const renderStaffDashboard = async (req: RequestAccount, res: Response) => {
     }
   }
 
-  // 2. Tồn kho thiết bị sẵn sàng bán & bảo hành (cộng đúng quantity cho hàng quản lý theo số lượng)
-  const [availAgg, activeWarrantyCount] = await Promise.all([
-    InventoryItem.aggregate([
-      { $match: { status: "available", deleted: { $ne: true } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$quantity", 1] } } } }
-    ]),
+  // 2. Tồn kho thiết bị sẵn sàng bán & bảo hành (chỉ đếm thiết bị định danh IMEI / Serial, không tính hàng theo số lượng)
+  const [availableStockCount, activeWarrantyCount] = await Promise.all([
+    InventoryItem.countDocuments({
+      status: "available",
+      trackingType: { $in: ["imei", "serial"] },
+      deleted: { $ne: true }
+    }),
     WarrantyTicket.countDocuments({
       ticketStatus: { $in: ["received", "in_progress", "completed"] },
       deleted: { $ne: true }
     })
   ]);
-  const availableStockCount = availAgg[0]?.total || 0;
 
   // 3. Phiếu bảo hành đến hẹn trả hôm nay hoặc trễ hẹn
   const dueWarranties = await WarrantyTicket.find({
@@ -202,11 +202,31 @@ export const index = async (req: RequestAccount, res: Response) => {
       deleted: { $ne: true }
     };
 
-    const [ordersInPeriod, allCompletedOrdersCount, cancelledOrdersCount] = await Promise.all([
+    const [ordersInPeriod, allCompletedOrdersCount, cancelledOrdersCount, pendingInstallmentAgg] = await Promise.all([
       Order.find({ ...orderMatch, orderStatus: "completed" }).lean(),
       Order.countDocuments({ ...orderMatch, orderStatus: "completed" }),
-      Order.countDocuments({ ...orderMatch, orderStatus: "cancelled" })
+      Order.countDocuments({ ...orderMatch, orderStatus: "cancelled" }),
+      Order.aggregate([
+        {
+          $match: {
+            deleted: { $ne: true },
+            orderStatus: "completed",
+            paymentMethod: "installment",
+            "installmentInfo.settlementStatus": "pending"
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            pendingInstallmentAmount: { $sum: "$installmentInfo.loanAmount" },
+            pendingInstallmentCount: { $sum: 1 }
+          }
+        }
+      ])
     ]);
+
+    const pendingInstallmentAmount = pendingInstallmentAgg.length > 0 ? pendingInstallmentAgg[0].pendingInstallmentAmount : 0;
+    const pendingInstallmentCount = pendingInstallmentAgg.length > 0 ? pendingInstallmentAgg[0].pendingInstallmentCount : 0;
 
     let totalRevenue = 0;
     for (const ord of ordersInPeriod) {
@@ -478,6 +498,8 @@ export const index = async (req: RequestAccount, res: Response) => {
         totalRevenue,
         allCompletedOrdersCount,
         cancelledOrdersCount,
+        pendingInstallmentAmount,
+        pendingInstallmentCount,
         avgOrderValue,
         availableStockCount,
         totalStockValue,

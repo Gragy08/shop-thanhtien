@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 export interface CustomerDocument extends mongoose.Document {
   fullName: string;
   phone: string;
+  cccd?: string;
   email?: string;
   address?: string;
   birthday?: Date;
@@ -33,6 +34,11 @@ const customerSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true
+    },
+    cccd: {
+      type: String,
+      trim: true,
+      default: ""
     },
     email: {
       type: String,

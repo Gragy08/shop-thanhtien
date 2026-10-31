@@ -191,7 +191,7 @@ block main
                     tr
                       td.text-center
                         input.form-check-input.ticket-select-item(type="checkbox", value=tk._id, data-code=tk.ticketCode)
-                      td.text-center.text-muted #{index + 1}
+                      td.text-center.text-muted #{(pagination ? pagination.skip : 0) + index + 1}
                       td
                         a.fw-bold.text-primary.text-decoration-none(href=`/${pathAdmin}/warranty/${tk._id}`)
                           | #{tk.ticketCode}
@@ -261,6 +261,9 @@ block main
                       i.las.la-tools.fs-1.d-block.mb-2.text-muted.opacity-50
                       span.fw-semibold Chưa có phiếu bảo hành nào!
                       p.small.text-muted.mb-0 Hãy bấm "+ Tiếp nhận bảo hành" để lập phiếu tiếp nhận thiết bị mới.
+
+        .px-3.pb-3
+          include ../../partials/pagination.pug
 
 block script
   script(src="/admin/assets/js/warranty-list.js")

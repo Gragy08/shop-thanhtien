@@ -10,8 +10,12 @@ import { readVietnameseNumber } from "../../helpers/number-to-words.helper";
 import { parseVNDate } from "../../helpers/date.helper";
 
 interface OrderItemInput {
-  productId: string;
-  variantId: string;
+  isCustomItem?: boolean;
+  customItemType?: "custom_product" | "custom_service";
+  productName?: string;
+  purchasePrice?: number | string;
+  productId?: string;
+  variantId?: string;
   quantity: number | string;
   unitPrice: number | string;
   discount?: number | string;
@@ -231,6 +235,39 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     const imeiToSellList: string[] = [];
 
     for (const rawItem of itemsInput) {
+      if (rawItem.isCustomItem) {
+        const customName = typeof rawItem.productName === "string" ? rawItem.productName.trim() : "";
+        if (!customName) {
+          res.status(400).json({ code: "error", message: "Vui lòng nhập tên mặt hàng hoặc dịch vụ bán ngoài!" });
+          return;
+        }
+
+        const quantity = Math.max(1, parseInt(String(rawItem.quantity), 10) || 1);
+        const unitPrice = Math.max(0, parseFloat(String(rawItem.unitPrice)) || 0);
+        const discount = Math.max(0, parseFloat(String(rawItem.discount)) || 0);
+        const lineTotal = Math.max(0, quantity * unitPrice - discount);
+        const purchasePrice = Math.max(0, parseFloat(String(rawItem.purchasePrice)) || 0);
+        const customType = rawItem.customItemType === "custom_service" ? "custom_service" : "custom_product";
+
+        calculatedSubTotal += lineTotal;
+
+        orderItems.push({
+          isCustomItem: true,
+          customItemType: customType,
+          productName: customName,
+          variantSku: customType === "custom_service" ? "DICH-VU" : "BAN-NGOAI",
+          variantName: customType === "custom_service" ? "Dịch vụ / Tiền công" : "Sản phẩm lặt vặt",
+          trackingType: "custom",
+          identifiers: [],
+          quantity,
+          unitPrice,
+          purchasePrice,
+          discount,
+          totalPrice: lineTotal
+        });
+        continue;
+      }
+
       if (!mongoose.isValidObjectId(rawItem.productId) || !mongoose.isValidObjectId(rawItem.variantId)) {
         res.status(400).json({ code: "error", message: "Thông tin sản phẩm hoặc biến thể không hợp lệ!" });
         return;

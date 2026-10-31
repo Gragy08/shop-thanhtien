@@ -144,8 +144,13 @@ block main
                         if order.items && order.items.length
                           each item in order.items
                             div.mb-1
+                              if item.isCustomItem
+                                if item.customItemType === "custom_service"
+                                  span.badge.bg-info-subtle.text-info-emphasis.border.border-info-subtle.me-1 Dịch vụ
+                                else
+                                  span.badge.bg-warning-subtle.text-warning-emphasis.border.border-warning-subtle.me-1 Bán ngoài
                               span.fw-semibold #{item.productName}
-                              if item.variantName
+                              if item.variantName && !item.isCustomItem
                                 small.text-muted.ms-1 (#{item.variantName})
                               span.badge.bg-light.text-dark.border.ms-1 x#{item.quantity}
                               if item.identifiers && item.identifiers.length
@@ -214,7 +219,7 @@ block main
           .alert.alert-warning.small.mb-3
             i.las.la-info-circle.me-1
             | Khi hủy đơn, toàn bộ các thiết bị (IMEI/Serial) đã xuất bán trong đơn hàng này sẽ được 
-            strong tự động hoàn trả về kho với trạng thái "Có sẵn" (Available)
+            strong tự động hoàn trả về kho với trạng thái "Có sẵn"
             | .
           .mb-3
             label.form-label.small.fw-bold Lý do hủy đơn

@@ -249,10 +249,20 @@ block main
                           td.text-center.text-muted #{idx + 1}
                           td
                             strong.text-dark #{item.productName}
-                            if item.variantName
-                              span.text-muted.ms-1 (#{item.variantName})
-                            if item.variantSku
-                              code.ms-1.small #{item.variantSku}
+                            if item.isCustomItem
+                              if item.customItemType === "custom_service"
+                                span.badge.bg-info-subtle.text-info-emphasis.border.border-info-subtle.ms-1
+                                  i.las.la-tools.me-1
+                                  | Dịch vụ / Tiền công
+                              else
+                                span.badge.bg-warning-subtle.text-warning-emphasis.border.border-warning-subtle.ms-1
+                                  i.las.la-tag.me-1
+                                  | Bán ngoài
+                            else
+                              if item.variantName
+                                span.text-muted.ms-1 (#{item.variantName})
+                              if item.variantSku
+                                code.ms-1.small #{item.variantSku}
                             if item.identifiers && item.identifiers.length
                               .mt-1
                                 small.text-muted.d-block Mã IMEI / Serial thiết bị:
@@ -368,7 +378,13 @@ block main
                       tr
                         td.pt-1.text-start
                           div.fw-bold #{item.productName}
-                          if item.variantName
+                          if item.isCustomItem
+                            div.text-muted.small
+                              if item.customItemType === "custom_service"
+                                | [Dịch vụ / Tiền công]
+                              else
+                                | [Món bán ngoài]
+                          else if item.variantName
                             div.text-muted.small (#{item.variantName})
                           if item.identifiers && item.identifiers.length
                             each id in item.identifiers

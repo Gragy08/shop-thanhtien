@@ -35,6 +35,9 @@ block main
               )
               button#btnClearSearch.btn.btn-outline-secondary(type="button", style="display: none;")
                 i.las.la-times
+              button#btnOpenCustomItemModal.btn.btn-info.fw-semibold.px-3.text-dark(type="button", title="Bán món lặt vặt hoặc tiền công dịch vụ không lưu kho")
+                i.las.la-plus-circle.me-1.fs-5
+                | Bán ngoài / Dịch vụ
             
             // Menu thả xuống hiển thị kết quả tìm kiếm sản phẩm (Nổi bật trên giỏ hàng, nền trắng đục hoàn toàn)
             #posSearchResults.dropdown-menu.w-100.p-2(
@@ -227,6 +230,65 @@ block main
           button#btnConfirmImeis.btn.btn-primary(type="button")
             i.las.la-check.me-1
             | Xác nhận chọn
+
+  // Modal Thêm Món Bán Ngoài / Dịch Vụ Nhanh (Không lưu kho)
+  #customItemModal.modal.fade(tabindex="-1", aria-hidden="true")
+    .modal-dialog.modal-dialog-centered
+      .modal-content
+        .modal-header.bg-light
+          h5.modal-title.fw-bold.text-dark
+            i.las.la-plus-circle.text-info.me-1
+            | Bán Ngoài / Dịch Vụ Nhanh
+          button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+        .modal-body
+          form#customItemForm
+            .mb-3
+              label.form-label.fw-bold Phân loại hình thức *
+              .d-flex.gap-2
+                .form-check.form-check-inline.border.rounded.p-2.px-3.flex-grow-1
+                  input#typeCustomProduct.form-check-input(type="radio", name="customItemType", value="custom_product", checked)
+                  label.form-check-label.fw-semibold.ms-1(for="typeCustomProduct")
+                    | Mặt hàng lặt vặt
+                  small.d-block.text-muted.mt-1 Nón bảo hiểm, Ốp lưng, bao da,...
+                .form-check.form-check-inline.border.rounded.p-1.px-3.flex-grow-1
+                  input#typeCustomService.form-check-input(type="radio", name="customItemType", value="custom_service")
+                  label.form-check-label.fw-semibold.ms-1(for="typeCustomService")
+                    | Tiền công / Dịch vụ
+                  small.d-block.text-muted.mt-1 Dán màn hình, vệ sinh máy, cài đặt...
+
+            .mb-3
+              label.form-label.fw-bold(for="customProductName") Tên mặt hàng / Dịch vụ *
+              input#customProductName.form-control(type="text", placeholder="Ví dụ: Dán màn hình cường lực iPhone 15", required, autocomplete="off")
+              // Gợi ý chọn nhanh
+              .d-flex.gap-1.flex-wrap.mt-1
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-custom-name(type="button", data-name="Dán cường lực", data-price="100000", data-type="custom_service") Dán cường lực
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-custom-name(type="button", data-name="Ốp lưng", data-price="100000", data-type="custom_product") Ốp lưng
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-custom-name(type="button", data-name="Vệ sinh máy", data-price="50000", data-type="custom_service") Vệ sinh máy
+                button.btn.btn-sm.btn-light.border.py-0.px-2.btn-quick-custom-name(type="button", data-name="Cắt sim / Cài đặt", data-price="30000", data-type="custom_service") Cắt sim / Cài đặt
+
+            .row.g-2.mb-3
+              .col-6
+                label.form-label.fw-bold(for="customUnitPrice") Giá bán cho khách *
+                .input-group
+                  input#customUnitPrice.form-control.text-end.fw-bold(type="text", format-money, placeholder="50.000", required)
+                  span.input-group-text đ
+              .col-6
+                label.form-label.fw-bold(for="customQuantity") Số lượng *
+                input#customQuantity.form-control.text-center.fw-bold(type="number", min="1", value="1", required)
+
+            .mb-3
+              label.form-label.small.text-muted(for="customPurchasePrice")
+                | Giá vốn ước tính (Tùy chọn)
+              .input-group.input-group-sm
+                input#customPurchasePrice.form-control.text-end(type="text", format-money, placeholder="0")
+                span.input-group-text đ
+              small.text-muted Mặc định là 0 đ.
+
+        .modal-footer.bg-light
+          button.btn.btn-light(type="button", data-bs-dismiss="modal") Hủy
+          button#btnAddCustomItem.btn.btn-info.fw-bold.px-4.text-dark(type="button")
+            i.las.la-plus-circle.me-1
+            | Thêm vào đơn hàng
 
 block script
   script(src="/admin/assets/js/order-pos.js")

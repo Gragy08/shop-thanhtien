@@ -83,7 +83,7 @@ export const me = (req: RequestAccount, res: Response) => {
 
 export const logout = (req: Request, res: Response) => {
   res.clearCookie("tokenAdmin");
-  if (req.headers.accept?.includes("application/json") || req.xhr) {
+  if (!req.headers.accept?.includes("text/html") && (req.headers.accept?.includes("application/json") || req.xhr)) {
     res.json({ code: "success", message: "Đã đăng xuất!" });
     return;
   }

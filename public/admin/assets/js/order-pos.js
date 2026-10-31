@@ -5,6 +5,9 @@ let tempSelectedImeis = [];
 const selectImeiModalEl = document.querySelector("#selectImeiModal");
 const selectImeiModal = selectImeiModalEl && window.bootstrap ? window.bootstrap.Modal.getOrCreateInstance(selectImeiModalEl) : null;
 
+const customItemModalEl = document.querySelector("#customItemModal");
+const customItemModal = customItemModalEl && window.bootstrap ? window.bootstrap.Modal.getOrCreateInstance(customItemModalEl) : null;
+
 // ==========================================
 // 1. TÌM KIẾM SẢN PHẨM & QUÉT MÃ IMEI REAL-TIME
 // ==========================================
@@ -256,11 +259,16 @@ const renderCart = () => {
   if (emptyRow) emptyRow.style.display = "none";
 
   tbody.innerHTML = cart.map((item, index) => {
-    const isImeiTracking = item.trackingType === "imei" || item.trackingType === "serial";
+    const isCustom = Boolean(item.isCustomItem);
+    const isImeiTracking = !isCustom && (item.trackingType === "imei" || item.trackingType === "serial");
 
-    // Cột IMEI
+    // Cột IMEI / Phân loại kho
     let imeiCellContent = "";
-    if (!isImeiTracking) {
+    if (isCustom) {
+      imeiCellContent = item.customItemType === "custom_service"
+        ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle py-1 px-2"><i class="las la-tools me-1"></i> Dịch vụ (Không kho)</span>'
+        : '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle py-1 px-2"><i class="las la-tag me-1"></i> Bán ngoài (Không kho)</span>';
+    } else if (!isImeiTracking) {
       imeiCellContent = '<span class="badge bg-light text-muted border">Hàng số lượng</span>';
     } else {
       const selectedCount = item.identifiers.length;
@@ -282,11 +290,17 @@ const renderCart = () => {
       `;
     }
 
+    const customTypeBadge = isCustom
+      ? (item.customItemType === "custom_service"
+          ? '<span class="badge bg-info-subtle text-info-emphasis me-1 border border-info-subtle"><i class="las la-tools me-1"></i>Dịch vụ</span>'
+          : '<span class="badge bg-warning-subtle text-warning-emphasis me-1 border border-warning-subtle"><i class="las la-tag me-1"></i>Bán ngoài</span>')
+      : '';
+
     return `
       <tr>
         <td class="text-center text-muted">${index + 1}</td>
         <td>
-          <strong class="text-dark">${item.productName}</strong>
+          ${customTypeBadge}<strong class="text-dark">${item.productName}</strong>
           ${item.variantName ? `<br><small class="text-muted">${item.variantName}</small>` : ''}
           ${item.variantSku ? `<code class="ms-1 small">${item.variantSku}</code>` : ''}
         </td>
@@ -296,7 +310,7 @@ const renderCart = () => {
         <td class="text-center">
           <div class="input-group input-group-sm justify-content-center" style="width: 100px; margin: 0 auto;">
             <button class="btn btn-outline-secondary btn-qty-minus" type="button" data-index="${index}">-</button>
-            <input class="form-control text-center fw-bold btn-qty-input" type="number" min="1" max="${item.availableStock}" value="${item.quantity}" data-index="${index}">
+            <input class="form-control text-center fw-bold btn-qty-input" type="number" min="1" max="${isCustom ? 9999 : item.availableStock}" value="${item.quantity}" data-index="${index}">
             <button class="btn btn-outline-secondary btn-qty-plus" type="button" data-index="${index}">+</button>
           </div>
         </td>
@@ -338,7 +352,8 @@ const bindCartEvents = () => {
   document.querySelectorAll(".btn-qty-plus").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.index, 10);
-      if (cart[idx].quantity < cart[idx].availableStock) {
+      const isCustom = Boolean(cart[idx].isCustomItem);
+      if (isCustom || cart[idx].quantity < cart[idx].availableStock) {
         cart[idx].quantity += 1;
         cart[idx].totalPrice = cart[idx].quantity * cart[idx].unitPrice;
         renderCart();
@@ -353,8 +368,9 @@ const bindCartEvents = () => {
   document.querySelectorAll(".btn-qty-input").forEach((input) => {
     input.addEventListener("change", (e) => {
       const idx = parseInt(input.dataset.index, 10);
+      const isCustom = Boolean(cart[idx].isCustomItem);
       let val = parseInt(e.target.value, 10) || 1;
-      val = Math.max(1, Math.min(val, cart[idx].availableStock));
+      val = isCustom ? Math.max(1, val) : Math.max(1, Math.min(val, cart[idx].availableStock));
       cart[idx].quantity = val;
       if (cart[idx].identifiers.length > val) {
         cart[idx].identifiers.length = val;
@@ -607,6 +623,7 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
 
   // Kiểm tra IMEI với tất cả các dòng hàng định danh
   for (const item of cart) {
+    if (item.isCustomItem) continue; // Hàng bán ngoài / dịch vụ không lưu kho, bỏ qua kiểm tra IMEI
     if (item.trackingType === "imei" || item.trackingType === "serial") {
       if (item.identifiers.length !== item.quantity) {
         if (typeof notyf !== "undefined") notyf.error(`Sản phẩm "${item.productName}" yêu cầu chọn đủ ${item.quantity} mã ${item.trackingType === 'imei' ? 'IMEI' : 'Serial'} (Hiện có: ${item.identifiers.length})!`);
@@ -644,12 +661,16 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
       address: customerAddress
     },
     items: cart.map((i) => ({
+      isCustomItem: Boolean(i.isCustomItem),
+      customItemType: i.customItemType || "custom_product",
+      productName: i.productName,
+      purchasePrice: i.purchasePrice || 0,
       productId: i.productId,
       variantId: i.variantId,
       quantity: i.quantity,
       unitPrice: i.unitPrice,
       discount: i.discount || 0,
-      identifiers: i.identifiers
+      identifiers: i.identifiers || []
     })),
     subTotal,
     discount,
@@ -763,6 +784,100 @@ phoneInput?.addEventListener("input", (e) => {
       // Ignore lookup network errors
     }
   }, 250);
+});
+
+// ==========================================
+// 7. XỬ LÝ BÁN NGOÀI / TIỀN CÔNG DỊCH VỤ NHANH
+// ==========================================
+document.querySelector("#btnOpenCustomItemModal")?.addEventListener("click", () => {
+  const form = document.querySelector("#customItemForm");
+  if (form) form.reset();
+  const radio = document.querySelector("#typeCustomProduct");
+  if (radio) radio.checked = true;
+  const qty = document.querySelector("#customQuantity");
+  if (qty) qty.value = "1";
+  if (customItemModal) customItemModal.show();
+  setTimeout(() => {
+    document.querySelector("#customProductName")?.focus();
+  }, 350);
+});
+
+// Gợi ý tên nhanh
+document.querySelectorAll(".btn-quick-custom-name").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const name = btn.dataset.name || "";
+    const price = btn.dataset.price || "";
+    const type = btn.dataset.type || "custom_product";
+
+    const nameInput = document.querySelector("#customProductName");
+    if (nameInput) nameInput.value = name;
+
+    const priceInput = document.querySelector("#customUnitPrice");
+    if (priceInput) {
+      priceInput.value = window.formatVND ? window.formatVND(Number(price)) : Number(price).toLocaleString("vi-VN");
+    }
+
+    const typeRadio = document.querySelector(`input[name="customItemType"][value="${type}"]`);
+    if (typeRadio) typeRadio.checked = true;
+
+    if (priceInput) priceInput.focus();
+  });
+});
+
+// Thêm món bán ngoài vào giỏ hàng
+document.querySelector("#btnAddCustomItem")?.addEventListener("click", () => {
+  const typeRadio = document.querySelector("input[name='customItemType']:checked");
+  const customType = typeRadio ? typeRadio.value : "custom_product";
+
+  const nameInput = document.querySelector("#customProductName");
+  const productName = nameInput ? nameInput.value.trim() : "";
+  if (!productName) {
+    if (typeof notyf !== "undefined") notyf.error("Vui lòng nhập tên mặt hàng hoặc dịch vụ bán ngoài!");
+    else window.alert("Vui lòng nhập tên mặt hàng hoặc dịch vụ bán ngoài!");
+    nameInput?.focus();
+    return;
+  }
+
+  const unitPriceInput = document.querySelector("#customUnitPrice");
+  const rawUnitPrice = window.parseVND ? window.parseVND(unitPriceInput?.value) : parseFloat(unitPriceInput?.value);
+  const unitPrice = isNaN(rawUnitPrice) ? 0 : Math.max(0, rawUnitPrice);
+  if (unitPrice <= 0) {
+    if (typeof notyf !== "undefined") notyf.error("Vui lòng nhập giá bán hợp lệ lớn hơn 0 đ!");
+    else window.alert("Vui lòng nhập giá bán hợp lệ lớn hơn 0 đ!");
+    unitPriceInput?.focus();
+    return;
+  }
+
+  const quantityInput = document.querySelector("#customQuantity");
+  const quantity = Math.max(1, parseInt(quantityInput?.value, 10) || 1);
+
+  const purchasePriceInput = document.querySelector("#customPurchasePrice");
+  const rawPurchase = window.parseVND ? window.parseVND(purchasePriceInput?.value) : parseFloat(purchasePriceInput?.value);
+  const purchasePrice = isNaN(rawPurchase) ? 0 : Math.max(0, rawPurchase);
+
+  const isService = customType === "custom_service";
+
+  cart.push({
+    isCustomItem: true,
+    customItemType: customType,
+    productName: productName,
+    variantSku: isService ? "DICH-VU" : "BAN-NGOAI",
+    variantName: isService ? "Dịch vụ / Tiền công" : "Sản phẩm lặt vặt (Ngoài kho)",
+    trackingType: "custom",
+    unitPrice: unitPrice,
+    purchasePrice: purchasePrice,
+    quantity: quantity,
+    discount: 0,
+    totalPrice: unitPrice * quantity,
+    identifiers: [],
+    availableStock: 9999,
+    availableIdentifiers: []
+  });
+
+  if (customItemModal) customItemModal.hide();
+  renderCart();
+
+  if (typeof notyf !== "undefined") notyf.success(`Đã thêm "${productName}" vào đơn hàng!`);
 });
 
 

@@ -185,10 +185,10 @@ block main
                 .d-flex.justify-content-between.align-items-center.mb-1
                   span.text-muted.fw-semibold.small
                     i.las.la-money-bill-wave.text-success.me-1
-                    | TIỀN MẶT (TẠI KÉT)
+                    | TIỀN MẶT
                   span.badge.bg-success-subtle.text-success #{payments.cash.count} đơn
                 h4.fw-bold.text-success.mb-1 #{formatVND(payments.cash.revenue)}
-                small.text-muted Tiền mặt thu ngân cần đếm trong két để bàn giao
+                small.text-muted Đối soát tiền mặt thu trong ngày
 
             // Chuyển khoản
             .col-md-4
@@ -196,7 +196,7 @@ block main
                 .d-flex.justify-content-between.align-items-center.mb-1
                   span.text-muted.fw-semibold.small
                     i.las.la-qrcode.text-primary.me-1
-                    | CHUYỂN KHOẢN (NGÂN HÀNG)
+                    | CHUYỂN KHOẢN
                   span.badge.bg-primary-subtle.text-primary #{payments.bank_transfer.count} đơn
                 h4.fw-bold.text-primary.mb-1 #{formatVND(payments.bank_transfer.revenue)}
                 small.text-muted Đối soát tin nhắn biến động số dư tài khoản cửa hàng
@@ -207,10 +207,10 @@ block main
                 .d-flex.justify-content-between.align-items-center.mb-1
                   span.text-muted.fw-semibold.small
                     i.las.la-handshake.text-warning.me-1
-                    | HỒ SƠ TRẢ GÓP
+                    | TRẢ GÓP
                   span.badge.bg-warning-subtle.text-warning-emphasis #{payments.installment.count} đơn
                 h4.fw-bold.text-warning-emphasis.mb-1 #{formatVND(payments.installment.revenue)}
-                small.text-muted Tiền khách hàng mua trả góp đã nộp cho cửa hàng trong ca trực hôm nay
+                small.text-muted Đối soát tiền khách trả góp đã nộp trong ngày
 
   // 5. HAI CỘT CẢNH BÁO TÁC NGHIỆP: MÁY HẸN TRẢ & CẢNH BÁO SẮP HẾT HÀNG
   .row.g-3.mb-4

@@ -280,11 +280,13 @@ export const index = async (req: RequestAccount, res: Response) => {
     const productSoldMap: Record<string, { productName: string; variantSku: string; quantity: number; revenue: number }> = {};
     for (const ord of ordersInPeriod) {
       for (const it of ord.items) {
-        const pKey = it.variantSku || String(it.productId);
+        const pKey = it.isCustomItem ? `custom_${it.productName}` : (it.variantSku || String(it.productId || it.productName));
         if (!productSoldMap[pKey]) {
           productSoldMap[pKey] = {
             productName: it.productName,
-            variantSku: it.variantSku || it.variantName || "Mặc định",
+            variantSku: it.isCustomItem
+              ? (it.customItemType === "custom_service" ? "Dịch vụ" : "Bán ngoài")
+              : (it.variantSku || it.variantName || "Mặc định"),
             quantity: 0,
             revenue: 0
           };
@@ -347,13 +349,22 @@ export const index = async (req: RequestAccount, res: Response) => {
       .lean();
 
     // 10. Tỷ trọng doanh số theo danh mục
-    // Lấy thông tin category cho các order items
+    // Lấy thông tin category cho các order items thông thường trong kho
     const categoryRevenueMap: Record<string, number> = {};
-    const productIdsInOrders = Array.from(new Set(ordersInPeriod.flatMap((o) => o.items.map((i) => String(i.productId)))));
-    const productsInOrders = await Product.find({ _id: { $in: productIdsInOrders } })
-      .populate("categoryIds", "name")
-      .select("_id categoryIds")
-      .lean();
+    const validProductIdsInOrders = Array.from(
+      new Set(
+        ordersInPeriod
+          .flatMap((o) => o.items)
+          .filter((i) => !i.isCustomItem && i.productId && mongoose.isValidObjectId(i.productId))
+          .map((i) => String(i.productId))
+      )
+    );
+    const productsInOrders = validProductIdsInOrders.length > 0
+      ? await Product.find({ _id: { $in: validProductIdsInOrders } })
+          .populate("categoryIds", "name")
+          .select("_id categoryIds")
+          .lean()
+      : [];
 
     const prodCatMap = new Map<string, string>();
     for (const p of productsInOrders) {
@@ -364,7 +375,12 @@ export const index = async (req: RequestAccount, res: Response) => {
 
     for (const ord of ordersInPeriod) {
       for (const it of ord.items) {
-        const catName = prodCatMap.get(String(it.productId)) || "Khác";
+        let catName = "Khác";
+        if (it.isCustomItem) {
+          catName = it.customItemType === "custom_service" ? "Dịch vụ & Tiền công" : "Mặt hàng lặt vặt (Bán ngoài)";
+        } else if (it.productId) {
+          catName = prodCatMap.get(String(it.productId)) || "Khác";
+        }
         categoryRevenueMap[catName] = (categoryRevenueMap[catName] || 0) + (it.totalPrice || 0);
       }
     }
@@ -376,12 +392,14 @@ export const index = async (req: RequestAccount, res: Response) => {
     let grossProfit = 0;
     if (canViewCost) {
       // Ước tính lợi nhuận gộp = Doanh thu thuần - Giá vốn các sản phẩm bán
-      // Lấy giá vốn trung bình của các variant đã bán
       let totalCostSold = 0;
       for (const ord of ordersInPeriod) {
         for (const it of ord.items) {
-          // Tính giá vốn từ variant hoặc product
-          totalCostSold += Math.round((it.totalPrice || 0) * 0.7); // Ước tính an toàn
+          if (it.isCustomItem) {
+            totalCostSold += (it.purchasePrice || 0) * (it.quantity || 1);
+          } else {
+            totalCostSold += Math.round((it.totalPrice || 0) * 0.7); // Ước tính an toàn
+          }
         }
       }
       grossProfit = Math.max(0, totalRevenue - totalCostSold);

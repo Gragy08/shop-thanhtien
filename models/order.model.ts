@@ -2,15 +2,28 @@ import mongoose from "mongoose";
 
 const orderItemSchema = new mongoose.Schema(
   {
+    isCustomItem: {
+      type: Boolean,
+      default: false
+    },
+    customItemType: {
+      type: String,
+      enum: ["custom_product", "custom_service"],
+      default: "custom_product"
+    },
     productId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
-      required: true
+      required: function (this: any) {
+        return !this.isCustomItem;
+      }
     },
     variantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ProductVariant",
-      required: true
+      required: function (this: any) {
+        return !this.isCustomItem;
+      }
     },
     productName: {
       type: String,
@@ -28,8 +41,8 @@ const orderItemSchema = new mongoose.Schema(
     },
     trackingType: {
       type: String,
-      enum: ["imei", "serial", "quantity"],
-      required: true
+      enum: ["imei", "serial", "quantity", "custom"],
+      default: "custom"
     },
     identifiers: {
       type: [String],
@@ -44,6 +57,11 @@ const orderItemSchema = new mongoose.Schema(
     unitPrice: {
       type: Number,
       required: true,
+      min: 0
+    },
+    purchasePrice: {
+      type: Number,
+      default: 0,
       min: 0
     },
     discount: {

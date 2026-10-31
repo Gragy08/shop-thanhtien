@@ -8,7 +8,8 @@
     "dev": "nodemon --exec ts-node index.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "seed:admin": "ts-node scripts/seed-admin.ts"
+    "seed:admin": "ts-node scripts/seed-admin.ts",
+    "seed:admin:prod": "node dist/scripts/seed-admin.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

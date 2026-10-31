@@ -2,6 +2,7 @@ import "dotenv/config";
 import axios from "axios";
 import cookieParser from "cookie-parser";
 import express from "express";
+import fs from "fs";
 import path from "path";
 import { connectDB } from "./configs/database.config";
 import { pathAdmin, domainCDN } from "./configs/variable.config";
@@ -12,14 +13,19 @@ import { publicLookupPage } from "./controllers/admin/warranty.controller";
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
+app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.set("views", path.join(__dirname, "views"));
+const rootDir = fs.existsSync(path.join(__dirname, "views"))
+  ? __dirname
+  : path.resolve(__dirname, "..");
+
+app.set("views", path.join(rootDir, "views"));
 app.set("view engine", "pug");
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(rootDir, "public")));
 app.locals.pathAdmin = pathAdmin;
 app.locals.domainCDN = domainCDN;
 app.locals.formatVND = formatVND;
@@ -37,7 +43,7 @@ app.use("/media", async (req, res) => {
     const targetUrl = `${domainCDN}${req.originalUrl}`;
     const response = await axios.get(targetUrl, {
       headers: {
-        Referer: "https://typhuquy-shop.duckdns.org"
+        Referer: process.env.DOMAIN || "https://thanhtien-shop.duckdns.org"
       },
       responseType: "stream",
       timeout: 15000

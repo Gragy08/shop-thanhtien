@@ -32,9 +32,11 @@ block main
                       td #{account.email}
                       td
                         if account.role === "admin"
-                          span.badge.text-bg-dark Admin
+                          span.badge.text-bg-dark Quản trị viên
+                        else if account.role === "manager"
+                          span.badge.text-bg-info Quản lý
                         else
-                          span.badge.text-bg-info Manager
+                          span.badge.bg-primary-subtle.text-primary.border.border-primary Nhân viên
                       td
                         if account.status === "active"
                           span.status-dot.text-success Hoạt động

@@ -120,7 +120,10 @@ block main
                             .d-inline-flex.justify-content-center.align-items-center.rounded.bg-light.border(style="width: 42px; height: 42px;")
                               i.las.la-image.text-muted.fs-4
                           div
-                            a.fw-semibold.text-primary.text-decoration-none(href=`/${pathAdmin}/product/edit/${product._id}`) #{product.name}
+                            if canWrite
+                              a.fw-semibold.text-primary.text-decoration-none(href=`/${pathAdmin}/product/edit/${product._id}`) #{product.name}
+                            else
+                              a.fw-semibold.text-primary.text-decoration-none.btn-view-product(href="javascript:void(0)", data-id=product._id) #{product.name}
                             br
                             small.text-muted /#{product.slug}
                       td

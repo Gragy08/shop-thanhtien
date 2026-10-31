@@ -23,8 +23,9 @@ block main
               .col-md-6
                 label.form-label(for="role") Vai trò
                 select#role.form-select(name="role", required)
-                  option(value="admin", selected=account && account.role === "admin") Admin
-                  option(value="manager", selected=account && account.role === "manager") Manager
+                  option(value="admin", selected=account && account.role === "admin") Quản trị viên
+                  option(value="manager", selected=account && account.role === "manager") Quản lý 
+                  option(value="staff", selected=account && account.role === "staff") Nhân viên
               .col-md-6
                 label.form-label(for="status") Trạng thái
                 select#status.form-select(name="status")

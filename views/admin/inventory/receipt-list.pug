@@ -39,7 +39,8 @@ block main
                   th Mã phiếu
                   th Nhà cung cấp
                   th Hóa đơn NCC
-                  th.text-end Tổng chi phí
+                  if canViewPurchasePrice
+                    th.text-end Tổng chi phí
                   th Nhân viên liên hệ
                   th.text-center Số dòng
                   th Người tạo
@@ -63,8 +64,9 @@ block main
                             | #{receipt.invoiceNumber || "Có HĐ"}
                         else
                           span.badge.bg-light.text-muted Không có HĐ
-                      td.text-end.fw-bold.text-primary
-                        | #{formatVND(receipt.totalCost || 0)}
+                      if canViewPurchasePrice
+                        td.text-end.fw-bold.text-primary
+                          | #{formatVND(receipt.totalCost || 0)}
                       td #{receipt.supplierContactName}
                       td.text-center
                         span.badge.bg-light.text-dark #{receipt.lineCount}
@@ -74,14 +76,14 @@ block main
                         .table-actions
                           a.btn-action.btn-action-view(href=`/${pathAdmin}/inventory/receipt/${receipt._id}`, title="Chi tiết phiếu nhập")
                             i.las.la-eye
-                          if canWrite
+                          if canManageReceipt
                             a.btn-action.btn-action-edit(href=`/${pathAdmin}/inventory/receipt/edit/${receipt._id}`, title="Sửa phiếu nhập")
                               i.las.la-pen
                             button.btn-action.btn-action-delete.receipt-soft-delete(type="button", data-id=receipt._id, title="Xóa mềm vào thùng rác")
                               i.las.la-trash-alt
                 else
                   tr
-                    td.text-center.text-muted.py-5(colspan="9") Chưa có phiếu nhập kho.
+                    td.text-center.text-muted.py-5(colspan=canViewPurchasePrice ? 9 : 8) Chưa có phiếu nhập kho.
 
 block script
   script(src="/admin/assets/js/receipt.js")

@@ -15,7 +15,7 @@ router.post("/create", requirePermission("customer:write"), customerController.c
 router.get("/edit/:id", requirePermission("customer:write"), customerController.edit);
 router.patch("/edit/:id", requirePermission("customer:write"), customerController.editPatch);
 router.get("/:id", requirePermission("customer:read"), customerController.detail);
-router.delete("/:id", requirePermission("customer:write"), customerController.deleteCustomer);
+router.delete("/:id", requirePermission("customer:delete"), customerController.deleteCustomer);
 
 export default router;
 

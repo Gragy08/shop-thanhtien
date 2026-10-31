@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 import AccountAdmin from "../../models/account-admin.model";
 import { RequestAccount } from "../../interfaces/request.interface";
 
-const allowedRoles = ["admin", "manager"] as const;
+import { adminRoles } from "../../configs/variable.config";
+const allowedRoles = adminRoles;
 const allowedStatuses = ["active", "inactive"] as const;
 
 const parseAccountInput = (body: Record<string, unknown>) => {

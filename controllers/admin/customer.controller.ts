@@ -164,7 +164,8 @@ export const list = async (req: Request, res: Response) => {
       customers,
       stats: { totalCustomers, totalOrders, totalSpent },
       filters: { keyword, customerGroup, source },
-      canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("customer:write")
+      canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("customer:write"),
+      canDelete: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("customer:delete")
     });
   } catch (error) {
     console.error("Error customer list:", error);

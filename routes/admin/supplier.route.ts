@@ -4,12 +4,12 @@ import { requireAuth, requirePermission } from "../../middlewares/admin/authenti
 
 const router = Router();
 
-router.use(requireAuth, requirePermission("inventory:write"));
-router.get("/", supplierController.list);
-router.get("/create", supplierController.create);
-router.post("/create", supplierController.createPost);
-router.get("/edit/:id", supplierController.edit);
-router.patch("/edit/:id", supplierController.editPatch);
-router.patch("/delete/:id", supplierController.deletePatch);
+router.use(requireAuth);
+router.get("/", requirePermission("supplier:read"), supplierController.list);
+router.get("/create", requirePermission("supplier:write"), supplierController.create);
+router.post("/create", requirePermission("supplier:write"), supplierController.createPost);
+router.get("/edit/:id", requirePermission("supplier:write"), supplierController.edit);
+router.patch("/edit/:id", requirePermission("supplier:write"), supplierController.editPatch);
+router.patch("/delete/:id", requirePermission("supplier:write"), supplierController.deletePatch);
 
 export default router;

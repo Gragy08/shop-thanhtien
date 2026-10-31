@@ -48,8 +48,137 @@ const parseDateRange = (period: string, from?: string, to?: string): DateRange =
   return { startDate, endDate, periodLabel };
 };
 
+const renderStaffDashboard = async (req: RequestAccount, res: Response) => {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  // 1. Đơn hàng hoàn tất trong ngày hôm nay
+  const todayOrders = await Order.find({
+    createdAt: { $gte: startOfToday, $lte: endOfToday },
+    orderStatus: "completed",
+    deleted: { $ne: true }
+  })
+    .populate("createdBy", "fullName email")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  let todayTotalRevenue = 0;
+  const paymentBreakdown: Record<string, { count: number; revenue: number }> = {
+    cash: { count: 0, revenue: 0 },
+    bank_transfer: { count: 0, revenue: 0 },
+    installment: { count: 0, revenue: 0 }
+  };
+
+  let myRevenueToday = 0;
+  let myOrderCountToday = 0;
+  const currentAdminId = req.adminId ? String(req.adminId) : "";
+
+  for (const ord of todayOrders) {
+    const amt = ord.totalAmount || 0;
+    todayTotalRevenue += amt;
+
+    const pm = ord.paymentMethod || "cash";
+    if (paymentBreakdown[pm]) {
+      paymentBreakdown[pm].count += 1;
+      paymentBreakdown[pm].revenue += amt;
+    } else {
+      paymentBreakdown[pm] = { count: 1, revenue: amt };
+    }
+
+    const creatorId = ord.createdBy?._id ? String(ord.createdBy._id) : String(ord.createdBy);
+    if (currentAdminId && creatorId === currentAdminId) {
+      myRevenueToday += amt;
+      myOrderCountToday += 1;
+    }
+  }
+
+  // 2. Tồn kho thiết bị sẵn sàng bán & bảo hành
+  const [availableStockCount, activeWarrantyCount] = await Promise.all([
+    InventoryItem.countDocuments({ status: "available", deleted: { $ne: true } }),
+    WarrantyTicket.countDocuments({
+      ticketStatus: { $in: ["received", "in_progress", "completed"] },
+      deleted: { $ne: true }
+    })
+  ]);
+
+  // 3. Phiếu bảo hành đến hẹn trả hôm nay hoặc trễ hẹn
+  const dueWarranties = await WarrantyTicket.find({
+    ticketStatus: { $in: ["received", "in_progress", "completed"] },
+    deleted: { $ne: true },
+    expectedReturnDate: { $lte: endOfToday }
+  })
+    .sort({ expectedReturnDate: 1 })
+    .limit(8)
+    .lean();
+
+  // 4. Cảnh báo sản phẩm sắp hết hàng (tồn <= 2)
+  const availableItems = await InventoryItem.aggregate([
+    { $match: { status: "available", deleted: { $ne: true } } },
+    { $group: { _id: "$variantId", count: { $sum: 1 }, productId: { $first: "$productId" } } }
+  ]);
+  const stockMapByVariant = new Map<string, number>();
+  for (const a of availableItems) {
+    if (a._id) stockMapByVariant.set(String(a._id), a.count);
+  }
+
+  const activeVariants = await ProductVariant.find({ deleted: { $ne: true }, status: "active" })
+    .populate("productId", "name inventoryType")
+    .limit(60)
+    .lean();
+
+  const lowStockAlerts: any[] = [];
+  for (const vr of activeVariants) {
+    const prod = vr.productId as any;
+    if (!prod) continue;
+    const currentStock = stockMapByVariant.get(String(vr._id)) || 0;
+    if (currentStock <= 2) {
+      const variantName = (vr.attributeValues || []).map((a: any) => a.label).join(" / ");
+      lowStockAlerts.push({
+        productId: prod._id,
+        productName: prod.name,
+        variantSku: vr.sku,
+        variantName: variantName || "Mặc định",
+        currentStock,
+        isOut: currentStock === 0
+      });
+    }
+    if (lowStockAlerts.length >= 6) break;
+  }
+
+  // 5. 8 Đơn hàng gần nhất hôm nay
+  const recentOrders = todayOrders.slice(0, 8);
+
+  const daysOfWeek = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+  const dayName = daysOfWeek[now.getDay()];
+  const todayDateStr = `${dayName}, ngày ${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+
+  res.render("admin/dashboard/staff-index", {
+    pageTitle: "Bàn làm việc nhân viên",
+    todayDateStr,
+    kpis: {
+      todayTotalRevenue,
+      todayOrderCount: todayOrders.length,
+      myRevenueToday,
+      myOrderCountToday,
+      availableStockCount,
+      activeWarrantyCount,
+      dueWarrantyCount: dueWarranties.length
+    },
+    payments: paymentBreakdown,
+    dueWarranties,
+    lowStockAlerts,
+    recentOrders
+  });
+};
+
 export const index = async (req: RequestAccount, res: Response) => {
   try {
+    if (req.adminRole === "staff") {
+      await renderStaffDashboard(req, res);
+      return;
+    }
+
     const period = typeof req.query.period === "string" ? req.query.period : "30days";
     const from = typeof req.query.from === "string" ? req.query.from : "";
     const to = typeof req.query.to === "string" ? req.query.to : "";

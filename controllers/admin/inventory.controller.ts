@@ -416,7 +416,9 @@ export const receiptList = async (_req: Request, res: Response) => {
     receiptList,
     trashCount,
     filters: { from, to },
-    canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:write")
+    canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:write"),
+    canManageReceipt: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:receipt:manage"),
+    canViewPurchasePrice: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("price:purchase:read")
   });
 };
 
@@ -448,7 +450,9 @@ export const receiptTrash = async (_req: Request, res: Response) => {
     pageTitle: "Thùng rác phiếu nhập kho",
     trashList,
     filters: { from, to },
-    canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:write")
+    canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:write"),
+    canManageReceipt: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:receipt:manage"),
+    canViewPurchasePrice: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("price:purchase:read")
   });
 };
 
@@ -480,7 +484,9 @@ export const receiptDetail = async (req: Request, res: Response) => {
   res.render("admin/inventory/receipt-detail", {
     pageTitle: `Chi tiết ${receipt.receiptCode}`,
     receipt,
-    inventoryList
+    inventoryList,
+    canManageReceipt: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("inventory:receipt:manage"),
+    canViewPurchasePrice: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("price:purchase:read")
   });
 };
 

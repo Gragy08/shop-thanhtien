@@ -576,7 +576,8 @@ export const list = async (req: Request, res: Response) => {
     orders,
     stats: { totalOrders, completedCount, cancelledCount, totalRevenue },
     filters: { keyword, paymentMethod, orderStatus, from, to },
-    canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:write")
+    canWrite: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:write"),
+    canCancel: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:cancel")
   });
 };
 
@@ -604,6 +605,7 @@ export const detail = async (req: Request, res: Response) => {
   res.render("admin/order/detail", {
     pageTitle: `Hóa đơn: ${order.orderCode}`,
     order,
-    totalInWords: readVietnameseNumber(order.totalAmount || 0)
+    totalInWords: readVietnameseNumber(order.totalAmount || 0),
+    canCancel: res.locals.permissions.includes("admin:all") || res.locals.permissions.includes("order:cancel")
   });
 };

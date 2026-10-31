@@ -9,7 +9,7 @@ router.use(requireAuth);
 router.get("/", requirePermission("order:read"), orderController.list);
 router.get("/pos", requirePermission("order:write"), orderController.pos);
 router.post("/create", requirePermission("order:write"), orderController.createPost);
-router.patch("/cancel/:id", requirePermission("order:write"), orderController.cancel);
+router.patch("/cancel/:id", requirePermission("order:cancel"), orderController.cancel);
 
 router.get("/api/search-products", requirePermission("order:read"), orderController.searchProducts);
 router.get("/api/available-imeis/:variantId", requirePermission("order:read"), orderController.availableImeis);

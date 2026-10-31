@@ -144,6 +144,7 @@ block main
                           if canWrite
                             a.btn-action.btn-action-edit(href=`/${pathAdmin}/customer/edit/${c._id}`, title="Chỉnh sửa thông tin")
                               i.las.la-pen
+                          if canDelete
                             button.btn-action.btn-action-delete.btn-delete-customer(
                               type="button",
                               title="Xóa khách hàng",

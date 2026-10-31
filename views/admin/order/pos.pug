@@ -136,24 +136,19 @@ block main
           .mb-3
             label.form-label.small.fw-bold.mb-1 Phương thức thanh toán
             .row.g-1
-              .col-6
+              .col-4
                 input#payCash.btn-check(type="radio", name="paymentMethod", value="cash", checked)
-                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1(for="payCash")
+                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1.py-2(for="payCash")
                   i.las.la-money-bill-wave
                   | Tiền mặt
-              .col-6
+              .col-4
                 input#payBank.btn-check(type="radio", name="paymentMethod", value="bank_transfer")
-                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1(for="payBank")
+                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1.py-2(for="payBank")
                   i.las.la-qrcode
                   | Chuyển khoản
-              .col-6
-                input#payCard.btn-check(type="radio", name="paymentMethod", value="credit_card")
-                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1(for="payCard")
-                  i.las.la-credit-card
-                  | Thẻ Pos
-              .col-6
+              .col-4
                 input#payInstallment.btn-check(type="radio", name="paymentMethod", value="installment")
-                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1(for="payInstallment")
+                label.btn.btn-outline-primary.btn-sm.w-100.d-flex.align-items-center.justify-content-center.gap-1.py-2(for="payInstallment")
                   i.las.la-handshake
                   | Trả góp
 

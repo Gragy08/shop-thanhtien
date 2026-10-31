@@ -126,7 +126,7 @@ block main
             i.las.la-cash-register.me-1
             | Bán hàng
           
-          if order.orderStatus !== "cancelled"
+          if canCancel && order.orderStatus !== "cancelled"
             button#btnCancelThisOrder.btn.btn-outline-danger.btn-sm(
               type="button",
               data-id=order._id,

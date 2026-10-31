@@ -23,12 +23,15 @@
                 ul.nav.flex-column
                   li.nav-item
                     a.nav-link(href=`/${pathAdmin}/product`) Danh sách sản phẩm
-                  li.nav-item
-                    a.nav-link(href=`/${pathAdmin}/product/create`) Tạo sản phẩm
-                  li.nav-item
-                    a.nav-link(href=`/${pathAdmin}/product/category`) Danh mục sản phẩm
-                  li.nav-item
-                    a.nav-link(href=`/${pathAdmin}/product/attribute`) Thuộc tính sản phẩm
+                  if permissions.includes("product:write") || permissions.includes("admin:all")
+                    li.nav-item
+                      a.nav-link(href=`/${pathAdmin}/product/create`) Tạo sản phẩm
+                  if permissions.includes("category:write") || permissions.includes("admin:all")
+                    li.nav-item
+                      a.nav-link(href=`/${pathAdmin}/product/category`) Danh mục sản phẩm
+                  if permissions.includes("attribute:write") || permissions.includes("admin:all")
+                    li.nav-item
+                      a.nav-link(href=`/${pathAdmin}/product/attribute`) Thuộc tính sản phẩm
           if permissions.includes("inventory:read") || permissions.includes("admin:all")
             li.nav-item
               a.nav-link(aria-controls="sidebarInventory" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarInventory")
@@ -44,8 +47,9 @@
                     a.nav-link(href=`/${pathAdmin}/inventory/receipt`) Danh sách phiếu nhập
                   li.nav-item
                     a.nav-link(href=`/${pathAdmin}/inventory/receipt/create`) Phiếu nhập kho
-                  li.nav-item
-                    a.nav-link(href=`/${pathAdmin}/inventory/supplier`) Nhà cung cấp
+                  if permissions.includes("supplier:read") || permissions.includes("admin:all")
+                    li.nav-item
+                      a.nav-link(href=`/${pathAdmin}/inventory/supplier`) Nhà cung cấp
           if permissions.includes("order:read") || permissions.includes("admin:all")
             li.nav-item
               a.nav-link(aria-controls="sidebarOrder" aria-expanded="false" role="button" data-bs-toggle="collapse" href="#sidebarOrder")

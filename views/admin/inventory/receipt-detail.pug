@@ -9,7 +9,8 @@ block main
           h1.h3.mt-3.mb-1 #{pageTitle}
           p.text-muted.mb-0 #{new Date(receipt.createdAt).toLocaleString("vi-VN")}
         .d-flex.gap-2
-          a.btn.btn-outline-primary(href=`/${pathAdmin}/inventory/receipt/edit/${receipt._id}`) Sửa phiếu
+          if canManageReceipt
+            a.btn.btn-outline-primary(href=`/${pathAdmin}/inventory/receipt/edit/${receipt._id}`) Sửa phiếu
           a.btn.btn-primary(href=`/${pathAdmin}/inventory`) Xem tồn kho
       
       .card.mb-4
@@ -37,10 +38,11 @@ block main
                     | #{receipt.invoiceNumber || "Có hóa đơn"}
                 else
                   span.badge.bg-light.text-muted Không có hóa đơn
-            .col-md-3
-              small.text-muted Tổng chi phí trả NCC
-              p.fw-bold.fs-5.text-primary.mb-0
-                | #{formatVND(receipt.totalCost || 0)}
+            if canViewPurchasePrice
+              .col-md-3
+                small.text-muted Tổng chi phí trả NCC
+                p.fw-bold.fs-5.text-primary.mb-0
+                  | #{formatVND(receipt.totalCost || 0)}
             .col-md-6
               small.text-muted Người tạo
               p.fw-semibold.mb-0 #{receipt.createdBy ? receipt.createdBy.fullName : "Không xác định"} (#{new Date(receipt.createdAt).toLocaleString("vi-VN")})
@@ -61,8 +63,9 @@ block main
                     th Variant sản phẩm / SKU
                     th Kiểu
                     th.text-center Số lượng
-                    th.text-end Đơn giá nhập
-                    th.text-end Thành tiền
+                    if canViewPurchasePrice
+                      th.text-end Đơn giá nhập
+                      th.text-end Thành tiền
                     th Chi tiết IMEI/Serial dòng
                 tbody
                   each line in receipt.items
@@ -85,8 +88,9 @@ block main
                         else
                           span.badge.bg-secondary Số lượng
                       td.text-center.fw-bold #{line.quantity}
-                      td.text-end #{formatVND(line.purchasePrice || 0)}
-                      td.text-end.fw-semibold.text-primary #{formatVND(line.totalPrice || 0)}
+                      if canViewPurchasePrice
+                        td.text-end #{formatVND(line.purchasePrice || 0)}
+                        td.text-end.fw-semibold.text-primary #{formatVND(line.totalPrice || 0)}
                       td
                         if line.identifiers && line.identifiers.length
                           .d-flex.flex-wrap.gap-1(style="max-height: 80px; overflow-y: auto;")
@@ -107,7 +111,8 @@ block main
                   th Kiểu
                   th IMEI / Serial
                   th Số lượng
-                  th Đơn giá nhập
+                  if canViewPurchasePrice
+                    th.text-end Đơn giá nhập
                   th Trạng thái hiện tại
               tbody
                 each item in inventoryList
@@ -122,7 +127,8 @@ block main
                     td #{item.trackingType}
                     td.font-monospace #{item.identifier || "Không có"}
                     td #{item.quantity}
-                    td #{item.purchasePrice != null ? formatVND(item.purchasePrice) : "--"}
+                    if canViewPurchasePrice
+                      td.text-end #{item.purchasePrice != null ? formatVND(item.purchasePrice) : "--"}
                     td
                       if item.status === "available"
                         span.badge.bg-success-subtle.text-success.border.border-success Có sẵn

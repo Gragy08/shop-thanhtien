@@ -183,7 +183,7 @@ block main
                         .table-actions
                           a.btn-action.btn-action-view(href=`/${pathAdmin}/order/${order._id}`, title="Xem & In hóa đơn")
                             i.las.la-eye
-                          if canWrite && order.orderStatus !== "cancelled"
+                          if canCancel && order.orderStatus !== "cancelled"
                             button.btn-action.btn-action-delete.btn-cancel-order(
                               type="button",
                               title="Hủy đơn và hoàn trả thiết bị về kho",

@@ -8,7 +8,7 @@ block main
           .row.align-items-center
             .col
               h4.card-title #{pageTitle}
-              p.text-muted.mb-0 Các thuộc tính dùng để tạo variant sản phẩm.
+              p.text-muted.mb-0 Các thuộc tính dùng để tạo biến thể sản phẩm.
             .col-auto
               a.btn.btn-primary(href=`/${pathAdmin}/product/attribute/create`)
                 i.las.la-plus.me-1
@@ -32,7 +32,12 @@ block main
                       td
                         code #{attribute.code}
                       td
-                        span.badge.bg-light.text-dark #{attribute.type}
+                        if attribute.type === "color"
+                          span.badge.bg-primary-subtle.text-primary Màu sắc
+                        else if attribute.type === "select"
+                          span.badge.bg-info-subtle.text-info Danh sách chọn
+                        else
+                          span.badge.bg-light.text-dark.border Văn bản / Thông số
                       td
                         each option in attribute.options
                           span.badge.bg-info.me-1.mb-1 #{option.label}

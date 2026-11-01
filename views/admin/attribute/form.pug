@@ -12,18 +12,19 @@ block main
               .col-md-4
                 .mb-3
                   label.form-label(for="name") Tên thuộc tính *
-                  input#name.form-control(name="name", required, value=attribute ? attribute.name : "", placeholder="Ví dụ: Màu sắc")
+                  input#name.form-control(name="name", required, value=attribute ? attribute.name : "", placeholder="Ví dụ: iPhone - Màu sắc")
               .col-md-4
                 .mb-3
-                  label.form-label(for="code") Mã thuộc tính *
-                  input#code.form-control(name="code", required, value=attribute ? attribute.code : "", placeholder="color")
+                  label.form-label(for="code") Mã thuộc tính (không dấu) *
+                  input#code.form-control(name="code", required, value=attribute ? attribute.code : "", placeholder="Ví dụ: iphone-mau-sac")
               .col-md-4
                 .mb-3
                   label.form-label(for="type") Loại thuộc tính *
                   select#type.form-select(name="type", required)
-                    option(value="text", selected=!attribute || attribute.type === "text") text
-                    option(value="select", selected=attribute && attribute.type === "select") select
-                    option(value="color", selected=attribute && attribute.type === "color") color
+                    option(value="text", selected=!attribute || attribute.type === "text") Văn bản / Thông số cố định
+                    option(value="color", selected=attribute && attribute.type === "color") Màu sắc (cho phép sửa tên màu)
+                    if attribute && attribute.type === "select"
+                      option(value="select", selected) Danh sách lựa chọn
               .col-md-4
                 .mb-3
                   label.form-label(for="status") Trạng thái
@@ -39,7 +40,7 @@ block main
                     thead.table-light
                       tr
                         th Nhãn hiển thị
-                        th Giá trị lưu trữ
+                        th Giá trị lưu trữ (không dấu)
                         th(style="width: 80px")
                     tbody#optionList
                       if attribute && attribute.options.length

@@ -23,18 +23,38 @@ optionList?.addEventListener("click", (event) => {
   event.target.closest(".attribute-option").remove();
 });
 
+const toCodeSlug = (str) => str
+  .replace(/[đĐ]/g, "d")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/^-+|-+$/g, "");
+
+const nameInput = document.querySelector("#name");
+const codeInput = document.querySelector("#code");
+const attributeForm = document.querySelector("#attributeForm");
+
+if (nameInput && codeInput && attributeForm?.dataset.edit !== "true") {
+  nameInput.addEventListener("input", () => {
+    if (!codeInput.dataset.edited) {
+      codeInput.value = toCodeSlug(nameInput.value);
+    }
+  });
+  codeInput.addEventListener("input", () => {
+    codeInput.dataset.edited = codeInput.value.trim() ? "true" : "";
+  });
+}
+
 optionList?.addEventListener("input", (event) => {
   if (!event.target.classList.contains("option-label")) return;
   const row = event.target.closest(".attribute-option");
   const valueInput = row.querySelector(".option-value");
-  if (!valueInput.dataset.edited) valueInput.value = event.target.value
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  if (!valueInput.dataset.edited) valueInput.value = toCodeSlug(event.target.value);
 });
 optionList?.addEventListener("input", (event) => {
   if (event.target.classList.contains("option-value")) event.target.dataset.edited = "true";
 });
-
-const attributeForm = document.querySelector("#attributeForm");
 attributeForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(attributeForm);

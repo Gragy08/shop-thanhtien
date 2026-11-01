@@ -99,7 +99,6 @@ block main
                 option(value="") -- Thanh toán --
                 option(value="cash", selected=filters.paymentMethod === "cash") Tiền mặt
                 option(value="bank_transfer", selected=filters.paymentMethod === "bank_transfer") Chuyển khoản
-                option(value="credit_card", selected=filters.paymentMethod === "credit_card") Thẻ POS
                 option(value="installment", selected=filters.paymentMethod === "installment") Trả góp
             .col-xl-2.col-md-4
               select.form-select(name="installmentProvider")

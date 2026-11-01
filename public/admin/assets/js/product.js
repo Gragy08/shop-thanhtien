@@ -81,7 +81,7 @@ const renderVariants = () => {
   variantTable.querySelector("thead tr").innerHTML = head;
   variantTable.querySelector("tbody").innerHTML = body;
   if (window.initFormatMoney) window.initFormatMoney();
-  message.textContent = `${combinations.length} variant đã được sinh.`;
+  message.textContent = `Đã tạo ${combinations.length} biến thể.`;
   message.className = "form-message mt-3 mb-0 text-success";
 };
 

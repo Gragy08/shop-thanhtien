@@ -247,10 +247,13 @@ block main
                   h4.fw-bold.text-primary.mb-1 CỬA HÀNG THANH TIỀN
                   p.text-muted.small.mb-0
                     i.las.la-map-marker.me-1
-                    | Cửa hàng Điện thoại - Đồng hồ - Mắt kính
+                    | Điện thoại - Đồng hồ - Mắt kính
+                  p.text-muted.small.mb-0
+                    i.las.la-store.me-1
+                    | ĐC : Chợ Thứ 11 - An Minh - An Giang
                   p.text-muted.small.mb-0
                     i.las.la-phone.me-1
-                    | Hotline: 077.656.9999 | 077.657.8888 | 0949.679.777
+                    | Hotline: 0297.656.9999 | 0297.657.8888 | 0949.679.777
                 .col-sm-5.text-sm-end.mt-2.mt-sm-0
                   .invoice-title.text-dark HÓA ĐƠN BÁN HÀNG
                   div.text-muted.small Mã hóa đơn: 
@@ -265,7 +268,7 @@ block main
               .row.mb-3
                 .col-sm-6
                   h6.text-muted.text-uppercase.small.fw-bold.mb-1 Thông tin khách hàng
-                  strong.fs-6.text-dark #{order.customerInfo ? order.customerInfo.fullName : "Khách lẻ vãng lai"}
+                  strong.fs-6.text-dark #{order.customerInfo ? order.customerInfo.fullName : "Khách lẻ"}
                   if order.customerInfo && order.customerInfo.phone
                     div.text-muted.small
                       i.las.la-phone.me-1
@@ -413,7 +416,7 @@ block main
                 .col-6
                   p.small.text-muted.mb-1 NGƯỜI MUA HÀNG
                   div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, ghi rõ họ tên)
-                  div.fw-semibold.text-dark.mt-1 #{order.customerInfo.fullName || "Khách lẻ vãng lai"}
+                  div.fw-semibold.text-dark.mt-1 #{order.customerInfo.fullName || "Khách lẻ"}
                 .col-6
                   p.small.text-muted.mb-1 THU NGÂN / ĐẠI DIỆN BÁN HÀNG
                   div.fst-italic.small.text-muted(style="min-height: 40px;") (Ký, đóng dấu)
@@ -429,8 +432,9 @@ block main
               // Đầu phiếu in
               .text-center.mb-2
                 .fw-bold.fs-6.text-uppercase CỬA HÀNG THANH TIỀN
-                .small.text-muted Cửa hàng điện thoại - đồng hồ - mắt kính
-                .small.text-muted Hotline: 077.656.9999 | 077.657.8888 | 0949.679.777
+                .small.text-muted Điện thoại - Đồng hồ - Mắt kính
+                .small.text-muted ĐC : Chợ Thứ 11 - An Minh - An Giang
+                .small.text-muted Hotline: 0297.656.9999 | 0297.657.8888 | 0949.679.777
                 .border-bottom.border-dark.border-dashed.my-2
                 .fw-bold.fs-6.text-uppercase HÓA ĐƠN BÁN HÀNG
                 .small Ngày #{order.createdAt ? new Date(order.createdAt).toLocaleDateString("vi-VN") : "--"}

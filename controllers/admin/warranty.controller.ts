@@ -452,7 +452,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
           order.customerInfo = { fullName, phone: cleanPhone, address };
         } else {
           order.customerInfo.phone = cleanPhone;
-          if (!order.customerInfo.fullName || order.customerInfo.fullName === "Khách lẻ vãng lai") {
+          if (!order.customerInfo.fullName || order.customerInfo.fullName === "Khách lẻ") {
             order.customerInfo.fullName = fullName;
           }
           if (!order.customerInfo.address && address) {

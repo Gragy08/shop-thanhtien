@@ -378,7 +378,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
     const rawPhone = typeof customerInfo.phone === "string" ? customerInfo.phone.trim() : "";
     const cleanPhone = rawPhone.replace(/\D/g, "");
     const rawFullName = typeof customerInfo.fullName === "string" ? customerInfo.fullName.trim() : "";
-    const validName = rawFullName && rawFullName !== "Khách lẻ vãng lai" && rawFullName !== "Khách lẻ" ? rawFullName : "";
+    const validName = rawFullName && rawFullName !== "Khách lẻ" && rawFullName !== "Khách lẻ" ? rawFullName : "";
     const validAddress = typeof customerInfo.address === "string" ? customerInfo.address.trim() : "";
 
     let paidAmount = 0;
@@ -479,7 +479,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
         customer.totalSpent = (customer.totalSpent || 0) + totalAmount;
         customer.orderCount = (customer.orderCount || 0) + 1;
         customer.lastOrderAt = new Date();
-        if (validName && (!customer.fullName || customer.fullName === "Khách lẻ vãng lai" || customer.fullName === "Khách lẻ")) {
+        if (validName && (!customer.fullName || customer.fullName === "Khách lẻ" || customer.fullName === "Khách lẻ")) {
           customer.fullName = validName;
         }
         if (validAddress && !customer.address) {
@@ -510,7 +510,7 @@ export const createPost = async (req: RequestAccount, res: Response) => {
       orderCode,
       customerId: linkedCustomerId,
       customerInfo: {
-        fullName: validName || (rawFullName ? rawFullName : "Khách lẻ vãng lai"),
+        fullName: validName || (rawFullName ? rawFullName : "Khách lẻ"),
         phone: cleanPhone || rawPhone,
         address: validAddress
       },

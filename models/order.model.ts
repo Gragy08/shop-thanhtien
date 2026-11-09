@@ -149,7 +149,7 @@ const schema = new mongoose.Schema(
     customerInfo: {
       fullName: {
         type: String,
-        default: "Khách lẻ vãng lai",
+        default: "Khách lẻ",
         trim: true
       },
       phone: {

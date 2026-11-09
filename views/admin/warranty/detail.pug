@@ -313,13 +313,16 @@ block main
               // Đầu phiếu: Thông tin shop
               .row.align-items-center.border-bottom.pb-2.mb-3
                 .col-sm-7
-                  h4.fw-bold.text-primary.mb-1 SHOP THANH TIỀN
+                  h4.fw-bold.text-primary.mb-1 CỬA HÀNG THANH TIỀN
                   p.text-muted.small.mb-0
                     i.las.la-tools.me-1
-                    | Trung tâm dịch vụ bảo hành &amp; sửa chữa thiết bị di động chính hãng
+                    | Điện thoại - Đồng hồ - Mắt kính
+                  p.text-muted.small.mb-0
+                    i.las.la-store.me-1
+                    | ĐC: Chợ thứ 11 - An Minh - An Giang
                   p.text-muted.small.mb-0
                     i.las.la-phone.me-1
-                    | Hotline kỹ thuật: 0988.xxx.xxx | Tra cứu online: website shopthanhtien.vn
+                    | Hotline: 0297.656.9999 - 0297.657.8888 - 0949.679.777
                 .col-sm-5.text-sm-end.mt-2.mt-sm-0
                   .ticket-title.text-dark PHIẾU TIẾP NHẬN BẢO HÀNH
                   div.small.text-muted Mã phiếu: 
@@ -436,9 +439,11 @@ block main
           .d-flex.justify-content-center.py-2
             .k80-receipt#printableTicketK80
               .text-center.mb-2
-                .fw-bold.fs-6.text-uppercase SHOP THANH TIỀN
+                .fw-bold.fs-6.text-uppercase CỬA HÀNG THANH TIỀN
+                .small.text-muted Điện thoại - Đồng hồ - Mắt kính
                 .small.text-muted Dịch vụ bảo hành &amp; Sửa chữa
-                .small.text-muted Hotline: 0988.xxx.xxx
+                .small.text-muted ĐC: Chợ thứ 11 - An Minh - An Giang
+                .small.text-muted Hotline: 0297.656.9999 - 0297.657.8888 - 0949.679.777
                 .border-bottom.border-dark.border-dashed.my-2
                 .fw-bold.fs-6.text-uppercase PHIẾU HẸN BẢO HÀNH
                 .small Mã phiếu: #{ticket.ticketCode}
@@ -504,8 +509,7 @@ block main
 
               .text-center.small.mt-2
                 .fw-bold Vui lòng giữ phiếu khi đến nhận máy!
-                div(style="font-size: 11px;") Tra cứu tiến độ sửa chữa tại:
-                div.fw-semibold(style="font-size: 11px;") website shopthanhtien.vn
+                .fw-bold Cảm ơn Quý khách & Hẹn gặp lại!
 
         // ==========================================
         // TAB 3: BIÊN BẢN BÀN GIAO TRẢ MÁY KHỔ A5

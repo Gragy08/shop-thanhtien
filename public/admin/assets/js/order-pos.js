@@ -631,13 +631,13 @@ document.querySelectorAll("input[name=paymentMethod]").forEach((radio) => {
     const method = getSelectedPaymentMethod();
     const custNameInput = document.querySelector("#customerName");
     if (method === "installment") {
-      if (custNameInput && custNameInput.value.trim() === "Khách lẻ vãng lai") {
+      if (custNameInput && custNameInput.value.trim() === "Khách lẻ") {
         custNameInput.value = "";
         custNameInput.placeholder = "Nhập họ và tên thật trên CCCD...";
       }
     } else {
       if (custNameInput && !custNameInput.value.trim()) {
-        custNameInput.value = "Khách lẻ vãng lai";
+        custNameInput.value = "Khách lẻ";
       }
     }
     updateSummary();
@@ -752,7 +752,7 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
   const subTotal = cart.reduce((acc, i) => acc + i.totalPrice, 0);
   const totalAmount = Math.max(0, subTotal - discount);
 
-  let customerName = rawCustomerName || "Khách lẻ vãng lai";
+  let customerName = rawCustomerName || "Khách lẻ";
   let paidAmount = totalAmount;
   let rawChange = 0;
   let installmentInfo = null;
@@ -765,7 +765,7 @@ document.querySelector("#btnCheckout")?.addEventListener("click", async () => {
       return;
     }
 
-    if (!rawCustomerName || rawCustomerName === "Khách lẻ vãng lai" || rawCustomerName === "Khách lẻ") {
+    if (!rawCustomerName || rawCustomerName === "Khách lẻ" || rawCustomerName === "Khách lẻ") {
       if (typeof notyf !== "undefined") notyf.error("Đơn trả góp bắt buộc nhập Họ và tên thật của khách hàng!");
       else window.alert("Đơn trả góp bắt buộc nhập Họ và tên thật của khách hàng!");
       document.querySelector("#customerName")?.focus();
@@ -946,7 +946,7 @@ phoneInput?.addEventListener("input", (e) => {
       const data = await res.json();
 
       if (data.code === "success" && data.found && data.customer) {
-        if (nameInput && (!nameInput.value || nameInput.value === "Khách lẻ vãng lai" || nameInput.value === "Khách lẻ")) {
+        if (nameInput && (!nameInput.value || nameInput.value === "Khách lẻ" || nameInput.value === "Khách lẻ")) {
           nameInput.value = data.customer.fullName;
         }
         if (addressInput && !addressInput.value && data.customer.address) {
